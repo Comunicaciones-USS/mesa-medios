@@ -169,7 +169,7 @@ export default function App() {
       }
 
       // N — nuevo contenido (solo si no hay input enfocado y no hay modal abierto)
-      if (e.key === 'n' && !inInput && !showModal && !showLogs && !confirmDelete) {
+      if (e.key.toLowerCase() === 'n' && !inInput && !showModal && !showLogs && !confirmDelete) {
         setShowModal(true)
       }
     }
