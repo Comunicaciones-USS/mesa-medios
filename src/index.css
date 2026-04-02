@@ -2075,3 +2075,56 @@ body {
   from { transform: scale(.94); opacity: 0; }
   to   { transform: scale(1);   opacity: 1; }
 }
+
+/* ── Row Progress Bar ────────────────────────────────────────── */
+.row-progress {
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.progress-bar-track {
+  flex: 1;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+  min-width: 60px;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width .3s ease;
+}
+
+.progress-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Mobile progress */
+.mobile-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 3px;
+}
+
+.mobile-progress-track {
+  width: 60px;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.mobile-progress-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width .3s ease;
+}

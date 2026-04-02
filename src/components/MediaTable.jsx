@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 import { MEDIA_COLS, N_PROPIOS, N_PAGADOS } from '../config'
-import { getCellData } from '../App'
+import { getCellData, getRowProgress } from '../App'
 import CellPopover from './CellPopover'
 
 function getCellMeta(raw) {
@@ -126,13 +126,27 @@ export default function MediaTable({ rows, onCellChange, onFieldChange, onDelete
                           autoFocus
                         />
                       ) : (
-                        <span
-                          className="contenido-text"
-                          onClick={() => startEditField(row.id, 'nombre', row.nombre)}
-                          title="Clic para editar"
-                        >
-                          {row.nombre || <em className="placeholder">Sin nombre</em>}
-                        </span>
+                        <>
+                          <span
+                            className="contenido-text"
+                            onClick={() => startEditField(row.id, 'nombre', row.nombre)}
+                            title="Clic para editar"
+                          >
+                            {row.nombre || <em className="placeholder">Sin nombre</em>}
+                          </span>
+                          {(() => {
+                            const { filled, total, pct } = getRowProgress(row.medios)
+                            const color = pct >= 60 ? '#22c55e' : pct >= 30 ? '#f59e0b' : '#ef4444'
+                            return (
+                              <div className="row-progress">
+                                <div className="progress-bar-track">
+                                  <div className="progress-bar-fill" style={{ width: `${pct}%`, background: color }} />
+                                </div>
+                                <span className="progress-label">{filled}/{total} · {pct}%</span>
+                              </div>
+                            )
+                          })()}
+                        </>
                       )}
                     </td>
 

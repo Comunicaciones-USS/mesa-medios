@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { supabase } from './supabase'
+import { MEDIA_COLS } from './config'
 import Header from './components/Header'
 import MediaTable from './components/MediaTable'
 import MobileCardView from './components/MobileCardView'
@@ -27,6 +28,15 @@ export function setCellData(medios, colId, valor, notas) {
   const newNotas = notas !== undefined ? notas : existing.notas
   if (!valor && !newNotas) return { ...medios, [colId]: null }
   return { ...medios, [colId]: { valor: valor || '', notas: newNotas || '' } }
+}
+
+export function getRowProgress(medios) {
+  const filled = MEDIA_COLS.filter(col => {
+    const { valor } = getCellData(medios, col.id)
+    return valor && valor !== 'no'
+  }).length
+  const total = MEDIA_COLS.length
+  return { filled, total, pct: Math.round((filled / total) * 100) }
 }
 
 // ── Sort helper ─────────────────────────────────────────────────
