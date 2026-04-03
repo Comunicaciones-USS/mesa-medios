@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import logoUSS from '../../../public/escudo-uss-horizontal-blanco.svg'
 
 export default function DashboardSelector({ userName, userEmail, onSelect, onLogout }) {
   const [lastUsed, setLastUsed] = useState(null)
@@ -20,7 +21,7 @@ export default function DashboardSelector({ userName, userEmail, onSelect, onLog
         <div className="selector-header">
           <div className="selector-logo-wrap">
             <img
-              src="/escudo-uss-horizontal-blanco.svg"
+              src={logoUSS}
               alt="Universidad San Sebastián"
               className="selector-logo"
             />
