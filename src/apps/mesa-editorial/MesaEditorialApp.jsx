@@ -7,6 +7,7 @@ import HeaderEditorial from './components/Header'
 import EditorialTable from './components/EditorialTable'
 import MobileCardViewEditorial from './components/MobileCardView'
 import AddActionModal from './components/AddActionModal'
+import AuditLogPanel from '../mesa-medios/components/AuditLogPanel'
 import Toaster from '../shared/components/Toaster'
 import ConfirmDialog from '../shared/components/ConfirmDialog'
 
@@ -17,6 +18,7 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
   const [loading,       setLoading]       = useState(true)
   const [error,         setError]         = useState(null)
   const [showModal,     setShowModal]     = useState(false)
+  const [showLogs,      setShowLogs]      = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(null)
 
   // Filters
@@ -38,6 +40,7 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
       })
       .subscribe()
     fetchRows()
+    logAction('LOGIN', null, null, 'Ingresó a Mesa Editorial')
     return () => supabase.removeChannel(channel)
   }, [])
 
@@ -49,6 +52,7 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
       if (e.key === 'Escape') {
         if (confirmDelete) { setConfirmDelete(null); return }
         if (showModal)     { setShowModal(false);    return }
+        if (showLogs)      { setShowLogs(false);     return }
       }
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
         e.preventDefault()
@@ -61,7 +65,7 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [confirmDelete, showModal])
+  }, [confirmDelete, showModal, showLogs])
 
   async function fetchRows() {
     setLoading(true)
@@ -145,6 +149,8 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
         userEmail={session.user.email}
         onLogout={onLogout}
         onBackToSelector={onBackToSelector}
+        onShowLogs={() => setShowLogs(true)}
+        onAdd={() => setShowModal(true)}
       />
 
       {/* ── KPI Bar ── */}
@@ -258,6 +264,7 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
       )}
 
       {showModal && <AddActionModal onConfirm={handleAddRow} onClose={() => setShowModal(false)} />}
+      {showLogs && <AuditLogPanel onClose={() => setShowLogs(false)} />}
       {confirmDelete && (
         <ConfirmDialog
           nombre={confirmDelete.nombre}

@@ -1,4 +1,4 @@
-export default function HeaderEditorial({ userName, userEmail, onLogout, onBackToSelector }) {
+export default function HeaderEditorial({ userName, userEmail, onLogout, onBackToSelector, onShowLogs, onAdd }) {
   const initials = userName
     ? userName.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
     : '?'
@@ -37,6 +37,17 @@ export default function HeaderEditorial({ userName, userEmail, onLogout, onBackT
             </button>
           </div>
         </div>
+      </div>
+      <div className="header-row-actions">
+        <div className="realtime-badge"><span className="realtime-dot" /><span>En vivo</span></div>
+        <button className="btn-logs" onClick={onShowLogs} title="Ver registro de actividad">
+          <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><rect x="1.5" y="1.5" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.3" /><path d="M4 5h7M4 7.5h7M4 10h4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" /></svg>
+          <span>Actividad</span>
+        </button>
+        <button className="btn-add" onClick={onAdd}>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2v12M2 8h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
+          <span>Nueva acción</span>
+        </button>
       </div>
     </header>
   )
