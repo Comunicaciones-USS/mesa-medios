@@ -2760,6 +2760,8 @@ body {
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
 }
 
 .modal-content {
@@ -2792,4 +2794,124 @@ body {
   display: flex;
   justify-content: flex-end;
   gap: 0.75rem;
+}
+
+/* ===== DROPDOWNS Y SELECTS - DISEÑO PROFESIONAL ===== */
+
+.modal-body select {
+  width: 100%;
+  padding: 0.625rem 0.875rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-family: 'Montserrat', sans-serif;
+  color: #1f2937;
+  background-color: white;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23374151' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 12px;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.modal-body select:hover {
+  border-color: #0f2b41;
+}
+
+.modal-body select:focus {
+  outline: none;
+  border-color: #0f2b41;
+  box-shadow: 0 0 0 3px rgba(15, 43, 65, 0.1);
+}
+
+.modal-body input[type="text"],
+.modal-body input[type="date"],
+.modal-body textarea {
+  width: 100%;
+  padding: 0.625rem 0.875rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-family: 'Montserrat', sans-serif;
+  transition: all 0.2s ease;
+}
+
+.modal-body input:focus,
+.modal-body textarea:focus {
+  outline: none;
+  border-color: #0f2b41;
+  box-shadow: 0 0 0 3px rgba(15, 43, 65, 0.1);
+}
+
+.modal-body label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+/* ===== SELECTORES DE STATUS EN TABLA - MOBILE FIX ===== */
+
+.editorial-table select.status-select,
+.editorial-mobile select {
+  padding: 0.375rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 0.8125rem;
+  font-family: 'Montserrat', sans-serif;
+  background-color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+@media (max-width: 768px) {
+  .editorial-mobile select {
+    font-size: 0.75rem !important;
+    padding: 0.25rem 0.5rem !important;
+    min-height: 28px !important;
+    height: auto !important;
+    border-radius: 4px;
+  }
+
+  .editorial-mobile .status-wrap {
+    font-size: 0.75rem !important;
+    padding: 0.25rem 0.5rem !important;
+    border-radius: 4px;
+  }
+}
+
+/* ===== BOTONES DEL MODAL ===== */
+
+.modal-footer button {
+  padding: 0.625rem 1.25rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  font-family: 'Montserrat', sans-serif;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.modal-footer button:first-child {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.modal-footer button:first-child:hover {
+  background: #e5e7eb;
+}
+
+.modal-footer button:last-child {
+  background: #ceb37c;
+  color: #0f2b41;
+}
+
+.modal-footer button:last-child:hover {
+  background: #dcc08c;
 }
