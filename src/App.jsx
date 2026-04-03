@@ -3,6 +3,7 @@ import { supabase } from './apps/shared/utils/supabase'
 import Login from './apps/shared/components/Login'
 import USSLoader from './apps/shared/components/USSLoader'
 import MesaMediosApp from './apps/mesa-medios/MesaMediosApp'
+import DashboardSelector from './apps/shared/DashboardSelector'
 
 // Placeholder — se reemplaza en Task 9
 function MesaEditorialApp({ onBackToSelector }) {
@@ -19,20 +20,6 @@ function MesaEditorialApp({ onBackToSelector }) {
   )
 }
 
-// Placeholder — se reemplaza en Task 6
-function DashboardSelectorPlaceholder({ userName, userEmail, onSelect, onLogout }) {
-  return (
-    <div className="fullscreen-center">
-      <div style={{ textAlign: 'center', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        <h2 style={{ color: '#0f2b41' }}>Sistema USS</h2>
-        <p style={{ color: '#64748b' }}>Bienvenido, {userName}</p>
-        <button className="btn-add" onClick={() => onSelect('medios')}>Mesa de Medios</button>
-        <button className="btn-add" onClick={() => onSelect('editorial')}>Mesa Editorial</button>
-        <button className="btn-ghost-cancel" onClick={onLogout}>Cerrar sesión</button>
-      </div>
-    </div>
-  )
-}
 
 export default function App() {
   const [session,           setSession]           = useState(null)
@@ -127,7 +114,7 @@ export default function App() {
   )
 
   if (!selectedDashboard) return (
-    <DashboardSelectorPlaceholder
+    <DashboardSelector
       userName={userName}
       userEmail={session.user.email}
       onSelect={handleSelectDashboard}

@@ -1,0 +1,77 @@
+import { useEffect, useState } from 'react'
+
+export default function DashboardSelector({ userName, userEmail, onSelect, onLogout }) {
+  const [lastUsed, setLastUsed] = useState(null)
+  const [visible,  setVisible]  = useState(false)
+
+  useEffect(() => {
+    const last = localStorage.getItem('uss_last_dashboard')
+    setLastUsed(last)
+    // Trigger fade+slide animation
+    const t = setTimeout(() => setVisible(true), 50)
+    return () => clearTimeout(t)
+  }, [])
+
+  return (
+    <div className={`selector-page ${visible ? 'selector-visible' : ''}`}>
+      <div className="selector-container">
+
+        {/* Header */}
+        <div className="selector-header">
+          <img
+            src="/mesa-medios/escudo-uss-horizontal-blanco.svg"
+            alt="Universidad San Sebastián"
+            className="selector-logo"
+          />
+          <h1 className="selector-title">Sistema de Gestión USS</h1>
+          <p className="selector-subtitle">Selecciona tu mesa de trabajo</p>
+        </div>
+
+        {/* Cards */}
+        <div className="selector-cards">
+          <button
+            className="selector-card"
+            onClick={() => onSelect('medios')}
+          >
+            <span className="selector-card-icon" aria-hidden="true">📊</span>
+            <h2 className="selector-card-title">Mesa de Medios</h2>
+            <p className="selector-card-desc">Gestión de campañas y contenidos</p>
+            {lastUsed === 'medios' && (
+              <span className="selector-last-badge">Último usado</span>
+            )}
+          </button>
+
+          <button
+            className="selector-card"
+            onClick={() => onSelect('editorial')}
+          >
+            <span className="selector-card-icon" aria-hidden="true">📝</span>
+            <h2 className="selector-card-title">Mesa Editorial</h2>
+            <p className="selector-card-desc">Plan comunicacional y acciones por eje</p>
+            {lastUsed === 'editorial' && (
+              <span className="selector-last-badge">Último usado</span>
+            )}
+          </button>
+        </div>
+
+        {/* Footer */}
+        <div className="selector-footer">
+          <span className="selector-user">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <circle cx="7" cy="5" r="2.5" stroke="currentColor" strokeWidth="1.2" />
+              <path d="M2 12c0-2.761 2.239-5 5-5s5 2.239 5 5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+            </svg>
+            {userName}
+          </span>
+          <span className="selector-separator">·</span>
+          <button className="selector-logout" onClick={onLogout}>
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+              <path d="M4.5 2H2.5a1 1 0 00-1 1v7a1 1 0 001 1h2M8.5 9l2.5-2.5L8.5 4M5 6.5h6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Cerrar sesión
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
