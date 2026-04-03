@@ -78,7 +78,7 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
 
   async function logAction(accion, itemId, itemNombre, detalle = '') {
     if (!session) return
-    await supabase.from('logs').insert([{
+    await supabase.from('audit_logs').insert([{
       mesa_type:        'editorial',
       user_email:       session.user.email,
       user_nombre:      userName || session.user.email,

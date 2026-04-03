@@ -84,7 +84,7 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
 
   async function logAction(accion, contenidoId, contenidoNombre, detalle = '') {
     if (!session) return
-    await supabase.from('logs').insert([{
+    await supabase.from('audit_logs').insert([{
       mesa_type:        'medios',
       user_email:       session.user.email,
       user_nombre:      userName || session.user.email,

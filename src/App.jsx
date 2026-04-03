@@ -39,7 +39,7 @@ export default function App() {
     if (data) {
       setAuthorized(true)
       setUserName(data.nombre || email)
-      await supabase.from('logs').insert([{
+      await supabase.from('audit_logs').insert([{
         user_email: email.toLowerCase(),
         user_nombre: data.nombre || email,
         accion: 'LOGIN',

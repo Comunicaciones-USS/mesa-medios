@@ -31,7 +31,7 @@ export default function AuditLogPanel({ onClose, mesaType }) {
 
   useEffect(() => {
     async function fetchLogs() {
-      let query = supabase.from('logs').select('*')
+      let query = supabase.from('audit_logs').select('*')
       if (mesaType) query = query.eq('mesa_type', mesaType)
       const { data } = await query.order('created_at', { ascending: false }).limit(200)
       setLogs(data || [])
