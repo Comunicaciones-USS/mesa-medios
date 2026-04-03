@@ -36,7 +36,14 @@ export default function DashboardSelector({ userName, userEmail, onSelect, onLog
             className="selector-card"
             onClick={() => onSelect('medios')}
           >
-            <span className="selector-card-icon" aria-hidden="true">📊</span>
+            <span className="selector-card-icon" aria-hidden="true">
+              <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+                <rect x="3" y="16" width="5" height="9" rx="1.5" fill="#ceb37c"/>
+                <rect x="11" y="10" width="5" height="15" rx="1.5" fill="#0f2b41"/>
+                <rect x="19" y="4" width="5" height="21" rx="1.5" fill="#ceb37c" opacity="0.6"/>
+                <path d="M4 20L10 14L16 17L24 9" stroke="#0f2b41" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </span>
             <h2 className="selector-card-title">Mesa de Medios</h2>
             <p className="selector-card-desc">Gestión de campañas y contenidos</p>
             {lastUsed === 'medios' && (
@@ -48,7 +55,14 @@ export default function DashboardSelector({ userName, userEmail, onSelect, onLog
             className="selector-card"
             onClick={() => onSelect('editorial')}
           >
-            <span className="selector-card-icon" aria-hidden="true">📝</span>
+            <span className="selector-card-icon" aria-hidden="true">
+              <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+                <rect x="5" y="3" width="18" height="22" rx="3" fill="#f0f4f8" stroke="#0f2b41" strokeWidth="1.5"/>
+                <path d="M9 9h10M9 13h10M9 17h6" stroke="#0f2b41" strokeWidth="1.5" strokeLinecap="round"/>
+                <circle cx="21" cy="21" r="4.5" fill="#ceb37c"/>
+                <path d="M19.5 21h3M21 19.5v3" stroke="#0f2b41" strokeWidth="1.3" strokeLinecap="round"/>
+              </svg>
+            </span>
             <h2 className="selector-card-title">Mesa Editorial</h2>
             <p className="selector-card-desc">Plan comunicacional y acciones por eje</p>
             {lastUsed === 'editorial' && (
