@@ -50,7 +50,7 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
   useEffect(() => {
     function handleKeyDown(e) {
       const tag = document.activeElement?.tagName
-      const inInput = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT'
+      const inInput = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || document.activeElement?.isContentEditable
       if (e.key === 'Escape') {
         if (confirmDelete) { setConfirmDelete(null); return }
         if (showModal)     { setShowModal(false);    return }
@@ -187,25 +187,28 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
 
       {/* ── Filter bar ── */}
       <div className="editorial-filter-bar">
-        <div className="filter-search">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.3" />
-            <path d="M9.5 9.5L13 13" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-          </svg>
-          <input
-            type="text"
-            placeholder="Buscar tema, acción, responsable..."
-            value={filterInput}
-            onChange={e => setFilterInput(e.target.value)}
-            className="editorial-filter-input filter-input"
-          />
-          {filterInput && (
-            <button className="filter-clear" onClick={() => setFilterInput('')}>
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                <path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
-            </button>
-          )}
+        {/* Fila 1: buscador + sort fecha */}
+        <div className="editorial-filter-row">
+          <div className="filter-search">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.3" />
+              <path d="M9.5 9.5L13 13" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+            </svg>
+            <input
+              type="text"
+              placeholder="Buscar tema, acción, responsable..."
+              value={filterInput}
+              onChange={e => setFilterInput(e.target.value)}
+              className="editorial-filter-input filter-input"
+            />
+            {filterInput && (
+              <button className="filter-clear" onClick={() => setFilterInput('')}>
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                  <path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+              </button>
+            )}
+          </div>
           <button className="sort-btn" onClick={() => setSortDir(d => d === 'asc' ? 'desc' : d === 'desc' ? null : 'asc')}
             title={sortDir === 'asc' ? 'Más antigua primero' : sortDir === 'desc' ? 'Más reciente primero' : 'Ordenar por fecha'}>
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -216,47 +219,51 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
           </button>
         </div>
 
-        {/* Filter by eje */}
-        <div className="filter-pills">
-          <button className={`pill ${filterEje === 'all' ? 'pill-active' : ''}`} onClick={() => setFilterEje('all')}>
-            Todos los ejes
-          </button>
-          {EJES.map(eje => (
-            <button
-              key={eje.id}
-              className={`pill ${filterEje === eje.label ? 'pill-active' : ''}`}
-              style={filterEje === eje.label ? { background: eje.color, color: 'white', borderColor: eje.color } : {}}
-              onClick={() => setFilterEje(filterEje === eje.label ? 'all' : eje.label)}
-            >
-              {eje.label}
+        {/* Fila 2: todos los pills en línea */}
+        <div className="editorial-filter-pills-row">
+          <div className="filter-pills">
+            <button className={`pill ${filterEje === 'all' ? 'pill-active' : ''}`} onClick={() => setFilterEje('all')}>
+              Todos los ejes
             </button>
-          ))}
-        </div>
+            {EJES.map(eje => (
+              <button
+                key={eje.id}
+                className={`pill ${filterEje === eje.label ? 'pill-active' : ''}`}
+                style={filterEje === eje.label ? { background: eje.color, color: 'white', borderColor: eje.color } : {}}
+                onClick={() => setFilterEje(filterEje === eje.label ? 'all' : eje.label)}
+              >
+                {eje.label}
+              </button>
+            ))}
+          </div>
 
-        {/* Filter by status */}
-        <div className="filter-pills">
-          {['all', 'Pendiente', 'En desarrollo', 'Completado'].map(s => (
-            <button
-              key={s}
-              className={`pill ${filterStatus === s ? 'pill-active' : ''}`}
-              onClick={() => setFilterStatus(s)}
-            >
-              {s === 'all' ? 'Todos los status' : s}
-            </button>
-          ))}
-        </div>
+          <div className="filter-pills-divider" />
 
-        {/* Filter by tipo de acción */}
-        <div className="filter-pills">
-          {['all', 'Backlog', 'Resultado'].map(t => (
-            <button
-              key={t}
-              className={`pill ${filterTipoAccion === t ? 'pill-active' : ''}`}
-              onClick={() => setFilterTipoAccion(t)}
-            >
-              {t === 'all' ? 'Todos los tipos' : t}
-            </button>
-          ))}
+          <div className="filter-pills">
+            {['all', 'Pendiente', 'En desarrollo', 'Completado'].map(s => (
+              <button
+                key={s}
+                className={`pill ${filterStatus === s ? 'pill-active' : ''}`}
+                onClick={() => setFilterStatus(s)}
+              >
+                {s === 'all' ? 'Todos los status' : s}
+              </button>
+            ))}
+          </div>
+
+          <div className="filter-pills-divider" />
+
+          <div className="filter-pills">
+            {['all', 'Backlog', 'Resultado'].map(t => (
+              <button
+                key={t}
+                className={`pill ${filterTipoAccion === t ? 'pill-active' : ''}`}
+                onClick={() => setFilterTipoAccion(t)}
+              >
+                {t === 'all' ? 'Todos los tipos' : t}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
