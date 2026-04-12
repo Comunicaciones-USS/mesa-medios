@@ -58,7 +58,7 @@ export default function AddRowModal({ onConfirm, onClose, existingNames = [] }) 
       </div>
 
       <p className="modal-hint">
-        Después de crear el contenido puedes asignar responsables en cada medio.
+        Podrás asignar el estado y descripción de cada medio después de crearlo.
       </p>
     </>
   )
