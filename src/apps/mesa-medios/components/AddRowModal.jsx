@@ -10,7 +10,7 @@ function useIsMobile() {
   return mobile
 }
 
-export default function AddRowModal({ onConfirm, onClose }) {
+export default function AddRowModal({ onConfirm, onClose, existingNames = [] }) {
   const [nombre, setNombre] = useState('')
   const [semana, setSemana] = useState('')
   const inputRef = useRef(null)
@@ -36,11 +36,15 @@ export default function AddRowModal({ onConfirm, onClose }) {
           ref={inputRef}
           id="nombre"
           type="text"
+          list="nombre-suggestions"
           placeholder="Ej: Nuevo Rector, Feria del Libro..."
           value={nombre}
           onChange={e => setNombre(e.target.value)}
           required
         />
+        <datalist id="nombre-suggestions">
+          {existingNames.map(n => <option key={n} value={n} />)}
+        </datalist>
       </div>
 
       <div className="form-group">

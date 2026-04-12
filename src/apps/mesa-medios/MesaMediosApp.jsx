@@ -207,7 +207,7 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
         </>
       )}
 
-      {showModal && <AddRowModal onConfirm={handleAddRow} onClose={() => setShowModal(false)} />}
+      {showModal && <AddRowModal onConfirm={handleAddRow} onClose={() => setShowModal(false)} existingNames={rows.map(r => r.nombre).filter(Boolean)} />}
       {showLogs && <AuditLogPanel onClose={() => setShowLogs(false)} mesaType="medios" />}
       {confirmDelete && (
         <ConfirmDialog nombre={confirmDelete.nombre}

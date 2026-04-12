@@ -33,7 +33,7 @@ function buildValue(status, name) {
 
 export default function CellPopover({ value, notas: initialNotas, position, onSave, onClose }) {
   const { status: initStatus, name: initName } = parseValue(value)
-  const [status, setStatus] = useState(initStatus)
+  const [status, setStatus] = useState(initStatus || 'si')
   const [name,   setName]   = useState(initName)
   const [showNotas, setShowNotas] = useState(false)
   const [notas, setNotas] = useState(initialNotas || '')
@@ -94,7 +94,7 @@ export default function CellPopover({ value, notas: initialNotas, position, onSa
           <input
             ref={nameRef}
             type="text"
-            placeholder="Nombre responsable"
+            placeholder="¿De qué se trata?"
             value={name}
             onChange={e => setName(e.target.value)}
             onKeyDown={handleKeyDown}
