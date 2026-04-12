@@ -24,6 +24,4 @@ export const STATUS_CONFIG = {
 
 export const STATUS_OPTIONS = ['Pendiente', 'En desarrollo', 'Completado']
 
-export const TIPO_ACCION_OPTIONS = [
-  'Interna', 'Externo', 'Interno y Externo', 'Interna-Externa', 'Externa-Interno',
-]
+export const TIPO_ACCION_OPTIONS = ['Backlog', 'Resultado']

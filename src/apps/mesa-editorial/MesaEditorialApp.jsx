@@ -22,10 +22,12 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
   const [confirmDelete, setConfirmDelete] = useState(null)
 
   // Filters
-  const [filterInput,  setFilterInput]  = useState('')
+  const [filterInput,      setFilterInput]      = useState('')
   const filterText = useDebounce(filterInput, 300)
-  const [filterEje,    setFilterEje]    = useState('all')
-  const [filterStatus, setFilterStatus] = useState('all')
+  const [filterEje,        setFilterEje]        = useState('all')
+  const [filterStatus,     setFilterStatus]     = useState('all')
+  const [filterTipoAccion, setFilterTipoAccion] = useState('all')
+  const [sortDir,          setSortDir]          = useState(null)
 
   const { toasts, addToast, removeToast } = useToast()
 
@@ -92,8 +94,9 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
   // useMemo for filtered rows
   const displayRows = useMemo(() => {
     let result = rows
-    if (filterEje !== 'all')    result = result.filter(r => r.eje === filterEje)
-    if (filterStatus !== 'all') result = result.filter(r => r.status === filterStatus)
+    if (filterEje !== 'all')        result = result.filter(r => r.eje === filterEje)
+    if (filterStatus !== 'all')     result = result.filter(r => r.status === filterStatus)
+    if (filterTipoAccion !== 'all') result = result.filter(r => r.tipo_accion === filterTipoAccion)
     if (filterText.trim()) {
       const q = filterText.toLowerCase()
       result = result.filter(r =>
@@ -102,8 +105,16 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
         r.responsable?.toLowerCase().includes(q)
       )
     }
+    if (sortDir) {
+      result = [...result].sort((a, b) => {
+        const dateA = a.fecha || ''
+        const dateB = b.fecha || ''
+        const cmp = dateA.localeCompare(dateB)
+        return sortDir === 'asc' ? cmp : -cmp
+      })
+    }
     return result
-  }, [rows, filterEje, filterStatus, filterText])
+  }, [rows, filterEje, filterStatus, filterTipoAccion, filterText, sortDir])
 
   // KPI computed values
   const kpi = useMemo(() => {
@@ -151,7 +162,6 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
         onLogout={onLogout}
         onBackToSelector={onBackToSelector}
         onShowLogs={() => setShowLogs(true)}
-        onAdd={() => setShowModal(true)}
       />
 
       {/* ── KPI Bar ── */}
@@ -196,6 +206,14 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
               </svg>
             </button>
           )}
+          <button className="sort-btn" onClick={() => setSortDir(d => d === 'asc' ? 'desc' : d === 'desc' ? null : 'asc')}
+            title={sortDir === 'asc' ? 'Más antigua primero' : sortDir === 'desc' ? 'Más reciente primero' : 'Ordenar por fecha'}>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M7 2v10M4 4l3-2.5L10 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: sortDir === 'asc' ? 1 : 0.3 }} />
+              <path d="M4 10l3 2.5L10 10" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: sortDir === 'desc' ? 1 : 0.3 }} />
+            </svg>
+            <span>Fecha</span>
+          </button>
         </div>
 
         {/* Filter by eje */}
@@ -224,6 +242,19 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
               onClick={() => setFilterStatus(s)}
             >
               {s === 'all' ? 'Todos los status' : s}
+            </button>
+          ))}
+        </div>
+
+        {/* Filter by tipo de acción */}
+        <div className="filter-pills">
+          {['all', 'Backlog', 'Resultado'].map(t => (
+            <button
+              key={t}
+              className={`pill ${filterTipoAccion === t ? 'pill-active' : ''}`}
+              onClick={() => setFilterTipoAccion(t)}
+            >
+              {t === 'all' ? 'Todos los tipos' : t}
             </button>
           ))}
         </div>
@@ -264,7 +295,7 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
         </>
       )}
 
-      {showModal && <AddActionModal onConfirm={handleAddRow} onClose={() => setShowModal(false)} />}
+      {showModal && <AddActionModal onConfirm={handleAddRow} onClose={() => setShowModal(false)} existingResponsables={[...new Set(rows.map(r => r.responsable).filter(Boolean))]} />}
       {showLogs && <AuditLogPanel onClose={() => setShowLogs(false)} mesaType="editorial" />}
       {confirmDelete && (
         <ConfirmDialog

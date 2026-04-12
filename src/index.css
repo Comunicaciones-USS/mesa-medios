@@ -2408,7 +2408,7 @@ body {
 .editorial-kpi-bar {
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 19;
   background: #0f2b41;
   color: #ffffff;
   display: flex;
@@ -2432,6 +2432,9 @@ body {
 
 /* Filter bar editorial */
 .editorial-filter-bar {
+  position: sticky;
+  top: 40px;
+  z-index: 20;
   background: white;
   border-bottom: 1px solid #e2e8f0;
   padding: 0.75rem 1.5rem;
