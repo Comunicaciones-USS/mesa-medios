@@ -2437,10 +2437,39 @@ body {
   z-index: 20;
   background: white;
   border-bottom: 1px solid #e2e8f0;
-  padding: 0.75rem 1.5rem;
+  padding: 8px 16px;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 6px;
+}
+
+.editorial-filter-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.editorial-filter-row .filter-search {
+  flex: 1;
+  min-width: 200px;
+}
+
+.editorial-filter-pills-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.editorial-filter-pills-row .filter-pills {
+  flex-wrap: nowrap;
+}
+
+.filter-pills-divider {
+  width: 1px;
+  height: 18px;
+  background: #e2e8f0;
+  flex-shrink: 0;
 }
 
 .filter-pills {
