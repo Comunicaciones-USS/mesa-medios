@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
 import { EJES, TIPOS_CONFIG, TIPO_ACCION_OPTIONS } from '../config'
 
-export default function AddActionModal({ onConfirm, onClose }) {
+export default function AddActionModal({ onConfirm, onClose, existingResponsables = [] }) {
   const [eje,         setEje]         = useState(EJES[0].label)
   const [tipo,        setTipo]        = useState('Ancla')
   const [tema,        setTema]        = useState('')
   const [accion,      setAccion]      = useState('')
-  const [tipoAccion,  setTipoAccion]  = useState('Interna')
+  const [tipoAccion,  setTipoAccion]  = useState('Backlog')
   const [fecha,       setFecha]       = useState('')
   const [responsable, setResponsable] = useState('')
   const firstRef = useRef(null)
@@ -57,7 +57,7 @@ export default function AddActionModal({ onConfirm, onClose }) {
                 </select>
               </div>
               <div className="form-group">
-                <label>Tipo</label>
+                <label>Hito</label>
                 <select value={tipo} onChange={e => setTipo(e.target.value)}>
                   {Object.keys(TIPOS_CONFIG).map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
@@ -65,7 +65,7 @@ export default function AddActionModal({ onConfirm, onClose }) {
             </div>
             <div className="form-group">
               <label>Tema</label>
-              <input type="text" value={tema} onChange={e => setTema(e.target.value)} placeholder="Tema general de la acción" />
+              <input type="text" value={tema} onChange={e => setTema(e.target.value)} placeholder="Comienza con un verbo: Crear un..., Buscar..., Diseñar..." />
             </div>
             <div className="form-group">
               <label>Acción <span className="required">*</span></label>
@@ -85,7 +85,10 @@ export default function AddActionModal({ onConfirm, onClose }) {
             </div>
             <div className="form-group">
               <label>Responsable</label>
-              <input type="text" value={responsable} onChange={e => setResponsable(e.target.value)} placeholder="Nombre del responsable" />
+              <input type="text" list="responsable-suggestions" value={responsable} onChange={e => setResponsable(e.target.value)} placeholder="Nombre del responsable" />
+              <datalist id="responsable-suggestions">
+                {existingResponsables.map(r => <option key={r} value={r} />)}
+              </datalist>
             </div>
           </div>
 

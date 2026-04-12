@@ -41,7 +41,7 @@ export default function EjeSection({ eje, rows, onCellChange, onDeleteRow, colla
                   <th className="col-tipo">Tipo</th>
                   <th className="col-tema">Tema</th>
                   <th className="col-accion">Acción</th>
-                  <th className="col-canal">Canal</th>
+                  <th className="col-canal">Tipo de acción</th>
                   <th className="col-fecha">Fecha</th>
                   <th className="col-resp">Responsable</th>
                   <th className="col-status">Status</th>
