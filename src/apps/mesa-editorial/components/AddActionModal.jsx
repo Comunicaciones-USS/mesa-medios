@@ -73,7 +73,7 @@ export default function AddActionModal({ onConfirm, onClose, existingResponsable
             </div>
             <div className="form-row-2">
               <div className="form-group">
-                <label>Canal</label>
+                <label>Tipo de acción</label>
                 <select value={tipoAccion} onChange={e => setTipoAccion(e.target.value)}>
                   {TIPO_ACCION_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
