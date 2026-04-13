@@ -1,4 +1,4 @@
-import { TIPOS_CONFIG, STATUS_CONFIG, STATUS_OPTIONS } from '../config'
+import { TIPOS_CONFIG, STATUS_CONFIG, STATUS_OPTIONS, TIPO_ACCION_OPTIONS } from '../config'
 
 function formatDate(dateStr) {
   if (!dateStr) return '—'
@@ -76,11 +76,18 @@ function EjeRow({ row, onCellChange, onDeleteRow }) {
 
   return (
     <tr className="editorial-row">
-      {/* Tipo — badge, no editable */}
+      {/* Tipo — select editable con estilo de badge */}
       <td className="col-tipo">
-        <span className="tipo-badge" style={{ color: tipoCfg.color, background: tipoCfg.bg }}>
-          {row.tipo || '—'}
-        </span>
+        <select
+          value={row.tipo || 'Ancla'}
+          onChange={e => handleInlineEdit('tipo', e.target.value)}
+          className="tipo-select"
+          style={{ color: tipoCfg.color, background: tipoCfg.bg, border: 'none', fontWeight: 600, fontSize: '0.75rem', borderRadius: '4px', padding: '2px 6px', cursor: 'pointer' }}
+        >
+          {Object.keys(TIPOS_CONFIG).map(t => (
+            <option key={t} value={t}>{t}</option>
+          ))}
+        </select>
       </td>
 
       {/* Tema — contenteditable */}
@@ -109,9 +116,18 @@ function EjeRow({ row, onCellChange, onDeleteRow }) {
         </span>
       </td>
 
-      {/* Canal — no editable */}
+      {/* Tipo de acción — select editable */}
       <td className="col-canal">
-        <span className="canal-text">{row.tipo_accion || '—'}</span>
+        <select
+          value={row.tipo_accion || 'Backlog'}
+          onChange={e => handleInlineEdit('tipo_accion', e.target.value)}
+          className="tipo-accion-select"
+          style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '0.85rem', color: '#374151' }}
+        >
+          {TIPO_ACCION_OPTIONS.map(t => (
+            <option key={t} value={t}>{t}</option>
+          ))}
+        </select>
       </td>
 
       {/* Fecha — display with inline date input on hover */}
