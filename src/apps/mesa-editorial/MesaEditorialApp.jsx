@@ -135,8 +135,17 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
   async function handleCellChange(rowId, field, value) {
     const row = rows.find(r => r.id === rowId)
     if (!row || row[field] === value) return
-    setRows(prev => prev.map(r => r.id === rowId ? { ...r, [field]: value } : r))
-    const { error } = await supabase.from(TABLE).update({ [field]: value }).eq('id', rowId)
+
+    const updateData = { [field]: value }
+    if (field === 'status' && value === 'Completado') {
+      updateData.completed_at = new Date().toISOString()
+    }
+    if (field === 'status' && row.status === 'Completado' && value !== 'Completado') {
+      updateData.completed_at = null
+    }
+
+    setRows(prev => prev.map(r => r.id === rowId ? { ...r, ...updateData } : r))
+    const { error } = await supabase.from(TABLE).update(updateData).eq('id', rowId)
     if (error) { addToast('Error al guardar. Los datos se recargarán.', 'error'); fetchRows(); return }
     await logAction('MODIFICAR', rowId, row.accion, `"${field}" → "${value}"`)
   }
