@@ -302,7 +302,7 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
         </>
       )}
 
-      {showModal && <AddActionModal onConfirm={handleAddRow} onClose={() => setShowModal(false)} existingResponsables={[...new Set(rows.map(r => r.responsable).filter(Boolean))]} />}
+      {showModal && <AddActionModal onConfirm={handleAddRow} onClose={() => setShowModal(false)} existingResponsables={[...new Set(rows.map(r => r.responsable).filter(Boolean))]} existingTemas={[...new Set(rows.map(r => r.tema).filter(Boolean))]} />}
       {showLogs && <AuditLogPanel onClose={() => setShowLogs(false)} mesaType="editorial" />}
       {confirmDelete && (
         <ConfirmDialog

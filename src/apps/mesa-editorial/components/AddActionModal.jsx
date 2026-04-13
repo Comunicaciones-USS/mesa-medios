@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { EJES, TIPOS_CONFIG, TIPO_ACCION_OPTIONS } from '../config'
 
-export default function AddActionModal({ onConfirm, onClose, existingResponsables = [] }) {
+export default function AddActionModal({ onConfirm, onClose, existingResponsables = [], existingTemas = [] }) {
   const [eje,         setEje]         = useState(EJES[0].label)
   const [tipo,        setTipo]        = useState('Ancla')
   const [tema,        setTema]        = useState('')
@@ -65,7 +65,10 @@ export default function AddActionModal({ onConfirm, onClose, existingResponsable
             </div>
             <div className="form-group">
               <label>Tema</label>
-              <input type="text" value={tema} onChange={e => setTema(e.target.value)} placeholder="Comienza con un verbo: Crear un..., Buscar..., Diseñar..." />
+              <input type="text" value={tema} onChange={e => setTema(e.target.value)} placeholder="Ej: Encuesta Chile, Informe Cescro..." list="tema-suggestions" />
+              <datalist id="tema-suggestions">
+                {existingTemas.map((t, i) => <option key={i} value={t} />)}
+              </datalist>
             </div>
             <div className="form-group">
               <label>Acción <span className="required">*</span></label>
