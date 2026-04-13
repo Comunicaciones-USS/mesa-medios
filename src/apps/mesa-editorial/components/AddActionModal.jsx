@@ -69,7 +69,7 @@ export default function AddActionModal({ onConfirm, onClose, existingResponsable
             </div>
             <div className="form-group">
               <label>Acción <span className="required">*</span></label>
-              <input type="text" value={accion} onChange={e => setAccion(e.target.value)} placeholder="Descripción específica de la acción" required />
+              <input type="text" value={accion} onChange={e => setAccion(e.target.value)} placeholder="Resultado: sustantivo / Backlog: verbo" required />
             </div>
             <div className="form-row-2">
               <div className="form-group">
