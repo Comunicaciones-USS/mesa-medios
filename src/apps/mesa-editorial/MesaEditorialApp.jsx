@@ -10,6 +10,7 @@ import AddActionModal from './components/AddActionModal'
 import AuditLogPanel from '../mesa-medios/components/AuditLogPanel'
 import Toaster from '../shared/components/Toaster'
 import ConfirmDialog from '../shared/components/ConfirmDialog'
+import UserProfilePanel from '../shared/components/UserProfilePanel'
 
 const TABLE = 'mesa_editorial_acciones'
 
@@ -19,6 +20,7 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
   const [error,         setError]         = useState(null)
   const [showModal,     setShowModal]     = useState(false)
   const [showLogs,      setShowLogs]      = useState(false)
+  const [showProfile,   setShowProfile]   = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(null)
 
   // Filters
@@ -52,6 +54,7 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
       const tag = document.activeElement?.tagName
       const inInput = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || document.activeElement?.isContentEditable
       if (e.key === 'Escape') {
+        if (showProfile)   { setShowProfile(false);  return }
         if (confirmDelete) { setConfirmDelete(null); return }
         if (showModal)     { setShowModal(false);    return }
         if (showLogs)      { setShowLogs(false);     return }
@@ -171,6 +174,7 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
         onLogout={onLogout}
         onBackToSelector={onBackToSelector}
         onShowLogs={() => setShowLogs(true)}
+        onShowProfile={() => setShowProfile(true)}
       />
 
       {/* ── KPI Bar ── */}
@@ -313,6 +317,7 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
 
       {showModal && <AddActionModal onConfirm={handleAddRow} onClose={() => setShowModal(false)} existingResponsables={[...new Set(rows.map(r => r.responsable).filter(Boolean))]} existingTemas={[...new Set(rows.map(r => r.tema).filter(Boolean))]} />}
       {showLogs && <AuditLogPanel onClose={() => setShowLogs(false)} mesaType="editorial" />}
+      {showProfile && <UserProfilePanel userEmail={session.user.email} userName={userName} onClose={() => setShowProfile(false)} />}
       {confirmDelete && (
         <ConfirmDialog
           nombre={confirmDelete.nombre}

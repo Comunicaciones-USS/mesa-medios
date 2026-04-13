@@ -1,6 +1,6 @@
 import logoUSS from '../../../assets/escudo-uss-horizontal-blanco.svg'
 
-export default function Header({ userName, userEmail, onAdd, onLogout, onShowLogs, onBackToSelector }) {
+export default function Header({ userName, userEmail, onAdd, onLogout, onShowLogs, onBackToSelector, onShowProfile }) {
   const initials = userName
     ? userName.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
     : '?'
@@ -27,7 +27,7 @@ export default function Header({ userName, userEmail, onAdd, onLogout, onShowLog
         </div>
         <div className="header-user">
           <div className="user-menu">
-            <div className="user-avatar" title={`${userName} (${userEmail})`}>{initials}</div>
+            <button className="user-avatar" onClick={onShowProfile} title={`Ver perfil de ${userName}`}>{initials}</button>
             <div className="user-info">
               <span className="user-name">{userName}</span>
               <span className="user-email">{userEmail}</span>

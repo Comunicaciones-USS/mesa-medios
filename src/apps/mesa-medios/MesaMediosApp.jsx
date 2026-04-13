@@ -11,6 +11,7 @@ import Toaster from '../shared/components/Toaster'
 import { useToast } from '../shared/hooks/useToast'
 import { useDebounce } from '../shared/hooks/useDebounce'
 import ConfirmDialog from '../shared/components/ConfirmDialog'
+import UserProfilePanel from '../shared/components/UserProfilePanel'
 
 function sortRows(rows, direction) {
   return [...rows].sort((a, b) => {
@@ -28,6 +29,7 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
   const [error,         setError]         = useState(null)
   const [showModal,     setShowModal]     = useState(false)
   const [showLogs,      setShowLogs]      = useState(false)
+  const [showProfile,   setShowProfile]   = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(null)
   const [filterInput,   setFilterInput]   = useState('')
   const filterText = useDebounce(filterInput, 300)
@@ -54,6 +56,7 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
       const tag = document.activeElement?.tagName
       const inInput = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT'
       if (e.key === 'Escape') {
+        if (showProfile)   { setShowProfile(false);  return }
         if (confirmDelete) { setConfirmDelete(null); return }
         if (showModal)     { setShowModal(false);    return }
         if (showLogs)      { setShowLogs(false);     return }
@@ -155,6 +158,7 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
         onLogout={onLogout}
         onShowLogs={() => setShowLogs(true)}
         onBackToSelector={onBackToSelector}
+        onShowProfile={() => setShowProfile(true)}
       />
 
       <div className="filter-bar">
@@ -209,6 +213,7 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
 
       {showModal && <AddRowModal onConfirm={handleAddRow} onClose={() => setShowModal(false)} existingNames={rows.map(r => r.nombre).filter(Boolean)} />}
       {showLogs && <AuditLogPanel onClose={() => setShowLogs(false)} mesaType="medios" />}
+      {showProfile && <UserProfilePanel userEmail={session.user.email} userName={userName} onClose={() => setShowProfile(false)} />}
       {confirmDelete && (
         <ConfirmDialog nombre={confirmDelete.nombre}
           onConfirm={() => { handleDeleteRow(confirmDelete.id); setConfirmDelete(null) }}
