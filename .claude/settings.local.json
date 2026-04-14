@@ -18,7 +18,11 @@
       "Bash(npx vite:*)",
       "Bash(npm run:*)",
       "Bash(pkill -f \"vite.*5173\")",
-      "Bash(xargs kill:*)"
+      "Bash(xargs kill:*)",
+      "Bash(git checkout:*)",
+      "Bash(wc -l src/apps/**/*.jsx src/apps/**/**/*.jsx src/App.jsx)",
+      "Bash(git push:*)",
+      "Bash(git pull:*)"
     ]
   }
 }
