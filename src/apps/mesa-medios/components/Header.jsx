@@ -27,11 +27,17 @@ export default function Header({ userName, userEmail, onAdd, onLogout, onShowLog
         </div>
         <div className="header-user">
           <div className="user-menu">
-            <button className="user-avatar" onClick={onShowProfile} title={`Ver perfil de ${userName}`}>{initials}</button>
-            <div className="user-info">
-              <span className="user-name">{userName}</span>
-              <span className="user-email">{userEmail}</span>
-            </div>
+            <button className="user-profile-trigger" onClick={onShowProfile} title={`Ver perfil de ${userName}`}>
+              <div className="user-avatar">{initials}</div>
+              <div className="user-info">
+                <span className="user-name">{userName}</span>
+                <span className="user-email">{userEmail}</span>
+              </div>
+              <svg className="user-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <path d="M3 5l3 3 3-3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+            <div className="user-menu-divider" />
             <button className="btn-logout" onClick={onLogout} title="Cerrar sesión">
               <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
                 <path d="M5.5 2H3a1 1 0 00-1 1v9a1 1 0 001 1h2.5M10 10l3-2.5L10 5M6 7.5h7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />

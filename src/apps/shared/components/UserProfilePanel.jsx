@@ -211,25 +211,17 @@ export default function UserProfilePanel({ userEmail, userName, onClose }) {
             {stats.recentLogs.length === 0 ? (
               <p className="profile-empty">Sin actividad registrada.</p>
             ) : (
-              <div className="profile-timeline">
-                {stats.recentLogs.map((log, i) => {
-                  const style = ACTION_STYLE[log.action] || { dot: '#94a3b8', label: log.action, bg: '#f1f5f9', text: '#475569' }
+              <div className="profile-activity-table">
+                {stats.recentLogs.map((log) => {
+                  const style = ACTION_STYLE[log.action] || { label: log.action, bg: '#f1f5f9', text: '#475569' }
                   const d = parseDetails(log.details)
+                  const desc = d.content_name || d.description || '—'
                   return (
-                    <div key={log.id} className="profile-timeline-item">
-                      <div className="profile-timeline-dot" style={{ background: style.dot }} />
-                      {i < stats.recentLogs.length - 1 && <div className="profile-timeline-line" />}
-                      <div className="profile-timeline-content">
-                        <span className="profile-timeline-badge" style={{ background: style.bg, color: style.text }}>
-                          {style.label}
-                        </span>
-                        {d.content_name && (
-                          <span className="profile-timeline-text"> "{d.content_name}"</span>
-                        )}
-                        {!d.content_name && d.description && (
-                          <span className="profile-timeline-text"> {d.description}</span>
-                        )}
-                      </div>
+                    <div key={log.id} className="profile-activity-row">
+                      <span className="profile-timeline-badge" style={{ background: style.bg, color: style.text }}>
+                        {style.label}
+                      </span>
+                      <span className="profile-activity-desc" title={desc}>{desc}</span>
                       <span className="profile-timeline-time">{timeAgo(log.created_at)}</span>
                     </div>
                   )
