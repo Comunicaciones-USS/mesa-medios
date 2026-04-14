@@ -3515,6 +3515,26 @@ body {
 }
 
 /* ── Explorer Sidebar ── */
+.explorer-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 43, 65, 0.3);
+  z-index: 49;
+  animation: fadeIn 0.15s ease;
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.explorer-subtitle {
+  font-size: 0.72rem;
+  color: rgba(255,255,255,0.5);
+  margin: 2px 0 0;
+  font-weight: 400;
+}
 .explorer-sidebar {
   position: fixed;
   top: 0;
@@ -3635,17 +3655,21 @@ body {
   display: flex;
   align-items: center;
   gap: 5px;
-  padding: 6px 12px;
+  padding: 5px 12px;
   border-radius: 6px;
-  border: 1px solid #e5e7eb;
-  background: #fff;
-  color: #374151;
+  border: 1px solid rgba(255,255,255,0.25);
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.85);
   font-size: 0.78rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s;
 }
-.btn-explorer:hover { border-color: #ceb37c; color: #0f2b41; }
+.btn-explorer:hover {
+  background: rgba(255,255,255,0.15);
+  border-color: #ceb37c;
+  color: #fff;
+}
 
 .explorer-active-filter {
   display: flex;
