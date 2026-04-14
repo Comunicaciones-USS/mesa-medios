@@ -25,3 +25,12 @@ export const STATUS_CONFIG = {
 export const STATUS_OPTIONS = ['Pendiente', 'En desarrollo', 'Completado']
 
 export const TIPO_ACCION_OPTIONS = ['Backlog', 'Resultado']
+
+export const TIPOLOGIA_RESULTADO_OPTIONS = [
+  'Evento institucional',
+  'Publicidad pagada',
+  'Publicación orgánica',
+  'Vocería / Entrevista',
+  'Documento / Informe',
+  'Campaña digital',
+]
