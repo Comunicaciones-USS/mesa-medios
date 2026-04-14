@@ -33,11 +33,21 @@ export default function ExplorerSidebar({ rows, onClose, onFilter, onAddAction }
   }
 
   return (
+    <>
+    <div className="explorer-overlay" onClick={onClose} />
     <div className="explorer-sidebar">
       <div className="explorer-header">
-        <h3 className="explorer-title">
-          {selectedTema || selectedEje || 'Explorador'}
-        </h3>
+        <div>
+          <h3 className="explorer-title">
+            {selectedTema || selectedEje || 'Explorador'}
+          </h3>
+          {!selectedEje && (
+            <p className="explorer-subtitle">Selecciona un eje para navegar</p>
+          )}
+          {selectedEje && !selectedTema && (
+            <p className="explorer-subtitle">Selecciona un tema</p>
+          )}
+        </div>
         <button className="modal-close" onClick={onClose} style={{ color: '#fff' }}>
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
             <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
@@ -144,10 +154,11 @@ export default function ExplorerSidebar({ rows, onClose, onFilter, onAddAction }
             <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
               <path d="M6.5 1v11M1 6.5h11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
             </svg>
-            + Acción
+            Acción
           </button>
         </div>
       )}
     </div>
+    </>
   )
 }
