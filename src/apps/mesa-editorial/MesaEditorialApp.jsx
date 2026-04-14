@@ -7,6 +7,7 @@ import HeaderEditorial from './components/Header'
 import EditorialTable from './components/EditorialTable'
 import MobileCardViewEditorial from './components/MobileCardView'
 import AddActionModal from './components/AddActionModal'
+import ExplorerSidebar from './components/ExplorerSidebar'
 import AuditLogPanel from '../mesa-medios/components/AuditLogPanel'
 import Toaster from '../shared/components/Toaster'
 import ConfirmDialog from '../shared/components/ConfirmDialog'
@@ -21,8 +22,10 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
   const [showModal,     setShowModal]     = useState(false)
   const [showLogs,      setShowLogs]      = useState(false)
   const [showProfile,   setShowProfile]   = useState(false)
-  const [confirmDelete,      setConfirmDelete]      = useState(null)
-  const [addBacklogParentId, setAddBacklogParentId] = useState(null)
+  const [confirmDelete,   setConfirmDelete]   = useState(null)
+  const [showExplorer,    setShowExplorer]    = useState(false)
+  const [explorerFilter,  setExplorerFilter]  = useState(null)
+  const [prefilledAction, setPrefilledAction] = useState(null)
 
   // Filters
   const [filterInput,      setFilterInput]      = useState('')
@@ -108,6 +111,10 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
         r.responsable?.toLowerCase().includes(q)
       )
     }
+    if (explorerFilter) {
+      if (explorerFilter.eje)  result = result.filter(r => r.eje === explorerFilter.eje)
+      if (explorerFilter.tema) result = result.filter(r => r.tema === explorerFilter.tema)
+    }
     if (sortDir) {
       result = [...result].sort((a, b) => {
         const dateA = a.fecha || ''
@@ -117,7 +124,7 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
       })
     }
     return result
-  }, [rows, filterEje, filterStatus, filterTipoAccion, filterText, sortDir])
+  }, [rows, filterEje, filterStatus, filterTipoAccion, filterText, sortDir, explorerFilter])
 
   // KPI computed values
   const kpi = useMemo(() => {
@@ -127,6 +134,28 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
     const pct = rows.length > 0 ? Math.round((completadas / rows.length) * 100) : 0
     return { total: rows.length, completadas, enDesarrollo, pendientes, pct }
   }, [rows])
+
+  async function handleAssignOrphans(backlogIds, resultadoId) {
+    const resultado = rows.find(r => r.id === resultadoId)
+    if (!resultado) return
+
+    setRows(prev => prev.map(r =>
+      backlogIds.includes(r.id) ? { ...r, parent_id: resultadoId } : r
+    ))
+
+    const promises = backlogIds.map(id =>
+      supabase.from(TABLE).update({ parent_id: resultadoId }).eq('id', id)
+    )
+    const results = await Promise.all(promises)
+    const failed = results.filter(r => r.error)
+    if (failed.length > 0) {
+      addToast(`${failed.length} backlogs no se pudieron asociar.`, 'error')
+      fetchRows()
+    } else {
+      addToast(`${backlogIds.length} backlogs asociados a "${resultado.accion}"`, 'success')
+      await logAction('MODIFICAR', resultadoId, resultado.accion, `Asoció ${backlogIds.length} backlogs`)
+    }
+  }
 
   async function handleAddBacklog(parentId) {
     const parentRow = rows.find(r => r.id === parentId)
@@ -210,6 +239,15 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
         <span className="kpi-sep" />
         <span className="kpi-pct"><strong>{kpi.pct}%</strong> avance</span>
         <div className="kpi-actions">
+          <button className="btn-explorer" onClick={() => setShowExplorer(true)} title="Explorador">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <rect x="1" y="1" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.2"/>
+              <rect x="8" y="1" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.2"/>
+              <rect x="1" y="8" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.2"/>
+              <rect x="8" y="8" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.2"/>
+            </svg>
+            Explorador
+          </button>
           <button className="btn-add btn-add-sm" onClick={() => setShowModal(true)}>
             <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
               <path d="M6.5 1v11M1 6.5h11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
@@ -301,6 +339,13 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
         </div>
       </div>
 
+      {explorerFilter && (
+        <div className="explorer-active-filter">
+          <span>Filtrando: {explorerFilter.eje}{explorerFilter.tema ? ` › ${explorerFilter.tema}` : ''}</span>
+          <button onClick={() => setExplorerFilter(null)}>✕</button>
+        </div>
+      )}
+
       {loading && <div className="loading-state"><div className="spinner" /><span>Cargando acciones...</span></div>}
       {error && <div className="error-state"><strong>Error de conexión:</strong> {error}</div>}
 
@@ -312,6 +357,7 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
               onCellChange={handleCellChange}
               onDeleteRow={requestDeleteRow}
               onAddBacklog={handleAddBacklog}
+              onAssignOrphans={handleAssignOrphans}
               totalRows={rows.length}
               filterQuery={filterInput}
               onClearFilter={() => setFilterInput('')}
@@ -337,7 +383,27 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
         </>
       )}
 
-      {showModal && <AddActionModal onConfirm={handleAddRow} onClose={() => setShowModal(false)} existingResponsables={[...new Set(rows.map(r => r.responsable).filter(Boolean))]} existingTemas={[...new Set(rows.map(r => r.tema).filter(Boolean))]} />}
+      {showModal && (
+        <AddActionModal
+          onConfirm={handleAddRow}
+          onClose={() => { setShowModal(false); setPrefilledAction(null) }}
+          existingResponsables={[...new Set(rows.map(r => r.responsable).filter(Boolean))]}
+          existingTemas={[...new Set(rows.map(r => r.tema).filter(Boolean))]}
+          prefilled={prefilledAction}
+        />
+      )}
+      {showExplorer && (
+        <ExplorerSidebar
+          rows={rows}
+          onClose={() => { setShowExplorer(false); setExplorerFilter(null) }}
+          onFilter={(filter) => { setExplorerFilter(filter); setShowExplorer(false) }}
+          onAddAction={({ eje, tema }) => {
+            setShowExplorer(false)
+            setPrefilledAction({ eje, tema })
+            setShowModal(true)
+          }}
+        />
+      )}}
       {showLogs && <AuditLogPanel onClose={() => setShowLogs(false)} mesaType="editorial" />}
       {showProfile && <UserProfilePanel userEmail={session.user.email} userName={userName} onClose={() => setShowProfile(false)} />}
       {confirmDelete && (

@@ -10,11 +10,14 @@ export const EJE_LABELS = EJES.map(e => e.label)
 
 export const EJE_COLOR_MAP = Object.fromEntries(EJES.map(e => [e.label, e.color]))
 
+// Orden forzado: Ancla → Soporte → Always ON
 export const TIPOS_CONFIG = {
-  'Ancla':   { color: '#C8102E', bg: '#FEE2E2', label: 'Ancla' },
-  'AO':      { color: '#2A5BA8', bg: '#DBEAFE', label: 'AO' },
-  'Soporte': { color: '#7A2AB8', bg: '#EDE9FE', label: 'Soporte' },
+  'Ancla':     { color: '#C8102E', bg: '#FEE2E2', label: 'Ancla',     order: 1 },
+  'Soporte':   { color: '#7A2AB8', bg: '#EDE9FE', label: 'Soporte',   order: 2 },
+  'Always ON': { color: '#2A5BA8', bg: '#DBEAFE', label: 'Always ON', order: 3 },
 }
+
+export const TIPOS_ORDER = ['Ancla', 'Soporte', 'Always ON']
 
 export const STATUS_CONFIG = {
   'Completado':    { dot: '#16A34A', text: '#166534', bg: '#DCFCE7' },
@@ -27,10 +30,10 @@ export const STATUS_OPTIONS = ['Pendiente', 'En desarrollo', 'Completado']
 export const TIPO_ACCION_OPTIONS = ['Backlog', 'Resultado']
 
 export const TIPOLOGIA_RESULTADO_OPTIONS = [
-  'Evento institucional',
-  'Publicidad pagada',
-  'Publicación orgánica',
-  'Vocería / Entrevista',
-  'Documento / Informe',
-  'Campaña digital',
+  'Medios orgánicos',
+  'Redes Sociales',
+  'Medios Propios',
+  'Alianzas',
+  'Publicidad Pagada',
+  'Eventos Institucionales',
 ]

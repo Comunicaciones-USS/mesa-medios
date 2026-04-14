@@ -1,12 +1,14 @@
 export const MEDIA_COLS = [
   // ── MEDIOS PROPIOS ───────────────────────────────────────────────
-  { id: 'mailing',            label: 'Mailing',             sub: '',               group: 'PROPIOS' },
   { id: 'sitio_web',          label: 'Sitio Web',           sub: '',               group: 'PROPIOS' },
-  { id: 'whatsapp',           label: 'Whatsapp',            sub: '',               group: 'PROPIOS' },
+  { id: 'mailing',            label: 'Mailings',            sub: '',               group: 'PROPIOS' },
+  { id: 'rrss',               label: 'Redes Sociales',      sub: '',               group: 'PROPIOS' },
+  { id: 'youtube',            label: 'YouTube',             sub: '',               group: 'PROPIOS' },
+  { id: 'intranet',           label: 'Intranet',            sub: '',               group: 'PROPIOS' },
   { id: 'fondo_pantalla',     label: 'Fondo de Pantalla',   sub: '',               group: 'PROPIOS' },
-  { id: 'firmas',             label: 'Firmas',              sub: '',               group: 'PROPIOS' },
   { id: 'pantallas',          label: 'Pantallas',           sub: '',               group: 'PROPIOS' },
-  { id: 'rrss',               label: 'RRSS',                sub: '',               group: 'PROPIOS' },
+  { id: 'whatsapp',           label: 'WhatsApp',            sub: '',               group: 'PROPIOS' },
+  { id: 'firmas',             label: 'Firmas',              sub: '',               group: 'PROPIOS' },
   // ── MEDIOS PAGADOS ───────────────────────────────────────────────
   { id: 'lt_publirreportaje', label: 'LT / Educa',          sub: 'Publirreportaje', group: 'PAGADOS' },
   { id: 'lt_conversatorio',   label: 'LT / Educa',          sub: 'Conversatorio',   group: 'PAGADOS' },

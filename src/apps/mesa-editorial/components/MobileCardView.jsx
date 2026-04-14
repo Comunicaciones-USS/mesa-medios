@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { TIPOS_CONFIG, STATUS_CONFIG, STATUS_OPTIONS, EJE_COLOR_MAP } from '../config'
+import { TIPOS_CONFIG, TIPOS_ORDER, STATUS_CONFIG, STATUS_OPTIONS, EJE_COLOR_MAP } from '../config'
 
 function formatDate(dateStr) {
   if (!dateStr) return '—'
@@ -32,7 +32,13 @@ export default function MobileCardViewEditorial({ rows, onCellChange, onDeleteRo
   }
 
   // Agrupar igual que EjeSection
-  const resultados = rows.filter(r => r.tipo_accion === 'Resultado')
+  const resultados = rows
+    .filter(r => r.tipo_accion === 'Resultado')
+    .sort((a, b) => {
+      const orderA = TIPOS_ORDER.indexOf(a.tipo)
+      const orderB = TIPOS_ORDER.indexOf(b.tipo)
+      return (orderA === -1 ? 99 : orderA) - (orderB === -1 ? 99 : orderB)
+    })
   const backlogsByParent = {}
   const orphanBacklogs = []
 
