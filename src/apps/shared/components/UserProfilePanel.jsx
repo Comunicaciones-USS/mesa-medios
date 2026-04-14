@@ -68,7 +68,8 @@ export default function UserProfilePanel({ userEmail, userName, onClose }) {
           .order('created_at', { ascending: false })
           .limit(200),
         supabase.from('mesa_editorial_acciones')
-          .select('id, responsable, status, created_at, completed_at'),
+          .select('id, responsable, status, created_at, completed_at')
+          .ilike('responsable', `%${userName.split(' ')[0]}%`),
       ])
       setLogs(logsRes.data || [])
       setEditorialRows(editorialRes.data || [])
@@ -86,9 +87,8 @@ export default function UserProfilePanel({ userEmail, userName, onClose }) {
     const firstLogin = logins.length > 0 ? logins[logins.length - 1].created_at : null
     const lastLogin  = logins.length > 0 ? logins[0].created_at : null
 
-    // Acciones asignadas por nombre (primer nombre del usuario)
-    const firstName = userName.split(' ')[0].toLowerCase()
-    const assigned     = editorialRows.filter(r => r.responsable?.toLowerCase().includes(firstName))
+    // Acciones asignadas — ya vienen filtradas desde Supabase
+    const assigned     = editorialRows
     const completadas  = assigned.filter(r => r.status === 'Completado')
     const enDesarrollo = assigned.filter(r => r.status === 'En desarrollo')
     const pendientes   = assigned.filter(r => r.status === 'Pendiente')
