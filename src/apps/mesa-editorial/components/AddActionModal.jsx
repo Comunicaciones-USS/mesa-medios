@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
-import { EJES, TIPOS_CONFIG, TIPO_ACCION_OPTIONS } from '../config'
+import { EJES, TIPOS_CONFIG, TIPO_ACCION_OPTIONS, TIPOLOGIA_RESULTADO_OPTIONS } from '../config'
 
 export default function AddActionModal({ onConfirm, onClose, existingResponsables = [], existingTemas = [] }) {
   const [eje,         setEje]         = useState(EJES[0].label)
   const [tipo,        setTipo]        = useState('Ancla')
   const [tema,        setTema]        = useState('')
   const [accion,      setAccion]      = useState('')
-  const [tipoAccion,  setTipoAccion]  = useState('Backlog')
+  const [tipoAccion,         setTipoAccion]         = useState('Backlog')
+  const [tipologiaResultado, setTipologiaResultado] = useState('')
   const [fecha,       setFecha]       = useState('')
   const [responsable, setResponsable] = useState('')
   const firstRef = useRef(null)
@@ -28,6 +29,7 @@ export default function AddActionModal({ onConfirm, onClose, existingResponsable
       tema,
       accion: accion.trim(),
       tipo_accion: tipoAccion,
+      tipologia_resultado: tipoAccion === 'Resultado' ? tipologiaResultado || null : null,
       fecha: fecha || null,
       responsable,
       status: 'Pendiente',
@@ -86,6 +88,15 @@ export default function AddActionModal({ onConfirm, onClose, existingResponsable
                 <input type="date" value={fecha} onChange={e => setFecha(e.target.value)} />
               </div>
             </div>
+            {tipoAccion === 'Resultado' && (
+              <div className="form-group">
+                <label>Tipología de resultado</label>
+                <select value={tipologiaResultado} onChange={e => setTipologiaResultado(e.target.value)}>
+                  <option value="">Seleccionar tipología...</option>
+                  {TIPOLOGIA_RESULTADO_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+            )}
             <div className="form-group">
               <label>Responsable</label>
               <input type="text" list="responsable-suggestions" value={responsable} onChange={e => setResponsable(e.target.value)} placeholder="Nombre del responsable" />
