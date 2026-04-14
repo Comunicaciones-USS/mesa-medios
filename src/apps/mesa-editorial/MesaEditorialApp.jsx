@@ -128,6 +128,28 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
     return { total: rows.length, completadas, enDesarrollo, pendientes, pct }
   }, [rows])
 
+  async function handleAssignOrphans(backlogIds, resultadoId) {
+    const resultado = rows.find(r => r.id === resultadoId)
+    if (!resultado) return
+
+    setRows(prev => prev.map(r =>
+      backlogIds.includes(r.id) ? { ...r, parent_id: resultadoId } : r
+    ))
+
+    const promises = backlogIds.map(id =>
+      supabase.from(TABLE).update({ parent_id: resultadoId }).eq('id', id)
+    )
+    const results = await Promise.all(promises)
+    const failed = results.filter(r => r.error)
+    if (failed.length > 0) {
+      addToast(`${failed.length} backlogs no se pudieron asociar.`, 'error')
+      fetchRows()
+    } else {
+      addToast(`${backlogIds.length} backlogs asociados a "${resultado.accion}"`, 'success')
+      await logAction('MODIFICAR', resultadoId, resultado.accion, `Asoció ${backlogIds.length} backlogs`)
+    }
+  }
+
   async function handleAddBacklog(parentId) {
     const parentRow = rows.find(r => r.id === parentId)
     if (!parentRow) return
@@ -312,6 +334,7 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
               onCellChange={handleCellChange}
               onDeleteRow={requestDeleteRow}
               onAddBacklog={handleAddBacklog}
+              onAssignOrphans={handleAssignOrphans}
               totalRows={rows.length}
               filterQuery={filterInput}
               onClearFilter={() => setFilterInput('')}
