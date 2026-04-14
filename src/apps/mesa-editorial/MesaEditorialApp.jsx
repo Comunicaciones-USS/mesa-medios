@@ -44,7 +44,6 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
       })
       .subscribe()
     fetchRows()
-    logAction('LOGIN', null, null, 'Ingresó a Mesa Editorial')
     return () => supabase.removeChannel(channel)
   }, [])
 
