@@ -45,7 +45,7 @@ export default function App() {
         action:     'login',
         table_name: null,
         record_id:  null,
-        details:    'Inició sesión',
+        details:    JSON.stringify({ description: 'Inició sesión' }),
       }])
       const last = localStorage.getItem('uss_last_dashboard')
       if (last) setSelectedDashboard(last)
