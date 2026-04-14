@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { EJES } from '../config'
 import EjeSection from './EjeSection'
 
-export default function EditorialTable({ rows, onCellChange, onDeleteRow, filterQuery, totalRows, onClearFilter, onAdd }) {
+export default function EditorialTable({ rows, onCellChange, onDeleteRow, onAddBacklog, filterQuery, totalRows, onClearFilter, onAdd }) {
   const [collapsedEjes, setCollapsedEjes] = useState({})
 
   function toggleEje(ejeLabel) {
@@ -58,6 +58,7 @@ export default function EditorialTable({ rows, onCellChange, onDeleteRow, filter
             rows={ejeRows}
             onCellChange={onCellChange}
             onDeleteRow={onDeleteRow}
+            onAddBacklog={onAddBacklog}
             collapsed={!!collapsedEjes[eje.label]}
             onToggle={() => toggleEje(eje.label)}
           />
