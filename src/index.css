@@ -3381,3 +3381,82 @@ body {
     padding: 16px;
   }
 }
+
+/* ── Jerarquía Resultado → Backlog ── */
+
+/* Resultado row — fila padre destacada */
+.resultado-row {
+  background: #f8fafc !important;
+  border-left: 3px solid #ceb37c;
+}
+.resultado-row:hover {
+  background: #f1f5f9 !important;
+}
+
+.resultado-accion-text {
+  font-weight: 600;
+  color: #0f2b41;
+}
+
+.resultado-backlog-count {
+  display: block;
+  font-size: 0.68rem;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+/* Backlog row — fila hijo indentada */
+.backlog-row {
+  background: #fff;
+}
+
+.backlog-indent {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.backlog-connector {
+  color: #cbd5e1;
+  font-size: 0.85rem;
+  line-height: 1;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.backlog-label {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+/* Tipología select */
+.tipologia-select {
+  font-size: 0.8rem;
+  color: #374151;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  max-width: 140px;
+}
+
+/* Botón agregar backlog */
+.btn-add-backlog {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  border: 1px solid #e5e7eb;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-right: 4px;
+}
+.btn-add-backlog:hover {
+  border-color: #ceb37c;
+  color: #ceb37c;
+  background: #fefce8;
+}
