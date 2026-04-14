@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
 import { EJES, TIPOS_CONFIG, TIPO_ACCION_OPTIONS, TIPOLOGIA_RESULTADO_OPTIONS } from '../config'
 
-export default function AddActionModal({ onConfirm, onClose, existingResponsables = [], existingTemas = [] }) {
-  const [eje,         setEje]         = useState(EJES[0].label)
+export default function AddActionModal({ onConfirm, onClose, existingResponsables = [], existingTemas = [], prefilled }) {
+  const [eje,         setEje]         = useState(prefilled?.eje || EJES[0].label)
   const [tipo,        setTipo]        = useState('Ancla')
-  const [tema,        setTema]        = useState('')
+  const [tema,        setTema]        = useState(prefilled?.tema || '')
   const [accion,      setAccion]      = useState('')
   const [tipoAccion,         setTipoAccion]         = useState('Backlog')
   const [tipologiaResultado, setTipologiaResultado] = useState('')
