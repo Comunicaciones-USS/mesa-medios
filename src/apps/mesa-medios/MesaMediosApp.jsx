@@ -54,7 +54,7 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
   useEffect(() => {
     function handleKeyDown(e) {
       const tag = document.activeElement?.tagName
-      const inInput = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT'
+      const inInput = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || document.activeElement?.isContentEditable
       if (e.key === 'Escape') {
         if (showProfile)   { setShowProfile(false);  return }
         if (confirmDelete) { setConfirmDelete(null); return }
