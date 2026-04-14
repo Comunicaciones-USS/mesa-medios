@@ -21,7 +21,8 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
   const [showModal,     setShowModal]     = useState(false)
   const [showLogs,      setShowLogs]      = useState(false)
   const [showProfile,   setShowProfile]   = useState(false)
-  const [confirmDelete, setConfirmDelete] = useState(null)
+  const [confirmDelete,      setConfirmDelete]      = useState(null)
+  const [addBacklogParentId, setAddBacklogParentId] = useState(null)
 
   // Filters
   const [filterInput,      setFilterInput]      = useState('')
@@ -126,6 +127,27 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
     const pct = rows.length > 0 ? Math.round((completadas / rows.length) * 100) : 0
     return { total: rows.length, completadas, enDesarrollo, pendientes, pct }
   }, [rows])
+
+  async function handleAddBacklog(parentId) {
+    const parentRow = rows.find(r => r.id === parentId)
+    if (!parentRow) return
+
+    const data = {
+      eje: parentRow.eje,
+      tipo: parentRow.tipo,
+      tema: parentRow.tema,
+      accion: '',
+      tipo_accion: 'Backlog',
+      parent_id: parentId,
+      fecha: null,
+      responsable: '',
+      status: 'Pendiente',
+    }
+
+    const { data: inserted, error } = await supabase.from(TABLE).insert([data]).select().single()
+    if (error) { addToast('Error al agregar backlog.', 'error'); return }
+    await logAction('AGREGAR', inserted.id, 'Nuevo backlog', `Backlog para "${parentRow.accion}"`)
+  }
 
   async function handleAddRow(data) {
     const { data: inserted, error } = await supabase.from(TABLE).insert([data]).select().single()
@@ -289,6 +311,7 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
               rows={displayRows}
               onCellChange={handleCellChange}
               onDeleteRow={requestDeleteRow}
+              onAddBacklog={handleAddBacklog}
               totalRows={rows.length}
               filterQuery={filterInput}
               onClearFilter={() => setFilterInput('')}
