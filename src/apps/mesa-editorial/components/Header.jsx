@@ -1,6 +1,6 @@
 import logoUSS from '../../../assets/escudo-uss-horizontal-blanco.svg'
 
-export default function HeaderEditorial({ userName, userEmail, onLogout, onBackToSelector, onShowLogs, onShowProfile }) {
+export default function HeaderEditorial({ userName, userEmail, onLogout, onBackToSelector, onShowLogs, onShowProfile, onSwitchDashboard, otherDashboardName }) {
   const initials = userName
     ? userName.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
     : '?'
@@ -52,6 +52,14 @@ export default function HeaderEditorial({ userName, userEmail, onLogout, onBackT
           <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><rect x="1.5" y="1.5" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.3" /><path d="M4 5h7M4 7.5h7M4 10h4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" /></svg>
           <span>Actividad</span>
         </button>
+        {onSwitchDashboard && otherDashboardName && (
+          <button className="btn-switch-mesa" onClick={onSwitchDashboard} title={`Ir a ${otherDashboardName}`}>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M1 7h12M9 3l4 4-4 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            <span>{otherDashboardName}</span>
+          </button>
+        )}
       </div>
     </header>
   )
