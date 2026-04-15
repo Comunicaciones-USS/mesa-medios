@@ -15,7 +15,7 @@ import UserProfilePanel from '../shared/components/UserProfilePanel'
 
 const TABLE = 'mesa_editorial_acciones'
 
-export default function MesaEditorialApp({ session, userName, onLogout, onBackToSelector }) {
+export default function MesaEditorialApp({ session, userName, onLogout, onBackToSelector, onSwitchDashboard, otherDashboardName }) {
   const [rows,          setRows]          = useState([])
   const [loading,       setLoading]       = useState(true)
   const [error,         setError]         = useState(null)
@@ -225,6 +225,8 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
         onBackToSelector={onBackToSelector}
         onShowLogs={() => setShowLogs(true)}
         onShowProfile={() => setShowProfile(true)}
+        onSwitchDashboard={onSwitchDashboard}
+        otherDashboardName={otherDashboardName}
       />
 
       {/* ── KPI Bar ── */}

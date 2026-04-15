@@ -116,6 +116,8 @@ export default function App() {
       userName={userName}
       onLogout={handleLogout}
       onBackToSelector={handleBackToSelector}
+      onSwitchDashboard={() => handleSelectDashboard('editorial')}
+      otherDashboardName="Mesa Editorial"
     />
   )
 
@@ -125,6 +127,8 @@ export default function App() {
       userName={userName}
       onLogout={handleLogout}
       onBackToSelector={handleBackToSelector}
+      onSwitchDashboard={() => handleSelectDashboard('medios')}
+      otherDashboardName="Mesa de Medios"
     />
   )
 

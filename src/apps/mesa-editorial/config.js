@@ -1,9 +1,9 @@
 export const EJES = [
-  { id: 'discusion',     label: 'Discusión País',          color: '#2A5BA8' },
-  { id: 'orgullo',       label: 'Orgullo USS',              color: '#C8102E' },
-  { id: 'salud',         label: 'Salud',                    color: '#1D7A4F' },
-  { id: 'investigacion', label: 'Investigación',            color: '#7A2AB8' },
-  { id: 'vinculacion',   label: 'Vinculación con el Medio', color: '#B06A00' },
+  { id: 'discusion',     label: 'Discusión País',             color: '#2A5BA8', responsable: 'Yaritza Ross' },
+  { id: 'orgullo',       label: 'Orgullo USS',                color: '#C8102E', responsable: 'Natalie Traverso' },
+  { id: 'salud',         label: 'Salud y Medicina',           color: '#1D7A4F', responsable: 'Esteban López' },
+  { id: 'investigacion', label: 'Investigación y Tecnología', color: '#7A2AB8', responsable: 'Bárbara Ruiz' },
+  { id: 'vinculacion',   label: 'Impacto Territorial',        color: '#B06A00', responsable: 'Sebastián Fuentes' },
 ]
 
 export const EJE_LABELS = EJES.map(e => e.label)
