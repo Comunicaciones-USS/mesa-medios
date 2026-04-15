@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { MEDIA_COLS, N_PROPIOS, N_PAGADOS } from '../config'
+import { MEDIA_COLS, GROUPS, getGroupCols } from '../config'
 import { getCellData, getRowProgress } from '../utils'
 import CellPopover from './CellPopover'
 
@@ -20,11 +20,21 @@ function getCellMeta(raw) {
   return { status: 'empty', display: raw, name: '' }
 }
 
-export default function MediaTable({ rows, onCellChange, onFieldChange, onDeleteRow, totalRows, filterQuery, onClearFilter, onAdd }) {
+function isLastInGroup(col, index, cols) {
+  const next = cols[index + 1]
+  return !next || next.group !== col.group
+}
+
+export default function MediaTable({ rows, onCellChange, onFieldChange, onDeleteRow, totalRows, filterQuery, onClearFilter, onAdd, visibleCols }) {
   const [popover, setPopover] = useState(null)
   const [editingField, setEditingField] = useState(null)
   const [editValue, setEditValue] = useState('')
   const [hoverRow, setHoverRow] = useState(null)
+
+  const activeCols = visibleCols || MEDIA_COLS
+
+  // Build active groups based on visible cols
+  const activeGroups = GROUPS.filter(g => activeCols.some(c => c.group === g.id))
 
   function openPopover(e, rowId, colId, medios) {
     const { valor, notas } = getCellData(medios, colId)
@@ -59,30 +69,27 @@ export default function MediaTable({ rows, onCellChange, onFieldChange, onDelete
       <div className="table-scroll">
         <table className="media-table">
           <thead>
-            {/* ── Group header row ── */}
             <tr className="group-header-row">
-              <th className="sticky-col col-contenidos group-dark" rowSpan={2}>
-                CONTENIDOS
-              </th>
-              <th className="sticky-col col-semana group-dark" rowSpan={2}>
-                SEMANA
-              </th>
-              <th colSpan={N_PROPIOS} className="group-propios">
-                MEDIOS PROPIOS
-              </th>
-              <th colSpan={N_PAGADOS} className="group-pagados">
-                MEDIOS PAGADOS
-              </th>
-              <th className="col-actions group-dark" rowSpan={2} />
+              <th className="sticky-col col-contenidos group-dark" rowSpan={3}>TEMAS</th>
+              <th className="sticky-col col-semana group-dark" rowSpan={3}>FECHA</th>
+              {activeGroups.map(g => (
+                <th key={g.id} colSpan={activeCols.filter(c => c.group === g.id).length} className={`group-header ${g.className}`}>{g.label}</th>
+              ))}
+              <th className="col-actions group-dark" rowSpan={3} />
             </tr>
-
-            {/* ── Sub-header row ── */}
+            <tr className="subgroup-header-row">
+              {activeGroups.map(g => {
+                const cols = activeCols.filter(c => c.group === g.id)
+                const subs = [...new Set(cols.map(c => c.subgroup).filter(Boolean))]
+                if (subs.length > 0) return subs.map(sg => (
+                  <th key={sg} colSpan={cols.filter(c => c.subgroup === sg).length} className="subgroup-cell">{sg}</th>
+                ))
+                return <th key={g.id} colSpan={cols.length} className="subgroup-cell subgroup-empty" />
+              })}
+            </tr>
             <tr className="sub-header-row">
-              {MEDIA_COLS.map((col, i) => (
-                <th
-                  key={col.id}
-                  className={`sub-header ${col.group === 'PROPIOS' ? 'sub-propios' : 'sub-pagados'} ${i === N_PROPIOS - 1 ? 'border-group-right' : ''}`}
-                >
+              {activeCols.map(col => (
+                <th key={col.id} className="sub-header">
                   <span className="sub-label">{col.label}</span>
                   {col.sub && <span className="sub-sublabel">{col.sub}</span>}
                 </th>
@@ -93,13 +100,13 @@ export default function MediaTable({ rows, onCellChange, onFieldChange, onDelete
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={MEDIA_COLS.length + 3} className="empty-state-cell">
+                <td colSpan={activeCols.length + 3} className="empty-state-cell">
                   {totalRows === 0 ? (
                     <div className="empty-state">
                       <span className="empty-state-icon">📋</span>
-                      <p className="empty-state-title">Sin contenidos aún</p>
+                      <p className="empty-state-title">Sin temas aún</p>
                       <span className="empty-state-sub">Agrega el primero para comenzar la planificación</span>
-                      <button className="empty-state-cta" onClick={onAdd}>+ Agregar contenido</button>
+                      <button className="empty-state-cta" onClick={onAdd}>+ Agregar tema</button>
                     </div>
                   ) : (
                     <div className="empty-state">
@@ -121,7 +128,7 @@ export default function MediaTable({ rows, onCellChange, onFieldChange, onDelete
                     onMouseEnter={() => setHoverRow(row.id)}
                     onMouseLeave={() => setHoverRow(null)}
                   >
-                    {/* ── CONTENIDOS ── */}
+                    {/* ── TEMAS ── */}
                     <td className="sticky-col col-contenidos td-contenidos">
                       {isEditing && editingField.field === 'nombre' ? (
                         <input
@@ -157,7 +164,7 @@ export default function MediaTable({ rows, onCellChange, onFieldChange, onDelete
                       )}
                     </td>
 
-                    {/* ── SEMANA ── */}
+                    {/* ── FECHA ── */}
                     <td className="sticky-col col-semana td-semana">
                       {isEditing && editingField.field === 'semana' ? (
                         <input
@@ -184,14 +191,14 @@ export default function MediaTable({ rows, onCellChange, onFieldChange, onDelete
                     </td>
 
                     {/* ── MEDIA CELLS ── */}
-                    {MEDIA_COLS.map((col, i) => {
+                    {activeCols.map((col, i) => {
                       const { valor, notas } = getCellData(row.medios, col.id)
                       const meta = getCellMeta(valor)
                       const isOpen = popover?.rowId === row.id && popover?.colId === col.id
                       return (
                         <td
                           key={col.id}
-                          className={`media-cell status-${meta.status} ${i === N_PROPIOS - 1 ? 'border-group-right' : ''} ${isOpen ? 'cell-active' : ''}`}
+                          className={`media-cell status-${meta.status} ${isLastInGroup(col, i, activeCols) ? 'border-group-right' : ''} ${isOpen ? 'cell-active' : ''}`}
                           onClick={e => openPopover(e, row.id, col.id, row.medios)}
                           title={valor || 'Clic para asignar estado'}
                         >
