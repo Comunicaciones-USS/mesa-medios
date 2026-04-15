@@ -223,6 +223,16 @@ body {
 .group-pub-pagada { background: var(--primary-light); color: #fff; text-align: center; }
 .col-actions { background: var(--primary); width: 42px; min-width: 42px; }
 
+/* Group collapse toggle */
+.group-header { cursor: pointer; transition: opacity 0.15s; }
+.group-header:hover { opacity: 0.85; }
+.group-toggle-icon { font-size: 0.7rem; margin-right: 5px; display: inline-block; transition: transform 0.15s; }
+.group-collapsed { min-width: 32px !important; padding: 10px 6px !important; }
+.subgroup-collapsed { background: #f0f4fb; min-width: 32px; }
+.sub-header-placeholder { background: #dbeafe; min-width: 32px; }
+.group-collapsed-cell { background: #f5f8ff; min-width: 32px; max-width: 32px; width: 32px; cursor: pointer; border-right: 2px solid var(--border-group) !important; }
+.group-collapsed-cell:hover { background: #e3edf8; }
+
 /* ── Sub-headers ───────────────────────────────────────────────── */
 .sub-header-row th {
   padding: 8px 6px;

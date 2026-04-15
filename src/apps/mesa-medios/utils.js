@@ -23,3 +23,13 @@ export function getRowProgress(medios) {
   const total = MEDIA_COLS.length
   return { filled, total, pct: Math.round((filled / total) * 100) }
 }
+
+export function getRowProgressFiltered(medios, cols) {
+  if (!cols || cols.length === 0) return { filled: 0, total: 0, pct: 0 }
+  const filled = cols.filter(col => {
+    const { valor } = getCellData(medios, col.id)
+    return valor && valor !== 'no'
+  }).length
+  const total = cols.length
+  return { filled, total, pct: Math.round((filled / total) * 100) }
+}
