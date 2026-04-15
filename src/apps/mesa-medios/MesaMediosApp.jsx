@@ -181,7 +181,7 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
   const hasActiveFilters = filterInput || filterStatus !== 'all' || filterGroup !== 'all' || filterCellStatus !== 'all' || filterDateRange.from || filterDateRange.to
 
   return (
-    <div className="app app-fill-height">
+    <div className="app">
       <Header
         userName={userName}
         userEmail={session.user.email}
