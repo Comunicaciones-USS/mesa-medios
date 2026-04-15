@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../shared/utils/supabase'
-import { MEDIA_COLS } from './config'
+import { MEDIA_COLS, GROUPS, getGroupCols } from './config'
 import { getCellData, setCellData, getRowProgress } from './utils'
 import Header from './components/Header'
 import MediaTable from './components/MediaTable'
@@ -23,7 +23,7 @@ function sortRows(rows, direction) {
   })
 }
 
-export default function MesaMediosApp({ session, userName, onLogout, onBackToSelector }) {
+export default function MesaMediosApp({ session, userName, onLogout, onBackToSelector, onSwitchDashboard, otherDashboardName }) {
   const [rows,          setRows]          = useState([])
   const [loading,       setLoading]       = useState(true)
   const [error,         setError]         = useState(null)
@@ -35,6 +35,14 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
   const filterText = useDebounce(filterInput, 300)
   const [sortDir,       setSortDir]       = useState('asc')
   const { toasts, addToast, removeToast } = useToast()
+
+  // Filtros verticales (filas)
+  const [filterStatus,    setFilterStatus]    = useState('all')
+  const [filterDateRange, setFilterDateRange] = useState({ from: '', to: '' })
+
+  // Filtros horizontales (columnas)
+  const [filterGroup,      setFilterGroup]      = useState('all')
+  const [filterCellStatus, setFilterCellStatus] = useState('all')
 
   // Realtime subscription
   useEffect(() => {
@@ -104,13 +112,34 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
       const q = filterText.toLowerCase()
       result = result.filter(r => r.nombre?.toLowerCase().includes(q))
     }
+    if (filterDateRange.from) result = result.filter(r => r.semana >= filterDateRange.from)
+    if (filterDateRange.to) result = result.filter(r => r.semana <= filterDateRange.to)
+    if (filterStatus === 'filled') result = result.filter(r => getRowProgress(r.medios).pct === 100)
+    else if (filterStatus === 'empty') result = result.filter(r => getRowProgress(r.medios).pct === 0)
+    else if (filterStatus === 'partial') result = result.filter(r => { const p = getRowProgress(r.medios).pct; return p > 0 && p < 100 })
+    if (filterCellStatus !== 'all') {
+      const targetCols = filterGroup === 'all' ? MEDIA_COLS : MEDIA_COLS.filter(c => c.group === filterGroup)
+      result = result.filter(r => targetCols.some(col => {
+        const { valor } = getCellData(r.medios, col.id)
+        if (filterCellStatus === 'si') return valor?.toLowerCase().startsWith('si')
+        if (filterCellStatus === 'pd') return valor?.toLowerCase().startsWith('pd')
+        if (filterCellStatus === 'no') return valor?.toLowerCase() === 'no'
+        if (filterCellStatus === 'empty') return !valor
+        return true
+      }))
+    }
     return sortRows(result, sortDir)
-  }, [rows, filterText, sortDir])
+  }, [rows, filterText, sortDir, filterStatus, filterDateRange, filterGroup, filterCellStatus])
+
+  const visibleCols = useMemo(() => {
+    if (filterGroup === 'all') return MEDIA_COLS
+    return MEDIA_COLS.filter(c => c.group === filterGroup)
+  }, [filterGroup])
 
   async function handleAddRow({ nombre, semana }) {
     const { data, error } = await supabase
       .from('contenidos').insert([{ nombre, semana, medios: {} }]).select().single()
-    if (error) { addToast('Error al agregar el contenido. Intenta nuevamente.', 'error'); return }
+    if (error) { addToast('Error al agregar el tema. Intenta nuevamente.', 'error'); return }
     await logAction('AGREGAR', data.id, nombre, `Agregó "${nombre}"`)
     setShowModal(false)
   }
@@ -138,16 +167,18 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
 
   function requestDeleteRow(rowId) {
     const row = rows.find(r => r.id === rowId)
-    setConfirmDelete({ id: rowId, nombre: row?.nombre || 'este contenido' })
+    setConfirmDelete({ id: rowId, nombre: row?.nombre || 'este tema' })
   }
 
   async function handleDeleteRow(rowId) {
     const row = rows.find(r => r.id === rowId)
     setRows(prev => prev.filter(r => r.id !== rowId))
     const { error } = await supabase.from('contenidos').delete().eq('id', rowId)
-    if (error) { addToast('Error al eliminar el contenido.', 'error'); fetchRows(); return }
+    if (error) { addToast('Error al eliminar el tema.', 'error'); fetchRows(); return }
     await logAction('ELIMINAR', rowId, row?.nombre, `Eliminó "${row?.nombre}"`)
   }
+
+  const hasActiveFilters = filterInput || filterStatus !== 'all' || filterGroup !== 'all' || filterCellStatus !== 'all' || filterDateRange.from || filterDateRange.to
 
   return (
     <div className="app">
@@ -159,33 +190,75 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
         onShowLogs={() => setShowLogs(true)}
         onBackToSelector={onBackToSelector}
         onShowProfile={() => setShowProfile(true)}
+        onSwitchDashboard={onSwitchDashboard}
+        otherDashboardName={otherDashboardName}
       />
 
-      <div className="filter-bar">
-        <div className="filter-search">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.3" />
-            <path d="M9.5 9.5L13 13" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-          </svg>
-          <input type="text" placeholder="Filtrar contenidos..." value={filterInput}
-            onChange={e => setFilterInput(e.target.value)} className="filter-input" />
-          {filterInput && (
-            <button className="filter-clear" onClick={() => setFilterInput('')}>
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                <path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
-            </button>
-          )}
+      <div className="medios-filter-bar">
+        {/* Fila 1: Buscador + Fechas + Orden */}
+        <div className="medios-filter-row">
+          <div className="filter-search">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.3" />
+              <path d="M9.5 9.5L13 13" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+            </svg>
+            <input type="text" placeholder="Buscar temas..." value={filterInput}
+              onChange={e => setFilterInput(e.target.value)} className="filter-input" />
+            {filterInput && (
+              <button className="filter-clear" onClick={() => setFilterInput('')}>
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                  <path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+              </button>
+            )}
+          </div>
+          <div className="filter-date-range">
+            <input type="date" value={filterDateRange.from} onChange={e => setFilterDateRange(p => ({ ...p, from: e.target.value }))} className="filter-date-input" title="Desde" />
+            <span className="filter-date-sep">→</span>
+            <input type="date" value={filterDateRange.to} onChange={e => setFilterDateRange(p => ({ ...p, to: e.target.value }))} className="filter-date-input" title="Hasta" />
+            {(filterDateRange.from || filterDateRange.to) && (
+              <button className="filter-clear-sm" onClick={() => setFilterDateRange({ from: '', to: '' })}>✕</button>
+            )}
+          </div>
+          <button className="sort-btn" onClick={() => setSortDir(d => d === 'asc' ? 'desc' : 'asc')}>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M7 2v10M4 4l3-2.5L10 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: sortDir === 'asc' ? 1 : 0.3 }} />
+              <path d="M4 10l3 2.5L10 10" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: sortDir === 'desc' ? 1 : 0.3 }} />
+            </svg>
+            <span>Fecha</span>
+          </button>
         </div>
-        <button className="sort-btn" onClick={() => setSortDir(d => d === 'asc' ? 'desc' : 'asc')}
-          title={sortDir === 'asc' ? 'Más antigua primero' : 'Más reciente primero'}>
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <path d="M7 2v10M4 4l3-2.5L10 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: sortDir === 'asc' ? 1 : 0.3 }} />
-            <path d="M4 10l3 2.5L10 10" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: sortDir === 'desc' ? 1 : 0.3 }} />
-          </svg>
-          <span>Fecha</span>
-        </button>
-        {filterInput && <span className="filter-count">{displayRows.length} de {rows.length}</span>}
+
+        {/* Fila 2: Pills */}
+        <div className="medios-filter-pills-row">
+          <div className="filter-pills">
+            {[{ value: 'all', label: 'Todos' }, { value: 'filled', label: 'Completos' }, { value: 'partial', label: 'En progreso' }, { value: 'empty', label: 'Vacíos' }].map(f => (
+              <button key={f.value} className={`pill ${filterStatus === f.value ? 'pill-active' : ''}`} onClick={() => setFilterStatus(f.value)}>{f.label}</button>
+            ))}
+          </div>
+          <div className="filter-pills-divider" />
+          <div className="filter-pills">
+            <button className={`pill ${filterGroup === 'all' ? 'pill-active' : ''}`} onClick={() => setFilterGroup('all')}>Todos los medios</button>
+            {GROUPS.map(g => (
+              <button key={g.id} className={`pill ${filterGroup === g.id ? 'pill-active' : ''}`} onClick={() => setFilterGroup(filterGroup === g.id ? 'all' : g.id)}>{g.label}</button>
+            ))}
+          </div>
+          <div className="filter-pills-divider" />
+          <div className="filter-pills">
+            {[{ value: 'all', label: 'Todas las celdas' }, { value: 'si', label: '✓ Confirmado' }, { value: 'pd', label: '◉ Por definir' }, { value: 'no', label: '✕ No aplica' }, { value: 'empty', label: '○ Vacías' }].map(f => (
+              <button key={f.value} className={`pill ${filterCellStatus === f.value ? 'pill-active' : ''}`} onClick={() => setFilterCellStatus(f.value)}>{f.label}</button>
+            ))}
+          </div>
+        </div>
+
+        {/* Indicador activo */}
+        {hasActiveFilters && (
+          <div className="medios-filter-active">
+            <span className="filter-count">{displayRows.length} de {rows.length} temas</span>
+            {filterGroup !== 'all' && <span className="filter-count">· {visibleCols.length} columnas</span>}
+            <button className="filter-reset" onClick={() => { setFilterInput(''); setFilterStatus('all'); setFilterGroup('all'); setFilterCellStatus('all'); setFilterDateRange({ from: '', to: '' }) }}>Limpiar filtros</button>
+          </div>
+        )}
       </div>
 
       {loading && <div className="loading-state"><div className="spinner" /><span>Cargando datos...</span></div>}
@@ -194,7 +267,7 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
       {!loading && !error && (
         <>
           <div className="desktop-only">
-            <MediaTable rows={displayRows} onCellChange={handleCellChange} onFieldChange={handleFieldChange}
+            <MediaTable rows={displayRows} visibleCols={visibleCols} onCellChange={handleCellChange} onFieldChange={handleFieldChange}
               onDeleteRow={requestDeleteRow} totalRows={rows.length} filterQuery={filterInput}
               onClearFilter={() => setFilterInput('')} onAdd={() => setShowModal(true)} />
           </div>
