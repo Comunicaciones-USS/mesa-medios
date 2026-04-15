@@ -181,12 +181,17 @@ body {
   padding: 20px 24px;
 }
 .table-scroll {
-  overflow-x: auto;
-  overflow-y: visible;
+  overflow: auto;
+  max-height: calc(100vh - 180px);
   position: relative;
   border-radius: 10px;
   box-shadow: var(--shadow);
   background: #fff;
+}
+.media-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 20;
 }
 
 /* ── Table ─────────────────────────────────────────────────────── */
@@ -262,21 +267,22 @@ body {
 .col-contenidos {
   left: 0;
   min-width: 200px;
-  max-width: 220px;
-  border-right: 1px solid var(--border);
-  box-shadow: 1px 0 0 var(--border);
+  max-width: 200px;
+  border-right: none;
 }
 .col-semana {
-  left: 220px;
-  min-width: 110px;
+  left: 200px;
+  min-width: 100px;
+  border-left: 1px solid var(--border);
   border-right: 2px solid var(--border-group);
   box-shadow: 2px 0 0 var(--border-group);
 }
 
 /* sticky header cells */
 .group-header-row .sticky-col,
+.subgroup-header-row .sticky-col,
 .sub-header-row .sticky-col {
-  z-index: 30;
+  z-index: 31;
 }
 .group-header-row .col-contenidos,
 .group-header-row .col-semana {
