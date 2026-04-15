@@ -177,16 +177,11 @@ body {
 
 /* ── Table wrapper ─────────────────────────────────────────────── */
 .table-wrapper {
-  flex: 1;
-  min-height: 0;          /* allow flex item to shrink below its content size */
   padding: 20px 24px;
-  display: flex;
-  flex-direction: column;
 }
 .table-scroll {
-  overflow: auto;
-  flex: 1;                /* fill remaining height from table-wrapper */
-  min-height: 0;          /* allow flex item to shrink in the column */
+  overflow-x: auto;
+  overflow-y: clip;       /* clip ≠ scroll container — thead sticky works on page scroll */
   position: relative;
   border-radius: 10px;
   box-shadow: var(--shadow);
@@ -236,6 +231,7 @@ body {
   border-right: 1px solid var(--border);
   min-width: 90px;
   max-width: 110px;
+  background: #dbeafe;    /* solid bg — prevents row content bleeding through on scroll */
 }
 /* Subgrupos */
 .subgroup-header-row th { font-size: .68rem; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; padding: 6px 8px; text-align: center; border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); background: #e8f5e9; color: #1D7A4F; white-space: nowrap; overflow: visible; }
@@ -1978,37 +1974,8 @@ body {
   .sort-btn span { display: none; }
 }
 
-/* ── Mesa Medios full-height layout ─────────────────────────── */
-/* Pins the app to 100vh so table-scroll fills remaining space
-   without a hardcoded calc(100vh - Npx) offset */
-.app-fill-height {
-  height: 100vh;
-  overflow: auto;
-}
-/* Repair flex chain: .desktop-only is display:block by default,
-   so flex:1 on .table-wrapper has no effect. Make it a flex container
-   so the height-fill chain reaches .table-scroll correctly. */
-.app-fill-height .desktop-only {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
-/* On mobile, revert to normal flow so MobileCardView can scroll */
-@media (max-width: 768px) {
-  .app-fill-height {
-    height: auto;
-    min-height: 100vh;
-    overflow: visible;
-  }
-  .app-fill-height .desktop-only {
-    flex: none;
-    display: none;
-  }
-}
-
 /* ── Medios filter bar ───────────────────────────────────────── */
-.medios-filter-bar { position: sticky; top: 68px; z-index: 19; background: #fff; border-bottom: 1px solid #e5e7eb; padding: 10px 16px; display: flex; flex-direction: column; gap: 8px; }
+.medios-filter-bar { background: #fff; border-bottom: 1px solid #e5e7eb; padding: 10px 16px; display: flex; flex-direction: column; gap: 8px; }
 .medios-filter-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .medios-filter-pills-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .filter-date-range { display: flex; align-items: center; gap: 4px; }
