@@ -187,8 +187,8 @@ function ContentCard({ row, onCellChange, onFieldChange, onDeleteRow }) {
     return valor && valor.trim() !== ''
   })
 
-  const propios = MEDIA_COLS.filter(c => c.group === 'PROPIOS')
-  const pagados = MEDIA_COLS.filter(c => c.group === 'PAGADOS')
+  const propios = MEDIA_COLS.filter(c => c.group === 'ORGANICOS')
+  const pagados = MEDIA_COLS.filter(c => c.group === 'ALIANZAS' || c.group === 'PUB_PAGADA')
 
   function handleSheetSave(newValue, newNotas) {
     if (sheet) onCellChange(row.id, sheet.colId, newValue, newNotas)
@@ -305,12 +305,12 @@ function ContentCard({ row, onCellChange, onFieldChange, onDeleteRow }) {
         {/* ── Expanded view ── */}
         {expanded && (
           <div className="mobile-card-expand">
-            <div className="mobile-section-label">Medios propios</div>
+            <div className="mobile-section-label">Medios Orgánicos</div>
             <div className="mobile-medio-grid">
               {propios.map(renderMedioSlot)}
             </div>
 
-            <div className="mobile-section-label">Medios pagados</div>
+            <div className="mobile-section-label">Alianzas + Publicidad Pagada</div>
             <div className="mobile-medio-grid">
               {pagados.map(renderMedioSlot)}
             </div>
@@ -321,7 +321,7 @@ function ContentCard({ row, onCellChange, onFieldChange, onDeleteRow }) {
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                   <path d="M2 3.5h10M5.5 3.5V2h3v1.5M5.833 6v4M8.167 6v4M3 3.5l.5 8a1 1 0 001 .917h5a1 1 0 001-.917l.5-8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
-                Eliminar contenido
+                Eliminar tema
               </button>
             </div>
           </div>
@@ -351,9 +351,9 @@ export default function MobileCardView({ rows, onCellChange, onFieldChange, onDe
           {totalRows === 0 ? (
             <>
               <span className="empty-state-icon">📋</span>
-              <p className="empty-state-title">Sin contenidos aún</p>
+              <p className="empty-state-title">Sin temas aún</p>
               <span className="empty-state-sub">Agrega el primero para comenzar</span>
-              <button className="empty-state-cta" onClick={onAdd}>+ Agregar contenido</button>
+              <button className="empty-state-cta" onClick={onAdd}>+ Agregar tema</button>
             </>
           ) : (
             <>

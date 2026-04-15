@@ -31,7 +31,7 @@ export default function AddRowModal({ onConfirm, onClose, existingNames = [] }) 
   const formContent = (
     <>
       <div className="form-group">
-        <label htmlFor="nombre">Nombre del contenido *</label>
+        <label htmlFor="nombre">Nombre del tema *</label>
         <input
           ref={inputRef}
           id="nombre"
@@ -48,7 +48,7 @@ export default function AddRowModal({ onConfirm, onClose, existingNames = [] }) 
       </div>
 
       <div className="form-group">
-        <label htmlFor="semana">Semana de publicación</label>
+        <label htmlFor="semana">Fecha</label>
         <input
           id="semana"
           type="date"
@@ -70,7 +70,7 @@ export default function AddRowModal({ onConfirm, onClose, existingNames = [] }) 
         <div className="mobile-overlay" onClick={onClose} />
         <div className="mobile-sheet mobile-sheet-form">
           <div className="sheet-handle" />
-          <div className="sheet-title">Agregar contenido</div>
+          <div className="sheet-title">Agregar tema</div>
           <form onSubmit={handleSubmit}>
             {formContent}
             <button
@@ -79,7 +79,7 @@ export default function AddRowModal({ onConfirm, onClose, existingNames = [] }) 
               disabled={!nombre.trim()}
               style={{ marginTop: 8 }}
             >
-              Crear contenido
+              Crear tema
             </button>
             <button type="button" className="sheet-back-btn" onClick={onClose}>
               Cancelar
@@ -95,7 +95,7 @@ export default function AddRowModal({ onConfirm, onClose, existingNames = [] }) 
     <div className="modal-backdrop" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal">
         <div className="modal-header">
-          <h2>Agregar contenido</h2>
+          <h2>Agregar tema</h2>
           <button className="modal-close" onClick={onClose}>
             <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
               <path d="M4 4l10 10M14 4L4 14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
@@ -111,7 +111,7 @@ export default function AddRowModal({ onConfirm, onClose, existingNames = [] }) 
               Cancelar
             </button>
             <button type="submit" className="btn-primary" disabled={!nombre.trim()}>
-              Crear contenido
+              Crear tema
             </button>
           </div>
         </form>
