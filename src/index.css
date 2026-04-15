@@ -178,17 +178,22 @@ body {
 /* ── Table wrapper ─────────────────────────────────────────────── */
 .table-wrapper {
   flex: 1;
+  min-height: 0;          /* allow flex item to shrink below its content size */
   padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
 }
 .table-scroll {
   overflow: auto;
-  max-height: calc(100vh - 180px);
+  flex: 1;                /* fill remaining height from table-wrapper */
+  min-height: 0;          /* allow flex item to shrink in the column */
   position: relative;
   border-radius: 10px;
   box-shadow: var(--shadow);
   background: #fff;
 }
-.media-table thead th {
+/* Sticky thead as a single block — prevents row 3 from covering rows 1-2 on scroll */
+.media-table thead {
   position: sticky;
   top: 0;
   z-index: 20;
@@ -233,7 +238,7 @@ body {
   max-width: 110px;
 }
 /* Subgrupos */
-.subgroup-header-row th { font-size: .68rem; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; padding: 6px 8px; text-align: center; border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); background: #e8f5e9; color: #1D7A4F; }
+.subgroup-header-row th { font-size: .68rem; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; padding: 6px 8px; text-align: center; border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); background: #e8f5e9; color: #1D7A4F; white-space: nowrap; overflow: visible; }
 .subgroup-empty { background: #f0f4fb; }
 
 .sub-label {
@@ -1973,8 +1978,24 @@ body {
   .sort-btn span { display: none; }
 }
 
+/* ── Mesa Medios full-height layout ─────────────────────────── */
+/* Pins the app to 100vh so table-scroll fills remaining space
+   without a hardcoded calc(100vh - Npx) offset */
+.app-fill-height {
+  height: 100vh;
+  overflow: hidden;
+}
+/* On mobile, revert to normal flow so MobileCardView can scroll */
+@media (max-width: 768px) {
+  .app-fill-height {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+}
+
 /* ── Medios filter bar ───────────────────────────────────────── */
-.medios-filter-bar { position: sticky; top: 0; z-index: 19; background: #fff; border-bottom: 1px solid #e5e7eb; padding: 10px 16px; display: flex; flex-direction: column; gap: 8px; }
+.medios-filter-bar { position: sticky; top: 68px; z-index: 19; background: #fff; border-bottom: 1px solid #e5e7eb; padding: 10px 16px; display: flex; flex-direction: column; gap: 8px; }
 .medios-filter-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .medios-filter-pills-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .filter-date-range { display: flex; align-items: center; gap: 4px; }
