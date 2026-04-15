@@ -1983,7 +1983,16 @@ body {
    without a hardcoded calc(100vh - Npx) offset */
 .app-fill-height {
   height: 100vh;
-  overflow: hidden;
+  overflow: auto;
+}
+/* Repair flex chain: .desktop-only is display:block by default,
+   so flex:1 on .table-wrapper has no effect. Make it a flex container
+   so the height-fill chain reaches .table-scroll correctly. */
+.app-fill-height .desktop-only {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 /* On mobile, revert to normal flow so MobileCardView can scroll */
 @media (max-width: 768px) {
@@ -1991,6 +2000,10 @@ body {
     height: auto;
     min-height: 100vh;
     overflow: visible;
+  }
+  .app-fill-height .desktop-only {
+    flex: none;
+    display: none;
   }
 }
 
