@@ -139,6 +139,13 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
       planificaciones: (planifs || []).filter(p => p.tema_id === tema.id),
     }))
     setTemas(tree)
+
+    // Auto-expandir temas con 0 ó 1 planificaciones (solo en la carga inicial)
+    setExpandedTemas(prev => {
+      if (prev.size > 0) return prev
+      return new Set(tree.filter(t => t.planificaciones.length <= 1).map(t => t.id))
+    })
+
     setLoading(false)
   }
 
@@ -262,12 +269,30 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
   }
 
   function requestDeleteRow(planifId) {
-    let nombre = 'esta planificación'
+    let nombre = 'planificación'
     for (const t of temas) {
       const p = t.planificaciones.find(p => p.id === planifId)
-      if (p) { nombre = `la planificación del ${p.semana ? new Date(p.semana + 'T12:00:00').toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'tema'} en "${t.nombre}"`; break }
+      if (p) {
+        const dateStr = p.semana
+          ? new Date(p.semana + 'T12:00:00').toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' })
+          : 'sin fecha'
+        nombre = `planificación del ${dateStr} en "${t.nombre}"`
+        break
+      }
     }
-    setConfirmDelete({ id: planifId, nombre })
+    setConfirmDelete({ type: 'planif', id: planifId, nombre })
+  }
+
+  function requestDeleteTema(temaId) {
+    const tema = temas.find(t => t.id === temaId)
+    if (!tema) return
+    setConfirmDelete({
+      type: 'tema',
+      id: temaId,
+      nombre: tema.nombre || 'Sin nombre',
+      n: tema.planificaciones.length,
+      fromEditorial: tema.origen === 'editorial',
+    })
   }
 
   async function handleDeleteRow(planifId) {
@@ -275,22 +300,29 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
     for (const t of temas) {
       if (t.planificaciones.some(p => p.id === planifId)) { tema = t; break }
     }
-
     const { error } = await supabase.from('contenidos').delete().eq('id', planifId)
     if (error) { addToast('Error al eliminar.', 'error'); fetchData(); return }
-
-    // Si era la última planificación de un tema de origen medios, eliminar el tema también
-    if (tema && tema.planificaciones.length === 1 && tema.origen !== 'editorial') {
-      await supabase.from('temas').delete().eq('id', tema.id)
-      setTemas(prev => prev.filter(t => t.id !== tema.id))
-    } else {
-      setTemas(prev => prev.map(t =>
-        t.id === tema?.id
-          ? { ...t, planificaciones: t.planificaciones.filter(p => p.id !== planifId) }
-          : t
-      ))
-    }
+    setTemas(prev => prev.map(t =>
+      t.id === tema?.id
+        ? { ...t, planificaciones: t.planificaciones.filter(p => p.id !== planifId) }
+        : t
+    ))
     await logAction('ELIMINAR', planifId, tema?.nombre)
+  }
+
+  async function handleDeleteTema(temaId) {
+    const tema = temas.find(t => t.id === temaId)
+    const { error } = await supabase.from('temas').delete().eq('id', temaId)
+    if (error) { addToast('Error al eliminar el tema.', 'error'); return }
+    setTemas(prev => prev.filter(t => t.id !== temaId))
+    await logAction('ELIMINAR', temaId, tema?.nombre, 'Eliminó tema completo')
+  }
+
+  async function handleRenameTema(temaId, nombre) {
+    setTemas(prev => prev.map(t => t.id === temaId ? { ...t, nombre } : t))
+    const { error } = await supabase.from('temas').update({ nombre }).eq('id', temaId)
+    if (error) { addToast('Error al renombrar el tema.', 'error'); fetchData(); return }
+    await logAction('MODIFICAR', temaId, nombre, `Renombró tema → "${nombre}"`)
   }
 
   function handleOpenAddPlanificacion(temaId) {
@@ -398,6 +430,8 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
               onCellChange={handleCellChange}
               onFieldChange={handleFieldChange}
               onDeleteRow={requestDeleteRow}
+              onDeleteTema={requestDeleteTema}
+              onRenameTema={handleRenameTema}
               onAddPlanificacion={handleOpenAddPlanificacion}
               totalTemas={temas.length}
               filterQuery={filterInput}
@@ -411,11 +445,12 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
           </div>
           <div className="mobile-only">
             <MobileCardView
-              rows={displayTemas.flatMap(t => t.planificaciones)}
+              temas={displayTemas}
               onCellChange={handleCellChange}
               onFieldChange={handleFieldChange}
               onDeleteRow={requestDeleteRow}
-              totalRows={totalPlanifs}
+              onAddPlanificacion={handleOpenAddPlanificacion}
+              totalTemas={temas.length}
               filterQuery={filterInput}
               onClearFilter={() => setFilterInput('')}
               onAdd={() => setShowModal('new')}
@@ -449,8 +484,21 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
       {showProfile && <UserProfilePanel userEmail={session.user.email} userName={userName} onClose={() => setShowProfile(false)} />}
       {confirmDelete && (
         <ConfirmDialog
-          nombre={confirmDelete.nombre}
-          onConfirm={() => { handleDeleteRow(confirmDelete.id); setConfirmDelete(null) }}
+          title={
+            confirmDelete.type === 'tema'
+              ? `¿Eliminar tema "${confirmDelete.nombre}"?`
+              : '¿Eliminar planificación?'
+          }
+          body={
+            confirmDelete.type === 'tema'
+              ? `Se eliminará el tema y ${confirmDelete.n === 0 ? 'sus datos' : confirmDelete.n === 1 ? 'su 1 planificación' : `sus ${confirmDelete.n} planificaciones`}. Esta acción no se puede deshacer.${confirmDelete.fromEditorial ? '\n\nEste tema fue sincronizado desde Mesa Editorial. Eliminarlo solo afecta Mesa de Medios; la acción en Editorial no se modifica.' : ''}`
+              : `Se eliminará la ${confirmDelete.nombre}. Esta acción no se puede deshacer.`
+          }
+          onConfirm={() => {
+            if (confirmDelete.type === 'tema') handleDeleteTema(confirmDelete.id)
+            else handleDeleteRow(confirmDelete.id)
+            setConfirmDelete(null)
+          }}
           onCancel={() => setConfirmDelete(null)}
         />
       )}

@@ -1,7 +1,7 @@
 // src/components/ConfirmDialog.jsx
 import { useEffect, useRef } from 'react'
 
-export default function ConfirmDialog({ nombre, onConfirm, onCancel }) {
+export default function ConfirmDialog({ nombre, title, body, onConfirm, onCancel }) {
   const cancelRef = useRef(null)
 
   // Focus on "Cancelar" on open to prevent accidental deletion with Enter
@@ -27,10 +27,14 @@ export default function ConfirmDialog({ nombre, onConfirm, onCancel }) {
             <path d="M14 9v6M14 18v1.5" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" />
           </svg>
         </div>
-        <h3 className="confirm-title">¿Eliminar contenido?</h3>
-        <p className="confirm-body">
-          Se eliminará <strong>"{nombre}"</strong> y todos sus datos de medios asignados.
-          <br />Esta acción no se puede deshacer.
+        <h3 className="confirm-title">{title || '¿Eliminar contenido?'}</h3>
+        <p className="confirm-body" style={{ whiteSpace: 'pre-line' }}>
+          {body || (
+            <>
+              Se eliminará <strong>"{nombre}"</strong> y todos sus datos de medios asignados.
+              <br />Esta acción no se puede deshacer.
+            </>
+          )}
         </p>
         <div className="confirm-actions">
           <button ref={cancelRef} className="btn-ghost-cancel" onClick={onCancel}>

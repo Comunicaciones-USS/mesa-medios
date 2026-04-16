@@ -27,14 +27,19 @@ function buildValue(status, name) {
   return ''
 }
 
-// ── Bottom sheet component ──────────────────────────────────────
+function formatDate(dateStr) {
+  if (!dateStr) return '--/--'
+  return new Date(dateStr + 'T12:00:00').toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit' })
+}
+
+// ── Bottom sheet ────────────────────────────────────────────────
 function BottomSheet({ medio, currentValue, currentNotas, onSave, onClose }) {
-  const [step, setStep] = useState('options') // 'options' | 'name' | 'notas'
+  const [step,          setStep]          = useState('options')
   const [pendingStatus, setPendingStatus] = useState('si')
-  const [name, setName] = useState('')
-  const [notas, setNotas] = useState(currentNotas || '')
+  const [name,          setName]          = useState('')
+  const [notas,         setNotas]         = useState(currentNotas || '')
   const nameRef = useRef(null)
-  const meta = getCellMeta(currentValue)
+  const meta    = getCellMeta(currentValue)
 
   useEffect(() => {
     if (step === 'name' && nameRef.current) nameRef.current.focus()
@@ -61,10 +66,6 @@ function BottomSheet({ medio, currentValue, currentNotas, onSave, onClose }) {
     onSave(buildValue(pendingStatus, name), notas)
   }
 
-  function handleKeyDown(e) {
-    if (e.key === 'Enter' && name.trim()) handleConfirmName()
-  }
-
   return (
     <>
       <div className="mobile-overlay" onClick={onClose} />
@@ -80,39 +81,24 @@ function BottomSheet({ medio, currentValue, currentNotas, onSave, onClose }) {
             <div className="sheet-options">
               <button className="sheet-opt" onClick={() => handleSelect('si')}>
                 <span className="sheet-dot dot-si" />
-                <div>
-                  <div className="sheet-opt-label">Sí</div>
-                  <div className="sheet-opt-hint">Asignar responsable</div>
-                </div>
+                <div><div className="sheet-opt-label">Sí</div><div className="sheet-opt-hint">Asignar responsable</div></div>
               </button>
               <button className="sheet-opt" onClick={() => handleSelect('pd')}>
                 <span className="sheet-dot dot-pd" />
-                <div>
-                  <div className="sheet-opt-label">Por definir</div>
-                  <div className="sheet-opt-hint">Asignar responsable (opcional)</div>
-                </div>
+                <div><div className="sheet-opt-label">Por definir</div><div className="sheet-opt-hint">Responsable opcional</div></div>
               </button>
               <button className="sheet-opt" onClick={() => handleSelect('no')}>
                 <span className="sheet-dot dot-no" />
-                <div>
-                  <div className="sheet-opt-label">No</div>
-                  <div className="sheet-opt-hint">No se utilizará este medio</div>
-                </div>
+                <div><div className="sheet-opt-label">No aplica</div><div className="sheet-opt-hint">No se usará este medio</div></div>
               </button>
               {meta.status !== 'empty' && (
                 <button className="sheet-opt" onClick={() => handleSelect('clear')}>
                   <span className="sheet-dot dot-clear" />
-                  <div>
-                    <div className="sheet-opt-label">Limpiar</div>
-                    <div className="sheet-opt-hint">Quitar asignación</div>
-                  </div>
+                  <div><div className="sheet-opt-label">Limpiar</div><div className="sheet-opt-hint">Quitar asignación</div></div>
                 </button>
               )}
             </div>
-            {/* Notes toggle */}
-            <button className="sheet-notas-toggle" onClick={() => setStep('notas')}>
-              Ver detalles
-            </button>
+            <button className="sheet-notas-toggle" onClick={() => setStep('notas')}>Ver detalles</button>
           </>
         ) : step === 'name' ? (
           <div className="sheet-name-step">
@@ -123,33 +109,17 @@ function BottomSheet({ medio, currentValue, currentNotas, onSave, onClose }) {
               placeholder="Nombre del responsable"
               value={name}
               onChange={e => setName(e.target.value)}
-              onKeyDown={handleKeyDown}
+              onKeyDown={e => e.key === 'Enter' && name.trim() && handleConfirmName()}
             />
-            <button
-              className="sheet-confirm-btn"
-              onClick={handleConfirmName}
-              disabled={!name.trim()}
-            >
+            <button className="sheet-confirm-btn" onClick={handleConfirmName} disabled={!name.trim()}>
               Confirmar
             </button>
-            <button className="sheet-back-btn" onClick={() => setStep('options')}>
-              Volver
-            </button>
+            <button className="sheet-back-btn" onClick={() => setStep('options')}>Volver</button>
           </div>
         ) : (
           <div className="sheet-name-step">
             <div className="sheet-notas-header">
               <span className="sheet-notas-label">Detalles</span>
-              <button
-                className="sheet-notas-edit-btn"
-                onClick={() => document.querySelector('.sheet-notas-textarea')?.focus()}
-                title="Editar detalles"
-              >
-                <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-                  <path d="M1 12h3l7-7a1.8 1.8 0 00-2.5-2.5l-7 7v2.5z" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-                  <path d="M7.5 4l2.5 2.5" stroke="currentColor" strokeWidth="1" strokeLinecap="round"/>
-                </svg>
-              </button>
             </div>
             <textarea
               className="sheet-notas-textarea"
@@ -158,15 +128,10 @@ function BottomSheet({ medio, currentValue, currentNotas, onSave, onClose }) {
               onChange={e => setNotas(e.target.value)}
               rows={4}
             />
-            <button
-              className="sheet-confirm-btn"
-              onClick={() => { onSave(currentValue, notas); }}
-            >
+            <button className="sheet-confirm-btn" onClick={() => onSave(currentValue, notas)}>
               Guardar detalles
             </button>
-            <button className="sheet-back-btn" onClick={() => setStep('options')}>
-              Volver
-            </button>
+            <button className="sheet-back-btn" onClick={() => setStep('options')}>Volver</button>
           </div>
         )}
       </div>
@@ -174,55 +139,32 @@ function BottomSheet({ medio, currentValue, currentNotas, onSave, onClose }) {
   )
 }
 
-// ── Single card ─────────────────────────────────────────────────
-function ContentCard({ row, onCellChange, onFieldChange, onDeleteRow }) {
+// ── Planificación card (dentro del tema) ────────────────────────
+function PlanifCard({ planif, temaNombre, onCellChange, onDeleteRow }) {
   const [expanded, setExpanded] = useState(false)
-  const [sheet, setSheet] = useState(null) // { colId, medio, value, notas }
-  const [editingName, setEditingName] = useState(false)
-  const [nameValue, setNameValue] = useState(row.nombre)
+  const [sheet,    setSheet]    = useState(null)
 
-  // Count assigned medios
-  const assignedMedias = MEDIA_COLS.filter(col => {
-    const { valor } = getCellData(row.medios, col.id)
+  const assigned = MEDIA_COLS.filter(col => {
+    const { valor } = getCellData(planif.medios, col.id)
     return valor && valor.trim() !== ''
   })
 
-  const propios = MEDIA_COLS.filter(c => c.group === 'ORGANICOS')
-  const pagados = MEDIA_COLS.filter(c => c.group === 'ALIANZAS' || c.group === 'PUB_PAGADA')
-
   function handleSheetSave(newValue, newNotas) {
-    if (sheet) onCellChange(row.id, sheet.colId, newValue, newNotas)
+    if (sheet) onCellChange(planif.id, sheet.colId, newValue, newNotas)
     setSheet(null)
   }
 
-  function handleNameBlur() {
-    if (nameValue !== row.nombre) onFieldChange(row.id, 'nombre', nameValue)
-    setEditingName(false)
-  }
-
-  function handleNameKeyDown(e) {
-    if (e.key === 'Enter') handleNameBlur()
-    if (e.key === 'Escape') { setNameValue(row.nombre); setEditingName(false) }
-  }
-
-  function renderMedioSlot(col) {
-    const { valor, notas } = getCellData(row.medios, col.id)
+  function renderSlot(col) {
+    const { valor, notas } = getCellData(planif.medios, col.id)
     const meta = getCellMeta(valor)
-    const statusClass = meta.status === 'empty' ? 'empty-slot' : `val-${meta.status}`
-
     return (
       <div
         key={col.id}
-        className={`mobile-medio-slot ${statusClass}`}
-        onClick={(e) => {
-          e.stopPropagation()
-          setSheet({ colId: col.id, medio: col, value: valor, notas })
-        }}
+        className={`mobile-medio-slot ${meta.status === 'empty' ? 'empty-slot' : `val-${meta.status}`}`}
+        onClick={e => { e.stopPropagation(); setSheet({ colId: col.id, medio: col, value: valor, notas }) }}
       >
         <div className="mobile-medio-name">{col.label}{col.sub ? ` · ${col.sub}` : ''}</div>
-        <div className="mobile-medio-value">
-          {meta.status === 'empty' ? 'Tocar para asignar' : meta.display}
-        </div>
+        <div className="mobile-medio-value">{meta.status === 'empty' ? 'Tocar para asignar' : meta.display}</div>
         {notas && (
           <div className="mobile-medio-has-notes">
             <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
@@ -237,84 +179,51 @@ function ContentCard({ row, onCellChange, onFieldChange, onDeleteRow }) {
 
   return (
     <>
-      <div className={`mobile-card ${expanded ? 'expanded' : ''}`}>
-        {/* ── Header ── */}
-        <div className="mobile-card-header" onClick={() => setExpanded(!expanded)}>
-          <div className="mobile-card-title-area">
-            {editingName ? (
-              <input
-                className="mobile-card-name-input"
-                value={nameValue}
-                onChange={e => setNameValue(e.target.value)}
-                onBlur={handleNameBlur}
-                onKeyDown={handleNameKeyDown}
-                onClick={e => e.stopPropagation()}
-                autoFocus
-              />
-            ) : (
-              <span
-                className="mobile-card-title"
-                onDoubleClick={(e) => { e.stopPropagation(); setEditingName(true) }}
-              >
-                {row.nombre || 'Sin nombre'}
-              </span>
-            )}
-          </div>
-          <div className="mobile-card-right">
-            <span className="mobile-card-date">
-              {row.semana
-                ? new Date(row.semana + 'T12:00:00').toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit' })
-                : '--/--'
-              }
-            </span>
-            <svg className={`mobile-card-arrow ${expanded ? 'rotated' : ''}`} width="18" height="18" viewBox="0 0 16 16" fill="none">
-              <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </div>
+      <div className={`mobile-planif-card ${expanded ? 'expanded' : ''}`}>
+        <div className="mobile-planif-header" onClick={() => setExpanded(!expanded)}>
+          <span className="mobile-planif-date">{formatDate(planif.semana)}</span>
+          {!expanded && assigned.length > 0 && (
+            <div className="mobile-card-chips">
+              {assigned.slice(0, 4).map(col => {
+                const { valor } = getCellData(planif.medios, col.id)
+                const meta = getCellMeta(valor)
+                return (
+                  <span key={col.id} className={`mobile-chip chip-${meta.status}`}>
+                    {col.label}{meta.name ? ` · ${meta.name}` : ''}
+                  </span>
+                )
+              })}
+              {assigned.length > 4 && <span className="mobile-chip chip-more">+{assigned.length - 4}</span>}
+            </div>
+          )}
+          <svg className={`mobile-card-arrow ${expanded ? 'rotated' : ''}`} width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
         </div>
 
-        {/* ── Chips (collapsed view) ── */}
-        {!expanded && assignedMedias.length > 0 && (
-          <div className="mobile-card-chips">
-            {assignedMedias.map(col => {
-              const { valor } = getCellData(row.medios, col.id)
-              const meta = getCellMeta(valor)
-              return (
-                <span key={col.id} className={`mobile-chip chip-${meta.status}`}>
-                  {col.label}{col.sub ? ` · ${col.sub}` : ''}{meta.name ? ` · ${meta.name}` : ''}
-                </span>
-              )
-            })}
-          </div>
-        )}
-
-        {/* ── Expanded view ── */}
         {expanded && (
           <div className="mobile-card-expand">
             <div className="mobile-section-label">Medios Orgánicos</div>
             <div className="mobile-medio-grid">
-              {propios.map(renderMedioSlot)}
+              {MEDIA_COLS.filter(c => c.group === 'ORGANICOS').map(renderSlot)}
             </div>
-
             <div className="mobile-section-label">Alianzas + Publicidad Pagada</div>
             <div className="mobile-medio-grid">
-              {pagados.map(renderMedioSlot)}
+              {MEDIA_COLS.filter(c => c.group === 'ALIANZAS' || c.group === 'PUB_PAGADA').map(renderSlot)}
             </div>
-
-            {/* ── Card actions ── */}
             <div className="mobile-card-actions">
-              <button className="mobile-btn-delete" onClick={() => onDeleteRow(row.id)}>
+              <button className="mobile-btn-delete" onClick={() => onDeleteRow(planif.id)}>
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                  <path d="M2 3.5h10M5.5 3.5V2h3v1.5M5.833 6v4M8.167 6v4M3 3.5l.5 8a1 1 0 001 .917h5a1 1 0 001-.917l.5-8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M2 3.5h10M5.5 3.5V2h3v1.5M5.833 6v4M8.167 6v4M3 3.5l.5 8a1 1 0 001 .917h5a1 1 0 001-.917l.5-8"
+                    stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
-                Eliminar tema
+                Eliminar planificación
               </button>
             </div>
           </div>
         )}
       </div>
 
-      {/* ── Bottom sheet ── */}
       {sheet && (
         <BottomSheet
           medio={sheet.medio}
@@ -328,13 +237,77 @@ function ContentCard({ row, onCellChange, onFieldChange, onDeleteRow }) {
   )
 }
 
+// ── Tema card ────────────────────────────────────────────────────
+function TemaCard({ tema, onCellChange, onFieldChange, onDeleteRow, onAddPlanificacion }) {
+  const [expanded, setExpanded] = useState(tema.planificaciones.length <= 1)
+  const n = tema.planificaciones.length
+
+  return (
+    <div className={`mobile-tema-card ${expanded ? 'expanded' : ''}`}>
+      {/* Header del tema */}
+      <div className="mobile-tema-header" onClick={() => setExpanded(!expanded)}>
+        <div className="mobile-tema-title-area">
+          <span className="mobile-tema-title">{tema.nombre || 'Sin nombre'}</span>
+          <span className="planif-count">{n} {n === 1 ? 'fecha' : 'fechas'}</span>
+          {tema.origen === 'editorial' && (
+            <span className="sync-badge" style={{ fontSize: '0.6rem' }}>Editorial</span>
+          )}
+        </div>
+        <svg className={`mobile-card-arrow ${expanded ? 'rotated' : ''}`} width="18" height="18" viewBox="0 0 16 16" fill="none">
+          <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </div>
+
+      {/* Planificaciones expandidas */}
+      {expanded && (
+        <div className="mobile-tema-planifs">
+          {n === 0 ? (
+            <div className="mobile-planif-empty">
+              <button className="btn-add-primera-fecha" onClick={() => onAddPlanificacion(tema.id)}>
+                + Agregar primera fecha
+              </button>
+            </div>
+          ) : (
+            <>
+              {tema.planificaciones.map(planif => (
+                <PlanifCard
+                  key={planif.id}
+                  planif={planif}
+                  temaNombre={tema.nombre}
+                  onCellChange={onCellChange}
+                  onDeleteRow={onDeleteRow}
+                />
+              ))}
+              <div className="mobile-planif-add">
+                <button className="btn-add-otra-fecha" onClick={() => onAddPlanificacion(tema.id)}>
+                  + Agregar otra fecha
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Main component ──────────────────────────────────────────────
-export default function MobileCardView({ rows, onCellChange, onFieldChange, onDeleteRow, totalRows, filterQuery, onClearFilter, onAdd }) {
+export default function MobileCardView({
+  temas,
+  onCellChange,
+  onFieldChange,
+  onDeleteRow,
+  onAddPlanificacion,
+  totalTemas,
+  filterQuery,
+  onClearFilter,
+  onAdd,
+}) {
   return (
     <div className="mobile-card-view">
-      {rows.length === 0 ? (
+      {temas.length === 0 ? (
         <div className="mobile-empty">
-          {totalRows === 0 ? (
+          {totalTemas === 0 ? (
             <>
               <span className="empty-state-icon">📋</span>
               <p className="empty-state-title">Sin temas aún</p>
@@ -351,13 +324,14 @@ export default function MobileCardView({ rows, onCellChange, onFieldChange, onDe
           )}
         </div>
       ) : (
-        rows.map(row => (
-          <ContentCard
-            key={row.id}
-            row={row}
+        temas.map(tema => (
+          <TemaCard
+            key={tema.id}
+            tema={tema}
             onCellChange={onCellChange}
             onFieldChange={onFieldChange}
             onDeleteRow={onDeleteRow}
+            onAddPlanificacion={onAddPlanificacion}
           />
         ))
       )}

@@ -3,13 +3,7 @@ import { MEDIA_COLS, GROUPS } from '../config'
 import { getCellData } from '../utils'
 import CellPopover from './CellPopover'
 
-// Devuelve el estado agregado de una lista de valores (prioridad: si > pd > no > empty)
-function getAggregatedStatus(valores) {
-  if (valores.some(v => v && v.toLowerCase().startsWith('si'))) return 'si'
-  if (valores.some(v => v && v.toLowerCase().startsWith('pd'))) return 'pd'
-  if (valores.some(v => v && v.toLowerCase() === 'no'))         return 'no'
-  return 'empty'
-}
+// ── Helpers ───────────────────────────────────────────────────────
 
 function getCellMeta(raw) {
   if (!raw) return { status: 'empty', display: '', name: '' }
@@ -17,12 +11,12 @@ function getCellMeta(raw) {
   if (lower === 'no') return { status: 'no', display: 'No', name: '' }
   if (lower.startsWith('pd')) {
     const parts = raw.split('/')
-    const name = parts[1]?.trim() || ''
+    const name  = parts[1]?.trim() || ''
     return { status: 'pd', display: name || 'PD', name }
   }
   if (lower.startsWith('si')) {
     const parts = raw.split('/')
-    const name = parts[1]?.trim() || 'Sí'
+    const name  = parts[1]?.trim() || 'Sí'
     return { status: 'si', display: name, name }
   }
   return { status: 'empty', display: raw, name: '' }
@@ -30,14 +24,42 @@ function getCellMeta(raw) {
 
 function formatDate(dateStr) {
   if (!dateStr) return null
-  return new Date(dateStr + 'T12:00:00').toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  return new Date(dateStr + 'T12:00:00').toLocaleDateString('es-CL', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+  })
 }
+
+// Estadísticas para la barra del tema (próxima fecha, canales activos)
+function getTemaStats(tema) {
+  const today  = new Date().toISOString().split('T')[0]
+  const sorted = tema.planificaciones
+    .filter(p => p.semana)
+    .map(p => p.semana)
+    .sort()
+  const future = sorted.filter(d => d >= today)
+  const past   = sorted.filter(d => d < today).reverse()
+
+  const targetDate = future[0] || past[0] || null
+  const isNext     = future.length > 0
+
+  const activeChannels = MEDIA_COLS.filter(col =>
+    tema.planificaciones.some(p =>
+      getCellData(p.medios, col.id).valor?.toLowerCase().startsWith('si')
+    )
+  ).length
+
+  return { targetDate, isNext, activeChannels }
+}
+
+// ── Component ─────────────────────────────────────────────────────
 
 export default function MediaTable({
   temas,
   onCellChange,
   onFieldChange,
   onDeleteRow,
+  onDeleteTema,
+  onRenameTema,
   onAddPlanificacion,
   totalTemas,
   filterQuery,
@@ -46,21 +68,39 @@ export default function MediaTable({
   visibleCols,
   collapsedGroups = new Set(),
   onToggleGroup,
-  expandedTemas = new Set(),
+  expandedTemas   = new Set(),
   onToggleTema,
 }) {
-  const [popover,      setPopover]      = useState(null)
-  const [editingField, setEditingField] = useState(null)
-  const [editValue,    setEditValue]    = useState('')
-  const [hoverPlanif,  setHoverPlanif]  = useState(null)
+  const [popover,          setPopover]          = useState(null)
+  const [editingField,     setEditingField]     = useState(null)
+  const [editValue,        setEditValue]        = useState('')
+  const [hoverPlanif,      setHoverPlanif]      = useState(null)
+  const [editingTemaId,    setEditingTemaId]    = useState(null)
+  const [editingTemaName,  setEditingTemaName]  = useState('')
 
-  const activeCols   = visibleCols || MEDIA_COLS
-  const activeGroups = GROUPS.filter(g => activeCols.some(c => c.group === g.id))
-  const expandedCols = activeCols.filter(c => !collapsedGroups.has(c.group))
-
+  const activeCols          = visibleCols || MEDIA_COLS
+  const activeGroups        = GROUPS.filter(g => activeCols.some(c => c.group === g.id))
+  const expandedCols        = activeCols.filter(c => !collapsedGroups.has(c.group))
   const collapsedGroupCount = activeGroups.filter(g => collapsedGroups.has(g.id)).length
-  const emptyColSpan = expandedCols.length + collapsedGroupCount + 3
+  // 1 TEMAS col + 1 FECHA col + media cols + 1 per collapsed group + 1 actions
+  const totalColSpan = expandedCols.length + collapsedGroupCount + 3
 
+  // Contexto para el badge de edición activa
+  let editBadgeTema = null, editBadgePlanif = null, editBadgeCol = null
+  if (popover) {
+    outer: for (const t of temas) {
+      for (const p of t.planificaciones) {
+        if (p.id === popover.rowId) {
+          editBadgeTema   = t
+          editBadgePlanif = p
+          editBadgeCol    = activeCols.find(c => c.id === popover.colId) || null
+          break outer
+        }
+      }
+    }
+  }
+
+  // ── Popover ────────────────────────────────────────────────────
   function openPopover(e, planifId, colId, medios) {
     const { valor, notas } = getCellData(medios, colId)
     const rect = e.currentTarget.getBoundingClientRect()
@@ -72,6 +112,7 @@ export default function MediaTable({
     setPopover(null)
   }
 
+  // ── Edición inline de fecha ────────────────────────────────────
   function startEditField(planifId, field, currentValue) {
     setEditingField({ rowId: planifId, field })
     setEditValue(currentValue || '')
@@ -83,16 +124,42 @@ export default function MediaTable({
   }
 
   function handleFieldKeyDown(e) {
-    if (e.key === 'Enter') commitEditField()
+    if (e.key === 'Enter')  commitEditField()
     if (e.key === 'Escape') setEditingField(null)
   }
 
-  // Celdas de medios individuales de una planificación
+  // ── Edición inline de nombre del tema ─────────────────────────
+  function startEditTema(temaId, nombre) {
+    setEditingTemaId(temaId)
+    setEditingTemaName(nombre || '')
+  }
+
+  function commitTemaName() {
+    if (editingTemaId && editingTemaName.trim()) {
+      onRenameTema(editingTemaId, editingTemaName.trim())
+    }
+    setEditingTemaId(null)
+    setEditingTemaName('')
+  }
+
+  function handleTemaNameKey(e) {
+    if (e.key === 'Enter')  commitTemaName()
+    if (e.key === 'Escape') { setEditingTemaId(null); setEditingTemaName('') }
+    e.stopPropagation()
+  }
+
+  // ── Celdas de medios de una planificación ─────────────────────
   function renderMediaCells(planif) {
     return activeGroups.flatMap(g => {
-      const isCollapsed = collapsedGroups.has(g.id)
-      if (isCollapsed) {
-        return [<td key={`col-${g.id}`} className="group-collapsed-cell" onClick={() => onToggleGroup?.(g.id)} title="Expandir grupo" />]
+      if (collapsedGroups.has(g.id)) {
+        return [
+          <td
+            key={`col-${g.id}`}
+            className="group-collapsed-cell"
+            onClick={() => onToggleGroup?.(g.id)}
+            title="Expandir grupo"
+          />,
+        ]
       }
       const groupCols = activeCols.filter(c => c.group === g.id)
       return groupCols.map((col, i) => {
@@ -115,82 +182,26 @@ export default function MediaTable({
     })
   }
 
-  // Celdas agregadas de un tema — comportamiento según número de planificaciones:
-  //   n=0 → click agrega planificación
-  //   n=1 → se comporta exactamente como una celda individual (abre popover directo)
-  //   n>1 → muestra color dominante; click expande el tema para editar individualmente
-  function renderAggregatedCells(tema) {
-    const n = tema.planificaciones.length
-    return activeGroups.flatMap(g => {
-      const isCollapsed = collapsedGroups.has(g.id)
-      if (isCollapsed) {
-        return [<td key={`col-${g.id}`} className="group-collapsed-cell" onClick={() => onToggleGroup?.(g.id)} title="Expandir grupo" />]
-      }
-      const groupCols = activeCols.filter(c => c.group === g.id)
-      return groupCols.map((col, i) => {
-        const isLast = i === groupCols.length - 1
-
-        // ── Sin planificaciones ──
-        if (n === 0) {
-          return (
-            <td
-              key={col.id}
-              className={`media-cell tema-agg-cell status-empty${isLast ? ' border-group-right' : ''}`}
-              onClick={() => onAddPlanificacion(tema.id)}
-              title="Agregar planificación"
-            />
-          )
-        }
-
-        // ── Una sola planificación: celda idéntica a la vista expandida ──
-        if (n === 1) {
-          const planif = tema.planificaciones[0]
-          const { valor, notas } = getCellData(planif.medios, col.id)
-          const meta   = getCellMeta(valor)
-          const isOpen = popover?.rowId === planif.id && popover?.colId === col.id
-          return (
-            <td
-              key={col.id}
-              className={`media-cell tema-agg-cell status-${meta.status}${isLast ? ' border-group-right' : ''}${isOpen ? ' cell-active' : ''}`}
-              onClick={e => openPopover(e, planif.id, col.id, planif.medios)}
-              title={valor || 'Clic para asignar estado'}
-            >
-              {meta.display && <span className="cell-text">{meta.display}</span>}
-              {notas && <span className="cell-notes-icon" title="Tiene detalles" />}
-            </td>
-          )
-        }
-
-        // ── Múltiples planificaciones: color dominante; click expande el tema ──
-        const valores   = tema.planificaciones.map(p => getCellData(p.medios, col.id).valor)
-        const aggStatus = getAggregatedStatus(valores)
-        const isMixed   = aggStatus !== 'empty' && valores.some(v => {
-          const s = !v ? 'empty'
-            : v.toLowerCase().startsWith('si') ? 'si'
-            : v.toLowerCase().startsWith('pd') ? 'pd'
-            : v.toLowerCase() === 'no' ? 'no' : 'empty'
-          return s !== aggStatus
-        })
-        return (
-          <td
-            key={col.id}
-            className={`media-cell tema-agg-cell status-${aggStatus}${isLast ? ' border-group-right' : ''}`}
-            onClick={() => onToggleTema(tema.id)}
-            title="Expande el tema para editar cada planificación"
-          >
-            {isMixed && <span className="agg-mixed" title="Planificaciones con estados distintos">◐</span>}
-          </td>
-        )
-      })
-    })
-  }
-
+  // ── Render ─────────────────────────────────────────────────────
   return (
     <div className="table-wrapper">
       <div className="table-scroll">
         <table className="media-table">
+          {/* colgroup fija anchos de columnas sticky para evitar estiramientos al colapsar grupos */}
+          <colgroup>
+            <col style={{ width: 200, minWidth: 200, maxWidth: 200 }} />
+            <col style={{ width: 100, minWidth: 100, maxWidth: 100 }} />
+            {activeGroups.flatMap(g => {
+              if (collapsedGroups.has(g.id)) return [<col key={g.id} style={{ width: 32 }} />]
+              return activeCols.filter(c => c.group === g.id).map(col => (
+                <col key={col.id} style={{ width: 90, minWidth: 90 }} />
+              ))
+            })}
+            <col style={{ width: 42, minWidth: 42 }} />
+          </colgroup>
+
           <thead>
-            {/* ROW 1: Group headers */}
+            {/* ROW 1: Grupos */}
             <tr className="group-header-row">
               <th className="sticky-col col-contenidos group-dark" rowSpan={3}>TEMAS</th>
               <th className="sticky-col col-semana group-dark" rowSpan={3}>FECHA</th>
@@ -217,14 +228,13 @@ export default function MediaTable({
               <th className="col-actions group-dark" rowSpan={3} />
             </tr>
 
-            {/* ROW 2: Subgroup headers */}
+            {/* ROW 2: Subgrupos */}
             <tr className="subgroup-header-row">
               {activeGroups.map(g => {
-                const isCollapsed = collapsedGroups.has(g.id)
-                const cols        = activeCols.filter(c => c.group === g.id)
-                const subs        = [...new Set(cols.map(c => c.subgroup).filter(Boolean))]
+                const isCollapsed  = collapsedGroups.has(g.id)
+                const cols         = activeCols.filter(c => c.group === g.id)
+                const subs         = [...new Set(cols.map(c => c.subgroup).filter(Boolean))]
                 const hasSubgroups = subs.length > 0
-
                 if (isCollapsed)   return <th key={g.id} className="subgroup-cell subgroup-collapsed" />
                 if (!hasSubgroups) return null
                 return subs.map(sg => (
@@ -233,11 +243,10 @@ export default function MediaTable({
               })}
             </tr>
 
-            {/* ROW 3: Column headers */}
+            {/* ROW 3: Columnas individuales */}
             <tr className="sub-header-row">
               {activeGroups.map(g => {
-                const isCollapsed = collapsedGroups.has(g.id)
-                if (isCollapsed) return <th key={g.id} className="sub-header sub-header-placeholder" />
+                if (collapsedGroups.has(g.id)) return <th key={g.id} className="sub-header sub-header-placeholder" />
                 return activeCols.filter(c => c.group === g.id).map(col => (
                   <th key={col.id} className="sub-header">
                     <span className="sub-label">{col.label}</span>
@@ -251,7 +260,7 @@ export default function MediaTable({
           <tbody>
             {temas.length === 0 ? (
               <tr>
-                <td colSpan={emptyColSpan} className="empty-state-cell">
+                <td colSpan={totalColSpan} className="empty-state-cell">
                   {totalTemas === 0 ? (
                     <div className="empty-state">
                       <span className="empty-state-icon">📋</span>
@@ -271,58 +280,103 @@ export default function MediaTable({
               </tr>
             ) : (
               temas.map(tema => {
-                const isExpanded = expandedTemas.has(tema.id)
-                const n = tema.planificaciones.length
+                const isExpanded        = expandedTemas.has(tema.id)
+                const n                 = tema.planificaciones.length
+                const { targetDate, isNext, activeChannels } = getTemaStats(tema)
+                const isEditingThisTema = editingTemaId === tema.id
 
                 return (
                   <Fragment key={tema.id}>
-                    {/* ── FILA DE TEMA ── */}
-                    <tr className="tema-row">
-                      {/* TEMAS col */}
-                      <td className="sticky-col col-contenidos td-contenidos tema-name-cell">
-                        <button
-                          className={`tema-expand-btn${isExpanded ? ' expanded' : ''}`}
-                          onClick={() => onToggleTema(tema.id)}
-                          title={isExpanded ? 'Colapsar fechas' : 'Expandir fechas'}
-                        >
-                          <svg width="10" height="10" viewBox="0 0 10 10" fill="none"
-                            style={{ transform: isExpanded ? 'rotate(90deg)' : 'none', transition: 'transform .15s' }}>
-                            <path d="M3 1.5l4 3.5-4 3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-                          </svg>
-                        </button>
-                        <span className="tema-nombre">{tema.nombre || <em className="placeholder">Sin nombre</em>}</span>
-                        {tema.sync_to_medios && <span className="sync-badge" title="Vinculado desde Editorial">E</span>}
-                        <span className="planif-count">{n} {n === 1 ? 'fecha' : 'fechas'}</span>
-                      </td>
+                    {/* ────── HEADER DEL TEMA ────────────────────────── */}
+                    <tr className={`tema-header-row${isExpanded ? ' expanded' : ''}`}>
+                      <td colSpan={totalColSpan} className="tema-header-cell">
+                        <div className="tema-header-bar">
 
-                      {/* FECHA col */}
-                      <td className="sticky-col col-semana td-semana tema-date-cell">
-                        {n > 0 ? (
-                          <span className="tema-date-range">
-                            {formatDate(tema.planificaciones[0].semana)}
-                            {n > 1 && <em className="tema-date-more"> +{n - 1} más</em>}
+                          {/* Chevron expand/collapse */}
+                          <button
+                            className={`tema-expand-btn${isExpanded ? ' expanded' : ''}`}
+                            onClick={() => onToggleTema(tema.id)}
+                            title={isExpanded ? 'Colapsar' : 'Expandir fechas'}
+                          >
+                            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"
+                              style={{ transform: isExpanded ? 'rotate(90deg)' : 'none', transition: 'transform .15s' }}>
+                              <path d="M3 1.5l4 3.5-4 3.5" stroke="currentColor" strokeWidth="1.4"
+                                strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          </button>
+
+                          {/* Nombre (doble-click para editar) */}
+                          {isEditingThisTema ? (
+                            <input
+                              className="tema-name-edit"
+                              value={editingTemaName}
+                              onChange={e => setEditingTemaName(e.target.value)}
+                              onBlur={commitTemaName}
+                              onKeyDown={handleTemaNameKey}
+                              onClick={e => e.stopPropagation()}
+                              autoFocus
+                            />
+                          ) : (
+                            <span
+                              className="tema-nombre"
+                              onDoubleClick={e => { e.stopPropagation(); startEditTema(tema.id, tema.nombre) }}
+                              title="Doble clic para editar el nombre"
+                            >
+                              {tema.nombre || <em className="placeholder">Sin nombre</em>}
+                            </span>
+                          )}
+
+                          {/* Badge: conteo de fechas */}
+                          <span className="planif-count">
+                            {n} {n === 1 ? 'fecha' : 'fechas'}
                           </span>
-                        ) : <em className="placeholder">—</em>}
-                      </td>
 
-                      {/* Celdas agregadas */}
-                      {renderAggregatedCells(tema)}
+                          {/* Badge: origen editorial */}
+                          {tema.origen === 'editorial' && (
+                            <span className="sync-badge" title="Sincronizado desde Mesa Editorial">
+                              Desde Editorial
+                            </span>
+                          )}
 
-                      {/* Acción: + agregar fecha */}
-                      <td className="col-actions td-actions">
-                        <button
-                          className="btn-add-planif"
-                          onClick={() => onAddPlanificacion(tema.id)}
-                          title="Agregar fecha"
-                        >
-                          <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-                            <path d="M6.5 1v11M1 6.5h11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-                          </svg>
-                        </button>
+                          {/* Info: próxima o última fecha */}
+                          {targetDate && (
+                            <>
+                              <span className="tema-info-sep">·</span>
+                              <span className="tema-proxima">
+                                {isNext ? 'Próxima' : 'Última'}: {formatDate(targetDate)}
+                              </span>
+                            </>
+                          )}
+
+                          {/* Info: canales activos con 'si' */}
+                          {activeChannels > 0 && (
+                            <>
+                              <span className="tema-info-sep">·</span>
+                              <span className="tema-canales">
+                                {activeChannels} canal{activeChannels !== 1 ? 'es' : ''} activo{activeChannels !== 1 ? 's' : ''}
+                              </span>
+                            </>
+                          )}
+
+                          {/* Spacer flexible */}
+                          <div className="tema-header-spacer" />
+
+                          {/* Botón eliminar tema (visible al hover) */}
+                          <button
+                            className="tema-trash-btn"
+                            onClick={e => { e.stopPropagation(); onDeleteTema(tema.id) }}
+                            title="Eliminar tema"
+                          >
+                            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                              <path d="M2 3.5h10M5.5 3.5V2h3v1.5M5.833 6v4M8.167 6v4M3 3.5l.5 8a1 1 0 001 .917h5a1 1 0 001-.917l.5-8"
+                                stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          </button>
+                        </div>
                       </td>
                     </tr>
 
-                    {/* ── FILAS DE PLANIFICACIONES (solo si expandido) ── */}
+                    {/* ────── FILAS DE PLANIFICACIONES (expandido) ────── */}
                     {isExpanded && tema.planificaciones.map((planif, idx) => {
                       const isEditingDate = editingField?.rowId === planif.id && editingField?.field === 'semana'
                       return (
@@ -332,12 +386,12 @@ export default function MediaTable({
                           onMouseEnter={() => setHoverPlanif(planif.id)}
                           onMouseLeave={() => setHoverPlanif(null)}
                         >
-                          {/* TEMAS col: indent */}
+                          {/* TEMAS col: indentación */}
                           <td className="sticky-col col-contenidos td-contenidos planif-indent-cell">
                             <span className="planif-connector">└</span>
                           </td>
 
-                          {/* FECHA col */}
+                          {/* FECHA col: edición inline */}
                           <td className="sticky-col col-semana td-semana">
                             {isEditingDate ? (
                               <input
@@ -353,12 +407,11 @@ export default function MediaTable({
                               <span
                                 className="semana-text"
                                 onClick={() => startEditField(planif.id, 'semana', planif.semana)}
-                                title="Clic para editar"
+                                title="Clic para editar fecha"
                               >
                                 {planif.semana
                                   ? formatDate(planif.semana)
-                                  : <em className="placeholder">--/--/----</em>
-                                }
+                                  : <em className="placeholder">--/--/----</em>}
                               </span>
                             )}
                           </td>
@@ -366,7 +419,7 @@ export default function MediaTable({
                           {/* Celdas de medios */}
                           {renderMediaCells(planif)}
 
-                          {/* Eliminar */}
+                          {/* Acción: eliminar planificación */}
                           <td className="col-actions td-actions">
                             <button
                               className="btn-delete"
@@ -374,13 +427,42 @@ export default function MediaTable({
                               title="Eliminar planificación"
                             >
                               <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                                <path d="M2 3.5h10M5.5 3.5V2h3v1.5M5.833 6v4M8.167 6v4M3 3.5l.5 8a1 1 0 001 .917h5a1 1 0 001-.917l.5-8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+                                <path d="M2 3.5h10M5.5 3.5V2h3v1.5M5.833 6v4M8.167 6v4M3 3.5l.5 8a1 1 0 001 .917h5a1 1 0 001-.917l.5-8"
+                                  stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
                               </svg>
                             </button>
                           </td>
                         </tr>
                       )
                     })}
+
+                    {/* ────── SIN PLANIFICACIONES ──────────────────────── */}
+                    {isExpanded && n === 0 && (
+                      <tr className="planif-empty-row">
+                        <td colSpan={totalColSpan} className="planif-empty-cell">
+                          <button
+                            className="btn-add-primera-fecha"
+                            onClick={() => onAddPlanificacion(tema.id)}
+                          >
+                            + Agregar primera fecha
+                          </button>
+                        </td>
+                      </tr>
+                    )}
+
+                    {/* ────── FOOTER: agregar otra fecha ───────────────── */}
+                    {isExpanded && n > 0 && (
+                      <tr className="planif-add-row">
+                        <td colSpan={totalColSpan} className="planif-add-cell">
+                          <button
+                            className="btn-add-otra-fecha"
+                            onClick={() => onAddPlanificacion(tema.id)}
+                          >
+                            + Agregar otra fecha
+                          </button>
+                        </td>
+                      </tr>
+                    )}
                   </Fragment>
                 )
               })
@@ -389,6 +471,18 @@ export default function MediaTable({
         </table>
       </div>
 
+      {/* ── BADGE de edición activa (sticky) ─────────────────────────── */}
+      {popover && editBadgeTema && (
+        <div className="cell-edit-badge">
+          Editando: <strong>{editBadgeTema.nombre}</strong>
+          {editBadgePlanif?.semana && <> · {formatDate(editBadgePlanif.semana)}</>}
+          {editBadgeCol && (
+            <> · {editBadgeCol.label}{editBadgeCol.sub ? ` ${editBadgeCol.sub}` : ''}</>
+          )}
+        </div>
+      )}
+
+      {/* ── POPOVER de celda ─────────────────────────────────────────── */}
       {popover && (
         <CellPopover
           value={popover.value}
