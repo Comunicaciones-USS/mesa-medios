@@ -8,7 +8,7 @@ function formatDate(dateStr) {
   return d.toLocaleDateString('es-CL', { day: 'numeric', month: 'short', year: '2-digit' })
 }
 
-export default function EjeSection({ eje, rows, onCellChange, onDeleteRow, collapsed, onToggle, onAddBacklog, onAssignOrphans }) {
+export default function EjeSection({ eje, rows, onCellChange, onDeleteRow, collapsed, onToggle, onAddBacklog, onAssignOrphans, onSyncToggle }) {
   const [expandedResults, setExpandedResults] = useState({})
 
   function toggleResult(id) {
@@ -90,6 +90,7 @@ export default function EjeSection({ eje, rows, onCellChange, onDeleteRow, colla
                         onAddBacklog={onAddBacklog}
                         expanded={!!expandedResults[resultado.id]}
                         onToggleExpand={() => toggleResult(resultado.id)}
+                        onSyncToggle={onSyncToggle}
                       />
                       {expandedResults[resultado.id] && (backlogsByParent[resultado.id] || []).map(backlog => (
                         <BacklogRow
@@ -97,6 +98,7 @@ export default function EjeSection({ eje, rows, onCellChange, onDeleteRow, colla
                           row={backlog}
                           onCellChange={onCellChange}
                           onDeleteRow={onDeleteRow}
+                          onSyncToggle={onSyncToggle}
                         />
                       ))}
                     </>
@@ -116,7 +118,7 @@ export default function EjeSection({ eje, rows, onCellChange, onDeleteRow, colla
   )
 }
 
-function ResultadoRow({ row, onCellChange, onDeleteRow, backlogCount, onAddBacklog, expanded, onToggleExpand }) {
+function ResultadoRow({ row, onCellChange, onDeleteRow, backlogCount, onAddBacklog, expanded, onToggleExpand, onSyncToggle }) {
   const tipoCfg   = TIPOS_CONFIG[row.tipo]   || {}
   const statusCfg = STATUS_CONFIG[row.status] || STATUS_CONFIG['Pendiente']
 
@@ -200,8 +202,19 @@ function ResultadoRow({ row, onCellChange, onDeleteRow, backlogCount, onAddBackl
         </select>
       </td>
 
-      {/* Acciones: agregar backlog + eliminar */}
+      {/* Acciones: sync + agregar backlog + eliminar */}
       <td className="col-del">
+        <button
+          className={`btn-sync-medios${row.sync_to_medios ? ' synced' : ''}`}
+          onClick={() => onSyncToggle?.(row.id, !row.sync_to_medios)}
+          title={row.sync_to_medios ? 'Desvinc. de Mesa de Medios' : 'Vincular a Mesa de Medios'}
+        >
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+            <path d="M2 6a4 4 0 014-4M10 6a4 4 0 01-4 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+            <path d="M9 4l1.5-1.5M9 4l1.5 1.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M3 8L1.5 9.5M3 8L1.5 6.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
         <button className="btn-add-backlog" onClick={() => onAddBacklog(row.id)} title="Agregar backlog a este resultado">
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
             <path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
@@ -217,7 +230,7 @@ function ResultadoRow({ row, onCellChange, onDeleteRow, backlogCount, onAddBackl
   )
 }
 
-function BacklogRow({ row, onCellChange, onDeleteRow }) {
+function BacklogRow({ row, onCellChange, onDeleteRow, onSyncToggle }) {
   const tipoCfg   = TIPOS_CONFIG[row.tipo]   || {}
   const statusCfg = STATUS_CONFIG[row.status] || STATUS_CONFIG['Pendiente']
 
@@ -285,8 +298,19 @@ function BacklogRow({ row, onCellChange, onDeleteRow }) {
         </select>
       </td>
 
-      {/* Eliminar */}
+      {/* Sync + Eliminar */}
       <td className="col-del">
+        <button
+          className={`btn-sync-medios${row.sync_to_medios ? ' synced' : ''}`}
+          onClick={() => onSyncToggle?.(row.id, !row.sync_to_medios)}
+          title={row.sync_to_medios ? 'Desvinc. de Mesa de Medios' : 'Vincular a Mesa de Medios'}
+        >
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+            <path d="M2 6a4 4 0 014-4M10 6a4 4 0 01-4 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+            <path d="M9 4l1.5-1.5M9 4l1.5 1.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M3 8L1.5 9.5M3 8L1.5 6.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
         <button className="btn-delete-row" onClick={() => onDeleteRow(row.id)} title="Eliminar backlog">
           <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
             <path d="M2 3.5h9M5 3.5V2.5a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v1M5.5 5.5v4M7.5 5.5v4M3.5 3.5l.5 7h5l.5-7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
