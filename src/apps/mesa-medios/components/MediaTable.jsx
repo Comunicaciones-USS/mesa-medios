@@ -288,11 +288,15 @@ export default function MediaTable({
                 return (
                   <Fragment key={tema.id}>
                     {/* ────── HEADER DEL TEMA ────────────────────────── */}
+                    {/*
+                      Dividido en 2 celdas:
+                      - Cell izq (sticky): chevron + nombre → siempre visible en scroll h
+                      - Cell der: badges + info + trash → puede desaparecer al scrollear
+                    */}
                     <tr className={`tema-header-row${isExpanded ? ' expanded' : ''}`}>
-                      <td colSpan={totalColSpan} className="tema-header-cell">
-                        <div className="tema-header-bar">
-
-                          {/* Chevron expand/collapse */}
+                      {/* Celda sticky: nombre del tema (siempre visible) */}
+                      <td className="sticky-col col-contenidos tema-header-sticky-col">
+                        <div className="tema-header-name">
                           <button
                             className={`tema-expand-btn${isExpanded ? ' expanded' : ''}`}
                             onClick={() => onToggleTema(tema.id)}
@@ -304,8 +308,6 @@ export default function MediaTable({
                                 strokeLinecap="round" strokeLinejoin="round" />
                             </svg>
                           </button>
-
-                          {/* Nombre (doble-click para editar) */}
                           {isEditingThisTema ? (
                             <input
                               className="tema-name-edit"
@@ -325,20 +327,20 @@ export default function MediaTable({
                               {tema.nombre || <em className="placeholder">Sin nombre</em>}
                             </span>
                           )}
+                        </div>
+                      </td>
 
-                          {/* Badge: conteo de fechas */}
+                      {/* Celda info: badges + datos + trash */}
+                      <td colSpan={totalColSpan - 1} className="tema-header-info-cell">
+                        <div className="tema-header-info">
                           <span className="planif-count">
                             {n} {n === 1 ? 'fecha' : 'fechas'}
                           </span>
-
-                          {/* Badge: origen editorial */}
                           {tema.origen === 'editorial' && (
                             <span className="sync-badge" title="Sincronizado desde Mesa Editorial">
                               Desde Editorial
                             </span>
                           )}
-
-                          {/* Info: próxima o última fecha */}
                           {targetDate && (
                             <>
                               <span className="tema-info-sep">·</span>
@@ -347,8 +349,6 @@ export default function MediaTable({
                               </span>
                             </>
                           )}
-
-                          {/* Info: canales activos con 'si' */}
                           {activeChannels > 0 && (
                             <>
                               <span className="tema-info-sep">·</span>
@@ -357,11 +357,7 @@ export default function MediaTable({
                               </span>
                             </>
                           )}
-
-                          {/* Spacer flexible */}
                           <div className="tema-header-spacer" />
-
-                          {/* Botón eliminar tema (visible al hover) */}
                           <button
                             className="tema-trash-btn"
                             onClick={e => { e.stopPropagation(); onDeleteTema(tema.id) }}
