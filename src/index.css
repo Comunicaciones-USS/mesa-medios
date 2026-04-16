@@ -1602,6 +1602,80 @@ body {
   line-height: 1.5;
 }
 
+/* ── Mobile: Tema cards ───────────────────────────────────────── */
+.mobile-tema-card {
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+  margin-bottom: 8px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+.mobile-tema-card.expanded { border-color: var(--secondary); }
+
+.mobile-tema-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  cursor: pointer;
+  gap: 8px;
+  background: #f4f9ff;
+}
+.mobile-tema-header:active { background: var(--row-hover); }
+.mobile-tema-title-area {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+.mobile-tema-title {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mobile-tema-planifs {
+  border-top: 1px solid var(--border);
+}
+.mobile-planif-card {
+  border-bottom: 1px solid var(--border);
+}
+.mobile-planif-card:last-of-type { border-bottom: none; }
+.mobile-planif-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  cursor: pointer;
+  background: #fff;
+}
+.mobile-planif-header:active { background: var(--row-hover); }
+.mobile-planif-date {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--primary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.mobile-planif-empty {
+  padding: 14px;
+}
+.mobile-planif-add {
+  padding: 8px 14px;
+  border-top: 1px dashed var(--border);
+}
+.mobile-chip-more {
+  font-size: 0.68rem;
+  background: var(--border);
+  color: var(--text-muted);
+  border-radius: 10px;
+  padding: 1px 6px;
+}
+
 /* ── Audit log fullscreen (mobile) ────────────────────────────── */
 .logs-fullscreen {
   position: fixed;
@@ -2190,20 +2264,28 @@ body {
   to   { transform: scale(1);   opacity: 1; }
 }
 
-/* ── Tema rows ───────────────────────────────────────────────── */
-.tema-row {
-  background: #f0f6fc;
-  border-top: 2px solid var(--border);
+/* ── Tema header rows ────────────────────────────────────────── */
+.tema-header-row {
+  background: #eef4fb;
+  border-top: 2px solid rgba(15, 43, 65, 0.1);
 }
-.tema-row:first-child { border-top: none; }
+.tema-header-row:first-child { border-top: none; }
+.tema-header-row.expanded    { border-bottom: none; }
 
-.tema-name-cell {
-  display: flex !important;
+.tema-header-cell {
+  padding: 0 !important;
+  border-bottom: 1px solid rgba(15, 43, 65, 0.08);
+}
+
+.tema-header-bar {
+  display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 12px !important;
+  gap: 7px;
+  padding: 8px 12px 8px 10px;
+  min-height: 42px;
 }
 
+/* Chevron expand button */
 .tema-expand-btn {
   flex-shrink: 0;
   display: flex;
@@ -2217,52 +2299,108 @@ body {
   cursor: pointer;
   border-radius: 3px;
   padding: 0;
+  transition: background .12s, color .12s;
 }
 .tema-expand-btn:hover { background: var(--border); color: var(--primary); }
 
+/* Nombre del tema (doble click para editar) */
 .tema-nombre {
   font-weight: 600;
   font-size: 0.82rem;
-  color: var(--text-main);
-  flex: 1;
-  min-width: 0;
+  color: var(--primary);
+  flex-shrink: 1;
+  min-width: 60px;
+  max-width: 320px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  cursor: default;
+}
+.tema-nombre:hover { text-decoration: underline; text-decoration-style: dotted; text-decoration-color: var(--border); }
+
+/* Input inline de edición del nombre */
+.tema-name-edit {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--primary);
+  border: 1.5px solid var(--secondary);
+  border-radius: 3px;
+  padding: 2px 8px;
+  outline: none;
+  background: #fff;
+  width: 220px;
+  flex-shrink: 0;
 }
 
+/* Badge: conteo de fechas */
 .planif-count {
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   color: var(--text-muted);
   white-space: nowrap;
   background: var(--border);
   border-radius: 10px;
-  padding: 1px 6px;
+  padding: 1px 7px;
+  flex-shrink: 0;
 }
 
+/* Badge: origen editorial */
 .sync-badge {
   font-size: 0.62rem;
   font-weight: 700;
   background: #0891b2;
   color: #fff;
   border-radius: 3px;
-  padding: 1px 4px;
+  padding: 1px 5px;
   letter-spacing: .03em;
+  flex-shrink: 0;
 }
 
-.tema-date-cell {
-  font-size: 0.75rem;
+/* Info: separador · */
+.tema-info-sep {
+  color: var(--border);
+  font-size: 0.9rem;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+/* Info: próxima/última fecha */
+.tema-proxima {
+  font-size: 0.71rem;
   color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
-.tema-date-range { display: block; line-height: 1.4; }
-.tema-date-more  { font-style: normal; color: var(--secondary); font-size: 0.7rem; }
 
-.tema-agg-cell { cursor: default !important; }
-.agg-count {
-  font-size: 0.7rem;
-  font-weight: 700;
-  opacity: .75;
+/* Info: canales activos */
+.tema-canales {
+  font-size: 0.71rem;
+  color: #1D7A4F;
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-weight: 500;
 }
+
+/* Spacer flexible */
+.tema-header-spacer { flex: 1; min-width: 8px; }
+
+/* Botón eliminar tema (solo visible en hover de la fila) */
+.tema-trash-btn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  background: transparent;
+  color: transparent;
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 0;
+  transition: color .12s, background .12s;
+}
+.tema-header-row:hover .tema-trash-btn { color: #dc2626; }
+.tema-trash-btn:hover { background: #fee2e2 !important; color: #dc2626 !important; }
 
 /* ── Planificacion rows ──────────────────────────────────────── */
 .planificacion-row td { font-size: 0.8rem; }
@@ -2276,25 +2414,60 @@ body {
   color: var(--border);
 }
 
-/* ── Add planificación button ────────────────────────────────── */
-.btn-add-planif {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border: 1.5px dashed var(--border);
-  border-radius: 4px;
-  background: transparent;
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: all .15s;
+/* ── Footer: sin planificaciones ─────────────────────────────── */
+.planif-empty-row { background: #f5f9ff; }
+.planif-empty-cell {
+  padding: 14px 20px !important;
+  border-bottom: 2px solid rgba(15, 43, 65, 0.08);
 }
-.btn-add-planif:hover {
-  border-color: var(--secondary);
+.btn-add-primera-fecha {
+  font-size: 0.78rem;
+  font-weight: 500;
   color: var(--secondary);
-  background: #eff6ff;
+  background: none;
+  border: 1.5px dashed var(--secondary);
+  border-radius: 5px;
+  padding: 5px 14px;
+  cursor: pointer;
+  transition: background .12s;
 }
+.btn-add-primera-fecha:hover { background: #eff6ff; }
+
+/* ── Footer: agregar otra fecha ──────────────────────────────── */
+.planif-add-row { background: #f8fbff; }
+.planif-add-cell {
+  padding: 7px 20px !important;
+  border-bottom: 2px solid rgba(15, 43, 65, 0.1);
+}
+.btn-add-otra-fecha {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  padding: 3px 0;
+  cursor: pointer;
+  transition: color .12s;
+}
+.btn-add-otra-fecha:hover { color: var(--secondary); }
+
+/* ── Badge sticky de edición activa ──────────────────────────── */
+.cell-edit-badge {
+  position: fixed;
+  top: 56px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 43, 65, 0.9);
+  color: #fff;
+  font-size: 0.71rem;
+  padding: 4px 14px;
+  border-radius: 20px;
+  z-index: 900;
+  pointer-events: none;
+  white-space: nowrap;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(4px);
+}
+.cell-edit-badge strong { font-weight: 700; }
 
 /* ── Modal hints ─────────────────────────────────────────────── */
 .modal-hint-info {
