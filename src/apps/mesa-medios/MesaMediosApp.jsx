@@ -140,11 +140,8 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
     }))
     setTemas(tree)
 
-    // Auto-expandir temas con 0 ó 1 planificaciones (solo en la carga inicial)
-    setExpandedTemas(prev => {
-      if (prev.size > 0) return prev
-      return new Set(tree.filter(t => t.planificaciones.length <= 1).map(t => t.id))
-    })
+    // Todos los temas colapsados al cargar — el usuario expande manualmente
+    setExpandedTemas(new Set())
 
     setLoading(false)
   }
