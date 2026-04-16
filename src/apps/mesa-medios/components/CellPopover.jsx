@@ -41,7 +41,7 @@ export default function CellPopover({ value, notas: initialNotas, position, onSa
   const isEmpty = !value  // cell has no state at all → go straight to edit
 
   const [mode,      setMode]      = useState(isEmpty ? 'edit' : 'view')
-  const [status,    setStatus]    = useState(initStatus || 'si')
+  const [status,    setStatus]    = useState(initStatus)   // '' = Vacío; no forzar 'si'
   const [name,      setName]      = useState(initName)
   const [notas,     setNotas]     = useState(initialNotas || '')
   const [showNotas, setShowNotas] = useState(!!initialNotas)
@@ -57,22 +57,21 @@ export default function CellPopover({ value, notas: initialNotas, position, onSa
     }
   }, [mode, status])
 
-  // Click outside: save if editing, close if viewing
+  // Click outside: always close without saving
   useEffect(() => {
     function handler(e) {
       if (ref.current && !ref.current.contains(e.target)) {
-        if (mode === 'edit') onSave(buildValue(status, name), notas)
-        else onClose()
+        onClose()
       }
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
-  }, [status, name, notas, onSave, onClose, mode])
+  }, [onClose])
 
   function handleKeyDown(e) {
     if (e.key === 'Enter' && !showNotas) {
-      if (mode === 'edit') onSave(buildValue(status, name), notas)
-      else onClose()
+      // Enter cierra sin guardar — solo "Guardar" escribe en DB
+      onClose()
     }
     if (e.key === 'Escape') {
       if (mode === 'edit' && !isEmpty) setMode('view')
@@ -92,7 +91,7 @@ export default function CellPopover({ value, notas: initialNotas, position, onSa
     if (isEmpty) {
       onClose()
     } else {
-      setStatus(initStatus || 'si')
+      setStatus(initStatus)
       setName(initName)
       setNotas(initialNotas || '')
       setShowNotas(!!initialNotas)
