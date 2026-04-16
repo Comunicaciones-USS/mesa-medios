@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, Fragment } from 'react'
 import { MEDIA_COLS, GROUPS } from '../config'
 import { getCellData } from '../utils'
 import CellPopover from './CellPopover'
@@ -115,8 +115,12 @@ export default function MediaTable({
     })
   }
 
-  // Celdas agregadas de un tema (resumen entre planificaciones)
+  // Celdas agregadas de un tema — comportamiento según número de planificaciones:
+  //   n=0 → click agrega planificación
+  //   n=1 → se comporta exactamente como una celda individual (abre popover directo)
+  //   n>1 → muestra color dominante; click expande el tema para editar individualmente
   function renderAggregatedCells(tema) {
+    const n = tema.planificaciones.length
     return activeGroups.flatMap(g => {
       const isCollapsed = collapsedGroups.has(g.id)
       if (isCollapsed) {
@@ -124,25 +128,57 @@ export default function MediaTable({
       }
       const groupCols = activeCols.filter(c => c.group === g.id)
       return groupCols.map((col, i) => {
+        const isLast = i === groupCols.length - 1
+
+        // ── Sin planificaciones ──
+        if (n === 0) {
+          return (
+            <td
+              key={col.id}
+              className={`media-cell tema-agg-cell status-empty${isLast ? ' border-group-right' : ''}`}
+              onClick={() => onAddPlanificacion(tema.id)}
+              title="Agregar planificación"
+            />
+          )
+        }
+
+        // ── Una sola planificación: celda idéntica a la vista expandida ──
+        if (n === 1) {
+          const planif = tema.planificaciones[0]
+          const { valor, notas } = getCellData(planif.medios, col.id)
+          const meta   = getCellMeta(valor)
+          const isOpen = popover?.rowId === planif.id && popover?.colId === col.id
+          return (
+            <td
+              key={col.id}
+              className={`media-cell tema-agg-cell status-${meta.status}${isLast ? ' border-group-right' : ''}${isOpen ? ' cell-active' : ''}`}
+              onClick={e => openPopover(e, planif.id, col.id, planif.medios)}
+              title={valor || 'Clic para asignar estado'}
+            >
+              {meta.display && <span className="cell-text">{meta.display}</span>}
+              {notas && <span className="cell-notes-icon" title="Tiene detalles" />}
+            </td>
+          )
+        }
+
+        // ── Múltiples planificaciones: color dominante; click expande el tema ──
         const valores   = tema.planificaciones.map(p => getCellData(p.medios, col.id).valor)
         const aggStatus = getAggregatedStatus(valores)
-        const isLast    = i === groupCols.length - 1
-        const matchCount = valores.filter(v => {
-          if (!v) return aggStatus === 'empty'
-          if (aggStatus === 'si') return v.toLowerCase().startsWith('si')
-          if (aggStatus === 'pd') return v.toLowerCase().startsWith('pd')
-          if (aggStatus === 'no') return v.toLowerCase() === 'no'
-          return false
-        }).length
+        const isMixed   = aggStatus !== 'empty' && valores.some(v => {
+          const s = !v ? 'empty'
+            : v.toLowerCase().startsWith('si') ? 'si'
+            : v.toLowerCase().startsWith('pd') ? 'pd'
+            : v.toLowerCase() === 'no' ? 'no' : 'empty'
+          return s !== aggStatus
+        })
         return (
           <td
             key={col.id}
             className={`media-cell tema-agg-cell status-${aggStatus}${isLast ? ' border-group-right' : ''}`}
-            title={`${tema.planificaciones.length} planificación(es)`}
+            onClick={() => onToggleTema(tema.id)}
+            title="Expande el tema para editar cada planificación"
           >
-            {aggStatus !== 'empty' && tema.planificaciones.length > 1 && (
-              <span className="agg-count">{matchCount}</span>
-            )}
+            {isMixed && <span className="agg-mixed" title="Planificaciones con estados distintos">◐</span>}
           </td>
         )
       })
@@ -239,9 +275,9 @@ export default function MediaTable({
                 const n = tema.planificaciones.length
 
                 return (
-                  <>
+                  <Fragment key={tema.id}>
                     {/* ── FILA DE TEMA ── */}
-                    <tr key={`tema-${tema.id}`} className="tema-row">
+                    <tr className="tema-row">
                       {/* TEMAS col */}
                       <td className="sticky-col col-contenidos td-contenidos tema-name-cell">
                         <button
@@ -345,7 +381,7 @@ export default function MediaTable({
                         </tr>
                       )
                     })}
-                  </>
+                  </Fragment>
                 )
               })
             )}

@@ -2339,11 +2339,11 @@ body {
 .tema-date-range { display: block; line-height: 1.4; }
 .tema-date-more  { font-style: normal; color: var(--secondary); font-size: 0.7rem; }
 
-.tema-agg-cell { cursor: default !important; }
-.agg-count {
-  font-size: 0.7rem;
-  font-weight: 700;
-  opacity: .75;
+.tema-agg-cell { cursor: pointer; }
+.agg-mixed {
+  font-size: 0.85rem;
+  opacity: 0.7;
+  pointer-events: none;
 }
 
 /* ── Planificacion rows ──────────────────────────────────────── */
