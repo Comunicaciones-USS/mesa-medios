@@ -120,19 +120,8 @@ export default function CellPopover({ value, notas: initialNotas, position, onSa
       onKeyDown={handleKeyDown}
     >
       {mode === 'view' ? (
-        /* ── VIEW MODE ─────────────────────────────────────────── */
+        /* ── VIEW MODE — descripción/notas arriba, badge estado abajo ── */
         <>
-          <div className="popover-view-header">
-            {statusInfo && (
-              <span
-                className="popover-status-badge"
-                style={{ background: statusInfo.bg, color: statusInfo.color, borderColor: statusInfo.border }}
-              >
-                {statusInfo.label}
-              </span>
-            )}
-          </div>
-
           {initName && (
             <p className="popover-view-desc">{initName}</p>
           )}
@@ -143,6 +132,17 @@ export default function CellPopover({ value, notas: initialNotas, position, onSa
               <p className="popover-view-notas-text">{initialNotas}</p>
             </div>
           )}
+
+          <div className="popover-view-header">
+            {statusInfo && (
+              <span
+                className="popover-status-badge"
+                style={{ background: statusInfo.bg, color: statusInfo.color, borderColor: statusInfo.border }}
+              >
+                {statusInfo.label}
+              </span>
+            )}
+          </div>
 
           <div className="popover-view-actions">
             {!initialNotas && (
@@ -156,24 +156,8 @@ export default function CellPopover({ value, notas: initialNotas, position, onSa
           </div>
         </>
       ) : (
-        /* ── EDIT MODE ─────────────────────────────────────────── */
+        /* ── EDIT MODE — descripción/notas arriba, estados abajo ── */
         <>
-          <p className="popover-title">Estado de la celda</p>
-
-          {STATUS_OPTIONS.map(opt => (
-            <label key={opt.value} className={`popover-option ${opt.color}`}>
-              <input
-                type="radio"
-                name="cell-status"
-                value={opt.value}
-                checked={status === opt.value}
-                onChange={() => setStatus(opt.value)}
-              />
-              <span className={`status-dot ${opt.color}`} />
-              {opt.label}
-            </label>
-          ))}
-
           {(status === 'si' || status === 'pd') && (
             <div className="popover-name-input">
               <input
@@ -206,6 +190,22 @@ export default function CellPopover({ value, notas: initialNotas, position, onSa
               />
             </div>
           )}
+
+          <p className="popover-title">Estado de la celda</p>
+
+          {STATUS_OPTIONS.map(opt => (
+            <label key={opt.value} className={`popover-option ${opt.color}`}>
+              <input
+                type="radio"
+                name="cell-status"
+                value={opt.value}
+                checked={status === opt.value}
+                onChange={() => setStatus(opt.value)}
+              />
+              <span className={`status-dot ${opt.color}`} />
+              {opt.label}
+            </label>
+          ))}
 
           <div className="popover-actions">
             <button className="popover-btn-cancel" onClick={handleCancel}>Cancelar</button>
