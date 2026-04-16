@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react'
-import { getCellData } from '../utils'
 
 const STATUS_OPTIONS = [
   { value: '',   label: 'Vacío',             color: '' },
@@ -7,6 +6,12 @@ const STATUS_OPTIONS = [
   { value: 'pd', label: 'Por definir (pd)',  color: 'yellow' },
   { value: 'no', label: 'No aplica (no)',    color: 'red' },
 ]
+
+const STATUS_VIEW = {
+  si: { label: 'Confirmado',  bg: 'var(--green-bg)',  color: 'var(--green-text)', border: 'var(--green-bdr)' },
+  pd: { label: 'Por definir', bg: 'var(--yellow-bg)', color: 'var(--yellow-text)', border: 'var(--yellow-bdr)' },
+  no: { label: 'No aplica',   bg: 'var(--red-bg)',    color: 'var(--red-text)',    border: 'var(--red-bdr)' },
+}
 
 function parseValue(raw) {
   if (!raw) return { status: '', name: '' }
@@ -33,38 +38,79 @@ function buildValue(status, name) {
 
 export default function CellPopover({ value, notas: initialNotas, position, onSave, onClose }) {
   const { status: initStatus, name: initName } = parseValue(value)
-  const [status, setStatus] = useState(initStatus || 'si')
-  const [name,   setName]   = useState(initName)
-  const [showNotas, setShowNotas] = useState(false)
-  const [notas, setNotas] = useState(initialNotas || '')
-  const ref     = useRef(null)
-  const nameRef = useRef(null)
+  const isEmpty = !value  // cell has no state at all → go straight to edit
 
+  const [mode,      setMode]      = useState(isEmpty ? 'edit' : 'view')
+  const [status,    setStatus]    = useState(initStatus || 'si')
+  const [name,      setName]      = useState(initName)
+  const [notas,     setNotas]     = useState(initialNotas || '')
+  const [showNotas, setShowNotas] = useState(!!initialNotas)
+
+  const ref      = useRef(null)
+  const nameRef  = useRef(null)
+  const notasRef = useRef(null)
+
+  // Auto-focus description input when entering edit mode for si/pd
   useEffect(() => {
-    if ((status === 'si' || status === 'pd') && nameRef.current) nameRef.current.focus()
-  }, [status])
+    if (mode === 'edit' && (status === 'si' || status === 'pd') && nameRef.current) {
+      nameRef.current.focus()
+    }
+  }, [mode, status])
 
+  // Click outside: save if editing, close if viewing
   useEffect(() => {
     function handler(e) {
       if (ref.current && !ref.current.contains(e.target)) {
-        onSave(buildValue(status, name), notas)
+        if (mode === 'edit') onSave(buildValue(status, name), notas)
+        else onClose()
       }
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
-  }, [status, name, notas, onSave])
+  }, [status, name, notas, onSave, onClose, mode])
 
   function handleKeyDown(e) {
-    if (e.key === 'Enter' && !showNotas) onSave(buildValue(status, name), notas)
-    if (e.key === 'Escape') onClose()
+    if (e.key === 'Enter' && !showNotas) {
+      if (mode === 'edit') onSave(buildValue(status, name), notas)
+      else onClose()
+    }
+    if (e.key === 'Escape') {
+      if (mode === 'edit' && !isEmpty) setMode('view')
+      else onClose()
+    }
   }
 
-  const popW = 240
-  const popH = showNotas ? 340 : (status === 'si' || status === 'pd') ? 260 : 220
+  // "Agregar detalles" from view mode — switch to edit and focus notas
+  function handleAddDetalles() {
+    setShowNotas(true)
+    setMode('edit')
+    setTimeout(() => notasRef.current?.focus(), 50)
+  }
+
+  // Cancel in edit mode: back to view if cell had a value, otherwise close
+  function handleCancel() {
+    if (isEmpty) {
+      onClose()
+    } else {
+      setStatus(initStatus || 'si')
+      setName(initName)
+      setNotas(initialNotas || '')
+      setShowNotas(!!initialNotas)
+      setMode('view')
+    }
+  }
+
+  // Position: keep popover within viewport
+  const popW  = 252
+  const editH = showNotas ? 340 : (status === 'si' || status === 'pd') ? 260 : 220
+  const viewH = 140 + (initName ? 36 : 0) + (initialNotas ? 80 : 0)
+  const popH  = mode === 'edit' ? editH : viewH
   let left = position.x
   let top  = position.y + 4
   if (left + popW > window.innerWidth  - 8) left = window.innerWidth  - popW - 8
   if (top  + popH > window.innerHeight - 8) top  = position.y - popH - 4
+
+  const statusInfo = STATUS_VIEW[initStatus]
 
   return (
     <div
@@ -73,71 +119,102 @@ export default function CellPopover({ value, notas: initialNotas, position, onSa
       style={{ left, top, width: popW }}
       onKeyDown={handleKeyDown}
     >
-      <p className="popover-title">Estado de la celda</p>
+      {mode === 'view' ? (
+        /* ── VIEW MODE ─────────────────────────────────────────── */
+        <>
+          <div className="popover-view-header">
+            {statusInfo && (
+              <span
+                className="popover-status-badge"
+                style={{ background: statusInfo.bg, color: statusInfo.color, borderColor: statusInfo.border }}
+              >
+                {statusInfo.label}
+              </span>
+            )}
+          </div>
 
-      {STATUS_OPTIONS.map(opt => (
-        <label key={opt.value} className={`popover-option ${opt.color}`}>
-          <input
-            type="radio"
-            name="cell-status"
-            value={opt.value}
-            checked={status === opt.value}
-            onChange={() => setStatus(opt.value)}
-          />
-          <span className={`status-dot ${opt.color}`} />
-          {opt.label}
-        </label>
-      ))}
+          {initName && (
+            <p className="popover-view-desc">{initName}</p>
+          )}
 
-      {(status === 'si' || status === 'pd') && (
-        <div className="popover-name-input">
-          <input
-            ref={nameRef}
-            type="text"
-            placeholder="¿De qué se trata?"
-            value={name}
-            onChange={e => setName(e.target.value)}
-            onKeyDown={handleKeyDown}
-          />
-        </div>
-      )}
+          {initialNotas && (
+            <div className="popover-view-notas-wrap">
+              <span className="popover-notas-label">Detalles</span>
+              <p className="popover-view-notas-text">{initialNotas}</p>
+            </div>
+          )}
 
-      {/* ── Notes toggle ── */}
-      {!showNotas ? (
-        <button className="popover-notas-toggle" onClick={() => setShowNotas(true)}>
-          Ver detalles
-        </button>
-      ) : (
-        <div className="popover-notas">
-          <div className="popover-notas-header">
-            <span className="popover-notas-label">Detalles</span>
-            <button
-              className="popover-notas-edit-btn"
-              onClick={() => document.querySelector('.popover-notas-input')?.focus()}
-              title="Editar detalles"
-            >
-              <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
-                <path d="M0.5 10.5h2.5l6-6a1.5 1.5 0 00-2-2l-6 6v2z" stroke="currentColor" strokeWidth="0.9" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-                <path d="M6 3l2 2" stroke="currentColor" strokeWidth="0.9" strokeLinecap="round"/>
-              </svg>
+          <div className="popover-view-actions">
+            {!initialNotas && (
+              <button className="popover-btn-add-notas" onClick={handleAddDetalles}>
+                + Agregar detalles
+              </button>
+            )}
+            <button className="popover-btn-edit" onClick={() => setMode('edit')}>
+              Editar
             </button>
           </div>
-          <textarea
-            className="popover-notas-input"
-            placeholder="Escribe los detalles aquí..."
-            value={notas}
-            onChange={e => setNotas(e.target.value)}
-            rows={3}
-          />
-        </div>
-      )}
+        </>
+      ) : (
+        /* ── EDIT MODE ─────────────────────────────────────────── */
+        <>
+          <p className="popover-title">Estado de la celda</p>
 
-      <div className="popover-actions">
-        <button className="popover-btn-cancel" onClick={onClose}>Cancelar</button>
-        <button className="popover-btn-save" onClick={() => onSave(buildValue(status, name), notas)}>
-          Guardar
-        </button>
-      </div>
+          {STATUS_OPTIONS.map(opt => (
+            <label key={opt.value} className={`popover-option ${opt.color}`}>
+              <input
+                type="radio"
+                name="cell-status"
+                value={opt.value}
+                checked={status === opt.value}
+                onChange={() => setStatus(opt.value)}
+              />
+              <span className={`status-dot ${opt.color}`} />
+              {opt.label}
+            </label>
+          ))}
+
+          {(status === 'si' || status === 'pd') && (
+            <div className="popover-name-input">
+              <input
+                ref={nameRef}
+                type="text"
+                placeholder="¿De qué se trata?"
+                value={name}
+                onChange={e => setName(e.target.value)}
+                onKeyDown={handleKeyDown}
+              />
+            </div>
+          )}
+
+          {!showNotas ? (
+            <button className="popover-notas-toggle" onClick={() => setShowNotas(true)}>
+              {notas ? '✎ Ver/editar detalles' : '+ Agregar detalles'}
+            </button>
+          ) : (
+            <div className="popover-notas">
+              <div className="popover-notas-header">
+                <span className="popover-notas-label">Detalles</span>
+              </div>
+              <textarea
+                ref={notasRef}
+                className="popover-notas-input"
+                placeholder="Escribe los detalles aquí..."
+                value={notas}
+                onChange={e => setNotas(e.target.value)}
+                rows={3}
+              />
+            </div>
+          )}
+
+          <div className="popover-actions">
+            <button className="popover-btn-cancel" onClick={handleCancel}>Cancelar</button>
+            <button className="popover-btn-save" onClick={() => onSave(buildValue(status, name), notas)}>
+              Guardar
+            </button>
+          </div>
+        </>
+      )}
     </div>
   )
 }

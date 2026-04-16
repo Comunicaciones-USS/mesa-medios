@@ -252,14 +252,7 @@ export default function MediaTable({ rows, onCellChange, onFieldChange, onDelete
                             title={valor || 'Clic para asignar estado'}
                           >
                             {meta.display && <span className="cell-text">{meta.display}</span>}
-                            {notas && (
-                              <span className="cell-notes-icon" title="Tiene detalles">
-                                <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
-                                  <rect x="0.5" y="0.5" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="0.8" />
-                                  <path d="M2 3h4M2 5h2.5" stroke="currentColor" strokeWidth="0.6" strokeLinecap="round" />
-                                </svg>
-                              </span>
-                            )}
+                            {notas && <span className="cell-notes-icon" title="Tiene detalles" />}
                           </td>
                         )
                       })
