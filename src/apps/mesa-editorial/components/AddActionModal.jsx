@@ -8,8 +8,9 @@ export default function AddActionModal({ onConfirm, onClose, existingResponsable
   const [accion,      setAccion]      = useState('')
   const [tipoAccion,         setTipoAccion]         = useState('Backlog')
   const [tipologiaResultado, setTipologiaResultado] = useState('')
-  const [fecha,       setFecha]       = useState('')
-  const [responsable, setResponsable] = useState('')
+  const [fecha,         setFecha]         = useState('')
+  const [responsable,   setResponsable]   = useState('')
+  const [syncToMedios,  setSyncToMedios]  = useState(false)
   const firstRef = useRef(null)
 
   useEffect(() => { firstRef.current?.focus() }, [])
@@ -33,6 +34,7 @@ export default function AddActionModal({ onConfirm, onClose, existingResponsable
       fecha: fecha || null,
       responsable,
       status: 'Pendiente',
+      sync_to_medios: syncToMedios,
     })
   }
 
@@ -104,6 +106,20 @@ export default function AddActionModal({ onConfirm, onClose, existingResponsable
                 {existingResponsables.map(r => <option key={r} value={r} />)}
               </datalist>
             </div>
+          </div>
+
+          <div className="form-group sync-toggle-group">
+            <label className="sync-toggle-label">
+              <input
+                type="checkbox"
+                checked={syncToMedios}
+                onChange={e => setSyncToMedios(e.target.checked)}
+              />
+              Planificar en Mesa de Medios
+            </label>
+            {syncToMedios && (
+              <p className="sync-toggle-hint">Se creará un tema vinculado en la planificación de medios.</p>
+            )}
           </div>
 
           <div className="modal-footer">

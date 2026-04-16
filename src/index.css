@@ -2272,35 +2272,180 @@ body {
   to   { transform: scale(1);   opacity: 1; }
 }
 
-/* ── Row Progress Bar ────────────────────────────────────────── */
-.row-progress {
-  margin-top: 4px;
-  display: flex;
+/* ── Tema rows ───────────────────────────────────────────────── */
+.tema-row {
+  background: #f0f6fc;
+  border-top: 2px solid var(--border);
+}
+.tema-row:first-child { border-top: none; }
+
+.tema-name-cell {
+  display: flex !important;
   align-items: center;
   gap: 6px;
+  padding: 8px 12px !important;
 }
 
-.progress-bar-track {
+.tema-expand-btn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: 3px;
+  padding: 0;
+}
+.tema-expand-btn:hover { background: var(--border); color: var(--primary); }
+
+.tema-nombre {
+  font-weight: 600;
+  font-size: 0.82rem;
+  color: var(--text-main);
   flex: 1;
-  height: 4px;
-  background: var(--border);
-  border-radius: 2px;
+  min-width: 0;
   overflow: hidden;
-  min-width: 60px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.progress-bar-fill {
-  height: 100%;
-  border-radius: 2px;
-  transition: width .3s ease;
-}
-
-.progress-label {
-  font-size: 10px;
+.planif-count {
+  font-size: 0.7rem;
   color: var(--text-muted);
   white-space: nowrap;
-  flex-shrink: 0;
+  background: var(--border);
+  border-radius: 10px;
+  padding: 1px 6px;
 }
+
+.sync-badge {
+  font-size: 0.62rem;
+  font-weight: 700;
+  background: #0891b2;
+  color: #fff;
+  border-radius: 3px;
+  padding: 1px 4px;
+  letter-spacing: .03em;
+}
+
+.tema-date-cell {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+.tema-date-range { display: block; line-height: 1.4; }
+.tema-date-more  { font-style: normal; color: var(--secondary); font-size: 0.7rem; }
+
+.tema-agg-cell { cursor: default !important; }
+.agg-count {
+  font-size: 0.7rem;
+  font-weight: 700;
+  opacity: .75;
+}
+
+/* ── Planificacion rows ──────────────────────────────────────── */
+.planificacion-row td { font-size: 0.8rem; }
+
+.planif-indent-cell {
+  padding-left: 18px !important;
+  color: var(--text-muted);
+}
+.planif-connector {
+  font-size: 0.9rem;
+  color: var(--border);
+}
+
+/* ── Add planificación button ────────────────────────────────── */
+.btn-add-planif {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 1.5px dashed var(--border);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all .15s;
+}
+.btn-add-planif:hover {
+  border-color: var(--secondary);
+  color: var(--secondary);
+  background: #eff6ff;
+}
+
+/* ── Modal hints ─────────────────────────────────────────────── */
+.modal-hint-info {
+  color: var(--secondary);
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 4px;
+  padding: 4px 8px;
+  margin-top: 4px;
+}
+.modal-hint-warn {
+  color: #92400e;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 4px;
+  padding: 4px 8px;
+  margin-top: 4px;
+}
+.input-readonly {
+  background: #f5f7fa;
+  color: var(--text-muted);
+  cursor: default;
+}
+
+/* ── Sync toggle (Editorial) ─────────────────────────────────── */
+.sync-toggle-group {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.sync-toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-main);
+  cursor: pointer;
+}
+.sync-toggle-label input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  accent-color: #0891b2;
+  cursor: pointer;
+}
+.sync-toggle-hint {
+  margin-top: 4px;
+  font-size: 0.75rem;
+  color: #0891b2;
+  padding-left: 23px;
+}
+
+/* ── Sync button (Editorial table) ──────────────────────────── */
+.btn-sync-medios {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all .15s;
+  margin-right: 2px;
+}
+.btn-sync-medios:hover       { border-color: #0891b2; color: #0891b2; background: #ecfeff; }
+.btn-sync-medios.synced      { border-color: #0891b2; color: #0891b2; background: #cffafe; }
 
 /* Mobile progress */
 .mobile-card-meta {

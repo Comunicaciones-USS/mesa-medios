@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { MEDIA_COLS } from '../config'
-import { getCellData, getRowProgress } from '../utils'
+import { getCellData } from '../utils'
 
 // ── Helpers ─────────────────────────────────────────────────────
 function getCellMeta(raw) {
@@ -259,20 +259,6 @@ function ContentCard({ row, onCellChange, onFieldChange, onDeleteRow }) {
                 {row.nombre || 'Sin nombre'}
               </span>
             )}
-            <div className="mobile-card-meta">
-              {(() => {
-                const { filled, total, pct } = getRowProgress(row.medios)
-                const color = pct >= 60 ? '#22c55e' : pct >= 30 ? '#f59e0b' : '#ef4444'
-                return (
-                  <>
-                    <div className="mobile-progress-track">
-                      <div className="mobile-progress-fill" style={{ width: `${pct}%`, background: color }} />
-                    </div>
-                    <span className="mobile-card-counter">{filled}/{total} medios</span>
-                  </>
-                )
-              })()}
-            </div>
           </div>
           <div className="mobile-card-right">
             <span className="mobile-card-date">

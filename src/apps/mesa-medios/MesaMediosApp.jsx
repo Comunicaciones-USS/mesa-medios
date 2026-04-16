@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../shared/utils/supabase'
-import { MEDIA_COLS, GROUPS, getGroupCols } from './config'
-import { getCellData, setCellData, getRowProgress } from './utils'
+import { MEDIA_COLS, GROUPS } from './config'
+import { getCellData, setCellData } from './utils'
 import Header from './components/Header'
 import MediaTable from './components/MediaTable'
 import MobileCardView from './components/MobileCardView'
@@ -13,21 +13,12 @@ import { useDebounce } from '../shared/hooks/useDebounce'
 import ConfirmDialog from '../shared/components/ConfirmDialog'
 import UserProfilePanel from '../shared/components/UserProfilePanel'
 
-function sortRows(rows, direction) {
-  return [...rows].sort((a, b) => {
-    const dateA = a.semana || ''
-    const dateB = b.semana || ''
-    const cmp = dateA.localeCompare(dateB)
-    if (cmp !== 0) return direction === 'asc' ? cmp : -cmp
-    return (a.nombre || '').localeCompare(b.nombre || '', 'es')
-  })
-}
-
 export default function MesaMediosApp({ session, userName, onLogout, onBackToSelector, onSwitchDashboard, otherDashboardName }) {
-  const [rows,          setRows]          = useState([])
+  const [temas,         setTemas]         = useState([])
   const [loading,       setLoading]       = useState(true)
   const [error,         setError]         = useState(null)
-  const [showModal,     setShowModal]     = useState(false)
+  // showModal: null | 'new' | { temaId, temaNombre, existingDates[] }
+  const [showModal,     setShowModal]     = useState(null)
   const [showLogs,      setShowLogs]      = useState(false)
   const [showProfile,   setShowProfile]   = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(null)
@@ -36,16 +27,18 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
   const [sortDir,       setSortDir]       = useState('asc')
   const { toasts, addToast, removeToast } = useToast()
 
-  // Filtros verticales (filas)
-  const [filterStatus,    setFilterStatus]    = useState('all')
+  // Filtros verticales
   const [filterDateRange, setFilterDateRange] = useState({ from: '', to: '' })
 
-  // Filtros horizontales (columnas)
+  // Filtros horizontales
   const [filterGroup,      setFilterGroup]      = useState('all')
   const [filterCellStatus, setFilterCellStatus] = useState('all')
 
   // Collapsed column groups
   const [collapsedGroups, setCollapsedGroups] = useState(new Set())
+
+  // Expanded temas
+  const [expandedTemas, setExpandedTemas] = useState(new Set())
 
   function toggleGroup(groupId) {
     setCollapsedGroups(prev => {
@@ -56,18 +49,57 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
     })
   }
 
-  // Realtime subscription
+  function toggleTema(temaId) {
+    setExpandedTemas(prev => {
+      const next = new Set(prev)
+      if (next.has(temaId)) next.delete(temaId)
+      else next.add(temaId)
+      return next
+    })
+  }
+
+  // Realtime subscriptions
   useEffect(() => {
-    const channel = supabase
-      .channel('contenidos-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'contenidos' }, (payload) => {
-        if (payload.eventType === 'INSERT')  setRows(prev => [...prev, payload.new])
-        else if (payload.eventType === 'UPDATE') setRows(prev => prev.map(r => r.id === payload.new.id ? payload.new : r))
-        else if (payload.eventType === 'DELETE') setRows(prev => prev.filter(r => r.id !== payload.old.id))
+    const chTemas = supabase
+      .channel('temas-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'temas' }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          setTemas(prev => [...prev, { ...payload.new, planificaciones: [] }])
+        } else if (payload.eventType === 'UPDATE') {
+          setTemas(prev => prev.map(t => t.id === payload.new.id ? { ...t, ...payload.new } : t))
+        } else if (payload.eventType === 'DELETE') {
+          setTemas(prev => prev.filter(t => t.id !== payload.old.id))
+        }
       })
       .subscribe()
-    fetchRows()
-    return () => supabase.removeChannel(channel)
+
+    const chContenidos = supabase
+      .channel('contenidos-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'contenidos' }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          const p = payload.new
+          setTemas(prev => prev.map(t =>
+            t.id === p.tema_id ? { ...t, planificaciones: [...t.planificaciones, p] } : t
+          ))
+        } else if (payload.eventType === 'UPDATE') {
+          setTemas(prev => prev.map(t => ({
+            ...t,
+            planificaciones: t.planificaciones.map(p => p.id === payload.new.id ? payload.new : p)
+          })))
+        } else if (payload.eventType === 'DELETE') {
+          setTemas(prev => prev.map(t => ({
+            ...t,
+            planificaciones: t.planificaciones.filter(p => p.id !== payload.old.id)
+          })))
+        }
+      })
+      .subscribe()
+
+    fetchData()
+    return () => {
+      supabase.removeChannel(chTemas)
+      supabase.removeChannel(chContenidos)
+    }
   }, [])
 
   // Keyboard shortcuts
@@ -78,7 +110,7 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
       if (e.key === 'Escape') {
         if (showProfile)   { setShowProfile(false);  return }
         if (confirmDelete) { setConfirmDelete(null); return }
-        if (showModal)     { setShowModal(false);    return }
+        if (showModal)     { setShowModal(null);     return }
         if (showLogs)      { setShowLogs(false);     return }
       }
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
@@ -87,27 +119,32 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
         return
       }
       if (e.key.toLowerCase() === 'n' && !inInput && !showModal && !showLogs && !confirmDelete) {
-        setShowModal(true)
+        setShowModal('new')
       }
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [confirmDelete, showModal, showLogs])
 
-  async function fetchRows() {
+  async function fetchData() {
     setLoading(true)
-    const { data, error } = await supabase
-      .from('contenidos').select('*')
-      .order('semana', { ascending: true })
-      .order('nombre', { ascending: true })
-    if (error) setError(error.message)
-    else setRows(data || [])
+    const [{ data: temasData, error: tErr }, { data: planifs, error: pErr }] = await Promise.all([
+      supabase.from('temas').select('*').order('nombre'),
+      supabase.from('contenidos').select('*').order('semana').order('nombre'),
+    ])
+    if (tErr || pErr) { setError((tErr || pErr).message); setLoading(false); return }
+
+    const tree = (temasData || []).map(tema => ({
+      ...tema,
+      planificaciones: (planifs || []).filter(p => p.tema_id === tema.id),
+    }))
+    setTemas(tree)
     setLoading(false)
   }
 
   async function logAction(accion, contenidoId, contenidoNombre, detalle = '') {
     if (!session) return
-    const actionMap = { AGREGAR: 'create', MODIFICAR: 'update', ELIMINAR: 'delete', LOGIN: 'login' }
+    const actionMap = { AGREGAR: 'create', MODIFICAR: 'update', ELIMINAR: 'delete' }
     await supabase.from('audit_logs').insert([{
       mesa_type:  'medios',
       user_email: session.user.email,
@@ -118,86 +155,164 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
     }])
   }
 
-  const displayRows = useMemo(() => {
-    let result = rows
+  const displayTemas = useMemo(() => {
+    let result = temas.map(tema => {
+      let planifs = [...tema.planificaciones]
+
+      // Filtro por rango de fecha sobre planificaciones
+      if (filterDateRange.from) planifs = planifs.filter(p => p.semana && p.semana >= filterDateRange.from)
+      if (filterDateRange.to)   planifs = planifs.filter(p => p.semana && p.semana <= filterDateRange.to)
+
+      // Filtro por estado de celda sobre planificaciones
+      if (filterCellStatus !== 'all') {
+        const targetCols = filterGroup === 'all' ? MEDIA_COLS : MEDIA_COLS.filter(c => c.group === filterGroup)
+        planifs = planifs.filter(p => targetCols.some(col => {
+          const { valor } = getCellData(p.medios, col.id)
+          if (filterCellStatus === 'si')    return valor?.toLowerCase().startsWith('si')
+          if (filterCellStatus === 'pd')    return valor?.toLowerCase().startsWith('pd')
+          if (filterCellStatus === 'no')    return valor?.toLowerCase() === 'no'
+          if (filterCellStatus === 'empty') return !valor
+          return true
+        }))
+      }
+
+      // Ordenar planificaciones por fecha
+      planifs.sort((a, b) => (a.semana || '').localeCompare(b.semana || ''))
+      return { ...tema, planificaciones: planifs }
+    })
+
+    // Filtro de texto sobre nombre del tema
     if (filterText.trim()) {
       const q = filterText.toLowerCase()
-      result = result.filter(r => r.nombre?.toLowerCase().includes(q))
+      result = result.filter(t => t.nombre?.toLowerCase().includes(q))
     }
-    if (filterDateRange.from) result = result.filter(r => r.semana >= filterDateRange.from)
-    if (filterDateRange.to) result = result.filter(r => r.semana <= filterDateRange.to)
-    if (filterStatus === 'filled') result = result.filter(r => getRowProgress(r.medios).pct === 100)
-    else if (filterStatus === 'empty') result = result.filter(r => getRowProgress(r.medios).pct === 0)
-    else if (filterStatus === 'partial') result = result.filter(r => { const p = getRowProgress(r.medios).pct; return p > 0 && p < 100 })
-    if (filterCellStatus !== 'all') {
-      const targetCols = filterGroup === 'all' ? MEDIA_COLS : MEDIA_COLS.filter(c => c.group === filterGroup)
-      result = result.filter(r => targetCols.some(col => {
-        const { valor } = getCellData(r.medios, col.id)
-        if (filterCellStatus === 'si') return valor?.toLowerCase().startsWith('si')
-        if (filterCellStatus === 'pd') return valor?.toLowerCase().startsWith('pd')
-        if (filterCellStatus === 'no') return valor?.toLowerCase() === 'no'
-        if (filterCellStatus === 'empty') return !valor
-        return true
-      }))
+
+    // Si hay filtros de planificacion activos, ocultar temas sin resultados
+    if (filterDateRange.from || filterDateRange.to || filterCellStatus !== 'all') {
+      result = result.filter(t => t.planificaciones.length > 0)
     }
-    return sortRows(result, sortDir)
-  }, [rows, filterText, sortDir, filterStatus, filterDateRange, filterGroup, filterCellStatus])
+
+    // Ordenar temas por fecha más temprana de sus planificaciones
+    result = [...result].sort((a, b) => {
+      const dateA = a.planificaciones[0]?.semana || '9999-99-99'
+      const dateB = b.planificaciones[0]?.semana || '9999-99-99'
+      const cmp = dateA.localeCompare(dateB)
+      return sortDir === 'desc' ? -cmp : cmp
+    })
+
+    return result
+  }, [temas, filterText, sortDir, filterDateRange, filterGroup, filterCellStatus])
 
   const visibleCols = useMemo(() => {
     if (filterGroup === 'all') return MEDIA_COLS
     return MEDIA_COLS.filter(c => c.group === filterGroup)
   }, [filterGroup])
 
-  async function handleAddRow({ nombre, semana }) {
+  // handleAddRow: crea tema (si es nuevo) + planificación
+  async function handleAddRow({ nombre, semana, temaId }) {
+    let targetTemaId = temaId
+    if (!targetTemaId) {
+      const { data: newTema, error } = await supabase
+        .from('temas').insert([{ nombre, origen: 'medios' }]).select().single()
+      if (error) { addToast('Error al crear el tema. Intenta nuevamente.', 'error'); return }
+      targetTemaId = newTema.id
+    }
     const { data, error } = await supabase
-      .from('contenidos').insert([{ nombre, semana, medios: {} }]).select().single()
-    if (error) { addToast('Error al agregar el tema. Intenta nuevamente.', 'error'); return }
+      .from('contenidos').insert([{ nombre, semana, medios: {}, tema_id: targetTemaId }]).select().single()
+    if (error) { addToast('Error al agregar la planificación. Intenta nuevamente.', 'error'); return }
     await logAction('AGREGAR', data.id, nombre, `Agregó "${nombre}"`)
-    setShowModal(false)
+    setShowModal(null)
   }
 
-  async function handleCellChange(rowId, colId, value, notas) {
-    const row = rows.find(r => r.id === rowId)
-    if (!row) return
-    const { valor: oldValue, notas: oldNotas } = getCellData(row.medios, colId)
+  // handleCellChange: actualiza una celda de una planificación
+  async function handleCellChange(planifId, colId, value, notas) {
+    let planif = null
+    let tema = null
+    for (const t of temas) {
+      const p = t.planificaciones.find(p => p.id === planifId)
+      if (p) { planif = p; tema = t; break }
+    }
+    if (!planif) return
+    const { valor: oldValue, notas: oldNotas } = getCellData(planif.medios, colId)
     if (oldValue === value && oldNotas === notas) return
-    const newMedios = setCellData(row.medios, colId, value, notas)
-    setRows(prev => prev.map(r => r.id === rowId ? { ...r, medios: newMedios } : r))
-    const { error } = await supabase.from('contenidos').update({ medios: newMedios }).eq('id', rowId)
-    if (error) { addToast('Error al guardar. Los datos se recargarán.', 'error'); fetchRows(); return }
+    const newMedios = setCellData(planif.medios, colId, value, notas)
+    setTemas(prev => prev.map(t => t.id === tema.id ? {
+      ...t,
+      planificaciones: t.planificaciones.map(p => p.id === planifId ? { ...p, medios: newMedios } : p)
+    } : t))
+    const { error } = await supabase.from('contenidos').update({ medios: newMedios }).eq('id', planifId)
+    if (error) { addToast('Error al guardar. Los datos se recargarán.', 'error'); fetchData(); return }
     const detalle = value ? `"${colId}" → "${value}"${notas ? ' (con notas)' : ''}` : `Limpió "${colId}"`
-    await logAction('MODIFICAR', rowId, row.nombre, detalle)
+    await logAction('MODIFICAR', planifId, tema.nombre, detalle)
   }
 
-  async function handleFieldChange(rowId, field, value) {
-    const row = rows.find(r => r.id === rowId)
-    setRows(prev => prev.map(r => r.id === rowId ? { ...r, [field]: value } : r))
-    const { error } = await supabase.from('contenidos').update({ [field]: value }).eq('id', rowId)
-    if (error) { addToast('Error al guardar el campo. Los datos se recargarán.', 'error'); fetchRows(); return }
-    await logAction('MODIFICAR', rowId, row?.nombre, `Cambió "${field}" → "${value}"`)
+  // handleFieldChange: edita campo de planificación (p.ej. semana)
+  async function handleFieldChange(planifId, field, value) {
+    let tema = null
+    for (const t of temas) {
+      if (t.planificaciones.some(p => p.id === planifId)) { tema = t; break }
+    }
+    setTemas(prev => prev.map(t => t.id === tema?.id ? {
+      ...t,
+      planificaciones: t.planificaciones.map(p => p.id === planifId ? { ...p, [field]: value } : p)
+    } : t))
+    const { error } = await supabase.from('contenidos').update({ [field]: value }).eq('id', planifId)
+    if (error) { addToast('Error al guardar el campo. Los datos se recargarán.', 'error'); fetchData(); return }
+    await logAction('MODIFICAR', planifId, tema?.nombre, `Cambió "${field}" → "${value}"`)
   }
 
-  function requestDeleteRow(rowId) {
-    const row = rows.find(r => r.id === rowId)
-    setConfirmDelete({ id: rowId, nombre: row?.nombre || 'este tema' })
+  function requestDeleteRow(planifId) {
+    let nombre = 'esta planificación'
+    for (const t of temas) {
+      const p = t.planificaciones.find(p => p.id === planifId)
+      if (p) { nombre = `la planificación del ${p.semana ? new Date(p.semana + 'T12:00:00').toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'tema'} en "${t.nombre}"`; break }
+    }
+    setConfirmDelete({ id: planifId, nombre })
   }
 
-  async function handleDeleteRow(rowId) {
-    const row = rows.find(r => r.id === rowId)
-    setRows(prev => prev.filter(r => r.id !== rowId))
-    const { error } = await supabase.from('contenidos').delete().eq('id', rowId)
-    if (error) { addToast('Error al eliminar el tema.', 'error'); fetchRows(); return }
-    await logAction('ELIMINAR', rowId, row?.nombre, `Eliminó "${row?.nombre}"`)
+  async function handleDeleteRow(planifId) {
+    let tema = null
+    for (const t of temas) {
+      if (t.planificaciones.some(p => p.id === planifId)) { tema = t; break }
+    }
+
+    const { error } = await supabase.from('contenidos').delete().eq('id', planifId)
+    if (error) { addToast('Error al eliminar.', 'error'); fetchData(); return }
+
+    // Si era la última planificación de un tema de origen medios, eliminar el tema también
+    if (tema && tema.planificaciones.length === 1 && tema.origen !== 'editorial') {
+      await supabase.from('temas').delete().eq('id', tema.id)
+      setTemas(prev => prev.filter(t => t.id !== tema.id))
+    } else {
+      setTemas(prev => prev.map(t =>
+        t.id === tema?.id
+          ? { ...t, planificaciones: t.planificaciones.filter(p => p.id !== planifId) }
+          : t
+      ))
+    }
+    await logAction('ELIMINAR', planifId, tema?.nombre)
   }
 
-  const hasActiveFilters = filterInput || filterStatus !== 'all' || filterGroup !== 'all' || filterCellStatus !== 'all' || filterDateRange.from || filterDateRange.to
+  function handleOpenAddPlanificacion(temaId) {
+    const tema = temas.find(t => t.id === temaId)
+    if (!tema) return
+    setShowModal({
+      temaId: tema.id,
+      temaNombre: tema.nombre,
+      existingDates: tema.planificaciones.map(p => p.semana).filter(Boolean),
+    })
+  }
+
+  const hasActiveFilters = filterInput || filterGroup !== 'all' || filterCellStatus !== 'all' || filterDateRange.from || filterDateRange.to
+  const totalPlanifs = temas.reduce((acc, t) => acc + t.planificaciones.length, 0)
+  const displayPlanifs = displayTemas.reduce((acc, t) => acc + t.planificaciones.length, 0)
 
   return (
     <div className="app">
       <Header
         userName={userName}
         userEmail={session.user.email}
-        onAdd={() => setShowModal(true)}
+        onAdd={() => setShowModal('new')}
         onLogout={onLogout}
         onShowLogs={() => setShowLogs(true)}
         onBackToSelector={onBackToSelector}
@@ -244,12 +359,6 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
         {/* Fila 2: Pills */}
         <div className="medios-filter-pills-row">
           <div className="filter-pills">
-            {[{ value: 'all', label: 'Todos' }, { value: 'filled', label: 'Completos' }, { value: 'partial', label: 'En progreso' }, { value: 'empty', label: 'Vacíos' }].map(f => (
-              <button key={f.value} className={`pill ${filterStatus === f.value ? 'pill-active' : ''}`} onClick={() => setFilterStatus(f.value)}>{f.label}</button>
-            ))}
-          </div>
-          <div className="filter-pills-divider" />
-          <div className="filter-pills">
             <button className={`pill ${filterGroup === 'all' ? 'pill-active' : ''}`} onClick={() => setFilterGroup('all')}>Todos los medios</button>
             {GROUPS.map(g => (
               <button key={g.id} className={`pill ${filterGroup === g.id ? 'pill-active' : ''}`} onClick={() => {
@@ -270,9 +379,9 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
         {/* Indicador activo */}
         {hasActiveFilters && (
           <div className="medios-filter-active">
-            <span className="filter-count">{displayRows.length} de {rows.length} temas</span>
-            {filterGroup !== 'all' && <span className="filter-count">· {visibleCols.length} columnas</span>}
-            <button className="filter-reset" onClick={() => { setFilterInput(''); setFilterStatus('all'); setFilterGroup('all'); setFilterCellStatus('all'); setFilterDateRange({ from: '', to: '' }) }}>Limpiar filtros</button>
+            <span className="filter-count">{displayTemas.length} de {temas.length} temas · {displayPlanifs} de {totalPlanifs} fechas</span>
+            {filterGroup !== 'all' && <span className="filter-count"> · {visibleCols.length} columnas</span>}
+            <button className="filter-reset" onClick={() => { setFilterInput(''); setFilterGroup('all'); setFilterCellStatus('all'); setFilterDateRange({ from: '', to: '' }) }}>Limpiar filtros</button>
           </div>
         )}
       </div>
@@ -283,15 +392,34 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
       {!loading && !error && (
         <>
           <div className="desktop-only">
-            <MediaTable rows={displayRows} visibleCols={visibleCols} onCellChange={handleCellChange} onFieldChange={handleFieldChange}
-              onDeleteRow={requestDeleteRow} totalRows={rows.length} filterQuery={filterInput}
-              onClearFilter={() => setFilterInput('')} onAdd={() => setShowModal(true)}
-              collapsedGroups={collapsedGroups} onToggleGroup={toggleGroup} />
+            <MediaTable
+              temas={displayTemas}
+              visibleCols={visibleCols}
+              onCellChange={handleCellChange}
+              onFieldChange={handleFieldChange}
+              onDeleteRow={requestDeleteRow}
+              onAddPlanificacion={handleOpenAddPlanificacion}
+              totalTemas={temas.length}
+              filterQuery={filterInput}
+              onClearFilter={() => setFilterInput('')}
+              onAdd={() => setShowModal('new')}
+              collapsedGroups={collapsedGroups}
+              onToggleGroup={toggleGroup}
+              expandedTemas={expandedTemas}
+              onToggleTema={toggleTema}
+            />
           </div>
           <div className="mobile-only">
-            <MobileCardView rows={displayRows} onCellChange={handleCellChange} onFieldChange={handleFieldChange}
-              onDeleteRow={requestDeleteRow} totalRows={rows.length} filterQuery={filterInput}
-              onClearFilter={() => setFilterInput('')} onAdd={() => setShowModal(true)} />
+            <MobileCardView
+              rows={displayTemas.flatMap(t => t.planificaciones)}
+              onCellChange={handleCellChange}
+              onFieldChange={handleFieldChange}
+              onDeleteRow={requestDeleteRow}
+              totalRows={totalPlanifs}
+              filterQuery={filterInput}
+              onClearFilter={() => setFilterInput('')}
+              onAdd={() => setShowModal('new')}
+            />
           </div>
           <div className="shortcuts-hint desktop-only">
             <span><kbd>Esc</kbd> cerrar</span><span>·</span>
@@ -301,13 +429,30 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
         </>
       )}
 
-      {showModal && <AddRowModal onConfirm={handleAddRow} onClose={() => setShowModal(false)} existingNames={rows.map(r => r.nombre).filter(Boolean)} />}
+      {/* Modales */}
+      {showModal === 'new' && (
+        <AddRowModal
+          temas={temas}
+          onConfirm={handleAddRow}
+          onClose={() => setShowModal(null)}
+        />
+      )}
+      {showModal && typeof showModal === 'object' && (
+        <AddRowModal
+          prefillTema={{ id: showModal.temaId, nombre: showModal.temaNombre }}
+          existingDates={showModal.existingDates}
+          onConfirm={handleAddRow}
+          onClose={() => setShowModal(null)}
+        />
+      )}
       {showLogs && <AuditLogPanel onClose={() => setShowLogs(false)} mesaType="medios" />}
       {showProfile && <UserProfilePanel userEmail={session.user.email} userName={userName} onClose={() => setShowProfile(false)} />}
       {confirmDelete && (
-        <ConfirmDialog nombre={confirmDelete.nombre}
+        <ConfirmDialog
+          nombre={confirmDelete.nombre}
           onConfirm={() => { handleDeleteRow(confirmDelete.id); setConfirmDelete(null) }}
-          onCancel={() => setConfirmDelete(null)} />
+          onCancel={() => setConfirmDelete(null)}
+        />
       )}
       <Toaster toasts={toasts} onRemove={removeToast} />
     </div>

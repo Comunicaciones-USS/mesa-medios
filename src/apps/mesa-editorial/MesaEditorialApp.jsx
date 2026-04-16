@@ -179,10 +179,46 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
   }
 
   async function handleAddRow(data) {
-    const { data: inserted, error } = await supabase.from(TABLE).insert([data]).select().single()
+    let insertData = { ...data }
+
+    // Si se marcó sync_to_medios, crear tema antes de insertar la acción
+    if (data.sync_to_medios) {
+      const { data: newTema, error: tErr } = await supabase
+        .from('temas')
+        .insert([{ nombre: data.tema || data.accion, origen: 'editorial', eje: data.eje }])
+        .select().single()
+      if (!tErr && newTema) insertData.tema_id = newTema.id
+    }
+
+    const { data: inserted, error } = await supabase.from(TABLE).insert([insertData]).select().single()
     if (error) { addToast('Error al agregar la acción. Intenta nuevamente.', 'error'); return }
     await logAction('AGREGAR', inserted.id, data.accion, `Agregó "${data.accion}"`)
     setShowModal(false)
+  }
+
+  async function handleSyncToggle(rowId, enable) {
+    const row = rows.find(r => r.id === rowId)
+    if (!row) return
+
+    if (enable) {
+      const { data: newTema, error: tErr } = await supabase
+        .from('temas')
+        .insert([{ nombre: row.tema || row.accion, origen: 'editorial', eje: row.eje }])
+        .select().single()
+      if (tErr) { addToast('Error al vincular con Mesa de Medios.', 'error'); return }
+
+      const updateData = { sync_to_medios: true, tema_id: newTema.id }
+      setRows(prev => prev.map(r => r.id === rowId ? { ...r, ...updateData } : r))
+      const { error } = await supabase.from(TABLE).update(updateData).eq('id', rowId)
+      if (error) { addToast('Error al guardar.', 'error'); fetchRows(); return }
+      addToast('Vinculado con Mesa de Medios', 'success')
+    } else {
+      const updateData = { sync_to_medios: false }
+      setRows(prev => prev.map(r => r.id === rowId ? { ...r, ...updateData } : r))
+      const { error } = await supabase.from(TABLE).update(updateData).eq('id', rowId)
+      if (error) { addToast('Error al guardar.', 'error'); fetchRows(); return }
+    }
+    await logAction('MODIFICAR', rowId, row.accion, `sync_to_medios → ${enable}`)
   }
 
   async function handleCellChange(rowId, field, value) {
@@ -355,6 +391,7 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
               onDeleteRow={requestDeleteRow}
               onAddBacklog={handleAddBacklog}
               onAssignOrphans={handleAssignOrphans}
+              onSyncToggle={handleSyncToggle}
               totalRows={rows.length}
               filterQuery={filterInput}
               onClearFilter={() => setFilterInput('')}
@@ -400,7 +437,7 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
             setShowModal(true)
           }}
         />
-      )}}
+      )}
       {showLogs && <AuditLogPanel onClose={() => setShowLogs(false)} mesaType="editorial" />}
       {showProfile && <UserProfilePanel userEmail={session.user.email} userName={userName} onClose={() => setShowProfile(false)} />}
       {confirmDelete && (
