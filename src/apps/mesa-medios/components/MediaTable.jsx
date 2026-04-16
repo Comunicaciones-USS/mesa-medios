@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
-import { MEDIA_COLS, GROUPS, getGroupCols } from '../config'
-import { getCellData, getRowProgress } from '../utils'
+import { MEDIA_COLS, GROUPS } from '../config'
+import { getCellData, getRowProgressFiltered } from '../utils'
 import CellPopover from './CellPopover'
 
 function getCellMeta(raw) {
@@ -20,12 +20,7 @@ function getCellMeta(raw) {
   return { status: 'empty', display: raw, name: '' }
 }
 
-function isLastInGroup(col, index, cols) {
-  const next = cols[index + 1]
-  return !next || next.group !== col.group
-}
-
-export default function MediaTable({ rows, onCellChange, onFieldChange, onDeleteRow, totalRows, filterQuery, onClearFilter, onAdd, visibleCols }) {
+export default function MediaTable({ rows, onCellChange, onFieldChange, onDeleteRow, totalRows, filterQuery, onClearFilter, onAdd, visibleCols, collapsedGroups = new Set(), onToggleGroup }) {
   const [popover, setPopover] = useState(null)
   const [editingField, setEditingField] = useState(null)
   const [editValue, setEditValue] = useState('')
@@ -35,6 +30,9 @@ export default function MediaTable({ rows, onCellChange, onFieldChange, onDelete
 
   // Build active groups based on visible cols
   const activeGroups = GROUPS.filter(g => activeCols.some(c => c.group === g.id))
+
+  // Columns of expanded groups (for progress bar and cells)
+  const expandedCols = activeCols.filter(c => !collapsedGroups.has(c.group))
 
   function openPopover(e, rowId, colId, medios) {
     const { valor, notas } = getCellData(medios, colId)
@@ -64,43 +62,84 @@ export default function MediaTable({ rows, onCellChange, onFieldChange, onDelete
     if (e.key === 'Escape') setEditingField(null)
   }
 
+  // Total visible header columns: 2 sticky + expanded cols + collapsed group placeholders + 1 actions
+  const collapsedGroupCount = activeGroups.filter(g => collapsedGroups.has(g.id)).length
+  const emptyColSpan = expandedCols.length + collapsedGroupCount + 3
+
   return (
     <div className="table-wrapper">
       <div className="table-scroll">
         <table className="media-table">
           <thead>
+            {/* ROW 1: Group headers
+                Groups without subgroups span rows 1+2 (rowSpan=2) so they don't leave
+                an empty cell in the subgroup row that bleeds across other groups. */}
             <tr className="group-header-row">
               <th className="sticky-col col-contenidos group-dark" rowSpan={3}>TEMAS</th>
               <th className="sticky-col col-semana group-dark" rowSpan={3}>FECHA</th>
-              {activeGroups.map(g => (
-                <th key={g.id} colSpan={activeCols.filter(c => c.group === g.id).length} className={`group-header ${g.className}`}>{g.label}</th>
-              ))}
+              {activeGroups.map(g => {
+                const isCollapsed = collapsedGroups.has(g.id)
+                const groupColCount = activeCols.filter(c => c.group === g.id).length
+                const groupSubs = [...new Set(activeCols.filter(c => c.group === g.id).map(c => c.subgroup).filter(Boolean))]
+                const hasSubgroups = groupSubs.length > 0
+                // Expanded groups with no subgroup occupy rows 1+2; collapsed always use rowSpan=1
+                const rowSpan = (!isCollapsed && !hasSubgroups) ? 2 : 1
+                return (
+                  <th
+                    key={g.id}
+                    colSpan={isCollapsed ? 1 : groupColCount}
+                    rowSpan={rowSpan}
+                    className={`group-header ${g.className}${isCollapsed ? ' group-collapsed' : ''}`}
+                    onClick={() => onToggleGroup?.(g.id)}
+                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                  >
+                    <span className="group-toggle-icon">{isCollapsed ? '▸' : '▾'}</span>
+                    {isCollapsed ? '' : g.label}
+                  </th>
+                )
+              })}
               <th className="col-actions group-dark" rowSpan={3} />
             </tr>
+
+            {/* ROW 2: Subgroup headers
+                Only renders cells for: (a) groups with subgroups, (b) collapsed groups.
+                Groups without subgroups are already covered by their rowSpan=2 cell above. */}
             <tr className="subgroup-header-row">
               {activeGroups.map(g => {
+                const isCollapsed = collapsedGroups.has(g.id)
                 const cols = activeCols.filter(c => c.group === g.id)
                 const subs = [...new Set(cols.map(c => c.subgroup).filter(Boolean))]
-                if (subs.length > 0) return subs.map(sg => (
+                const hasSubgroups = subs.length > 0
+
+                if (isCollapsed) return <th key={g.id} className="subgroup-cell subgroup-collapsed" />
+                // No cell needed — this group already spans rows 1+2 via rowSpan=2 above
+                if (!hasSubgroups) return null
+                // Render each distinct subgroup spanning its columns
+                return subs.map(sg => (
                   <th key={sg} colSpan={cols.filter(c => c.subgroup === sg).length} className="subgroup-cell">{sg}</th>
                 ))
-                return <th key={g.id} colSpan={cols.length} className="subgroup-cell subgroup-empty" />
               })}
             </tr>
+
+            {/* ROW 3: Column headers */}
             <tr className="sub-header-row">
-              {activeCols.map(col => (
-                <th key={col.id} className="sub-header">
-                  <span className="sub-label">{col.label}</span>
-                  {col.sub && <span className="sub-sublabel">{col.sub}</span>}
-                </th>
-              ))}
+              {activeGroups.map(g => {
+                const isCollapsed = collapsedGroups.has(g.id)
+                if (isCollapsed) return <th key={g.id} className="sub-header sub-header-placeholder" />
+                return activeCols.filter(c => c.group === g.id).map(col => (
+                  <th key={col.id} className="sub-header">
+                    <span className="sub-label">{col.label}</span>
+                    {col.sub && <span className="sub-sublabel">{col.sub}</span>}
+                  </th>
+                ))
+              })}
             </tr>
           </thead>
 
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={activeCols.length + 3} className="empty-state-cell">
+                <td colSpan={emptyColSpan} className="empty-state-cell">
                   {totalRows === 0 ? (
                     <div className="empty-state">
                       <span className="empty-state-icon">📋</span>
@@ -121,6 +160,9 @@ export default function MediaTable({ rows, onCellChange, onFieldChange, onDelete
             ) : (
               rows.map((row, idx) => {
                 const isEditing = editingField?.rowId === row.id
+                // Calculate progress only with columns from expanded groups
+                const progress = getRowProgressFiltered(row.medios, expandedCols)
+
                 return (
                   <tr
                     key={row.id}
@@ -149,7 +191,7 @@ export default function MediaTable({ rows, onCellChange, onFieldChange, onDelete
                             {row.nombre || <em className="placeholder">Sin nombre</em>}
                           </span>
                           {(() => {
-                            const { filled, total, pct } = getRowProgress(row.medios)
+                            const { filled, total, pct } = progress
                             const color = pct >= 60 ? '#22c55e' : pct >= 30 ? '#f59e0b' : '#ef4444'
                             return (
                               <div className="row-progress">
@@ -190,31 +232,37 @@ export default function MediaTable({ rows, onCellChange, onFieldChange, onDelete
                       )}
                     </td>
 
-                    {/* ── MEDIA CELLS ── */}
-                    {activeCols.map((col, i) => {
-                      const { valor, notas } = getCellData(row.medios, col.id)
-                      const meta = getCellMeta(valor)
-                      const isOpen = popover?.rowId === row.id && popover?.colId === col.id
-                      return (
-                        <td
-                          key={col.id}
-                          className={`media-cell status-${meta.status} ${isLastInGroup(col, i, activeCols) ? 'border-group-right' : ''} ${isOpen ? 'cell-active' : ''}`}
-                          onClick={e => openPopover(e, row.id, col.id, row.medios)}
-                          title={valor || 'Clic para asignar estado'}
-                        >
-                          {meta.display && (
-                            <span className="cell-text">{meta.display}</span>
-                          )}
-                          {notas && (
-                            <span className="cell-notes-icon" title="Tiene detalles">
-                              <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
-                                <rect x="0.5" y="0.5" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="0.8" />
-                                <path d="M2 3h4M2 5h2.5" stroke="currentColor" strokeWidth="0.6" strokeLinecap="round" />
-                              </svg>
-                            </span>
-                          )}
-                        </td>
-                      )
+                    {/* ── MEDIA CELLS — rendered per group ── */}
+                    {activeGroups.flatMap(g => {
+                      const isCollapsed = collapsedGroups.has(g.id)
+                      if (isCollapsed) {
+                        return [<td key={`col-${g.id}`} className="group-collapsed-cell" onClick={() => onToggleGroup?.(g.id)} title="Expandir grupo" />]
+                      }
+                      const groupCols = activeCols.filter(c => c.group === g.id)
+                      return groupCols.map((col, i) => {
+                        const { valor, notas } = getCellData(row.medios, col.id)
+                        const meta = getCellMeta(valor)
+                        const isOpen = popover?.rowId === row.id && popover?.colId === col.id
+                        const isLast = i === groupCols.length - 1
+                        return (
+                          <td
+                            key={col.id}
+                            className={`media-cell status-${meta.status}${isLast ? ' border-group-right' : ''}${isOpen ? ' cell-active' : ''}`}
+                            onClick={e => openPopover(e, row.id, col.id, row.medios)}
+                            title={valor || 'Clic para asignar estado'}
+                          >
+                            {meta.display && <span className="cell-text">{meta.display}</span>}
+                            {notas && (
+                              <span className="cell-notes-icon" title="Tiene detalles">
+                                <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                                  <rect x="0.5" y="0.5" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="0.8" />
+                                  <path d="M2 3h4M2 5h2.5" stroke="currentColor" strokeWidth="0.6" strokeLinecap="round" />
+                                </svg>
+                              </span>
+                            )}
+                          </td>
+                        )
+                      })
                     })}
 
                     {/* ── ACTIONS ── */}

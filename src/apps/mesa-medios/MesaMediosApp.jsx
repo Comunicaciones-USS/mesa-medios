@@ -44,6 +44,18 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
   const [filterGroup,      setFilterGroup]      = useState('all')
   const [filterCellStatus, setFilterCellStatus] = useState('all')
 
+  // Collapsed column groups
+  const [collapsedGroups, setCollapsedGroups] = useState(new Set())
+
+  function toggleGroup(groupId) {
+    setCollapsedGroups(prev => {
+      const next = new Set(prev)
+      if (next.has(groupId)) next.delete(groupId)
+      else next.add(groupId)
+      return next
+    })
+  }
+
   // Realtime subscription
   useEffect(() => {
     const channel = supabase
@@ -240,7 +252,11 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
           <div className="filter-pills">
             <button className={`pill ${filterGroup === 'all' ? 'pill-active' : ''}`} onClick={() => setFilterGroup('all')}>Todos los medios</button>
             {GROUPS.map(g => (
-              <button key={g.id} className={`pill ${filterGroup === g.id ? 'pill-active' : ''}`} onClick={() => setFilterGroup(filterGroup === g.id ? 'all' : g.id)}>{g.label}</button>
+              <button key={g.id} className={`pill ${filterGroup === g.id ? 'pill-active' : ''}`} onClick={() => {
+                const next = filterGroup === g.id ? 'all' : g.id
+                setFilterGroup(next)
+                if (next !== 'all') setCollapsedGroups(prev => { const s = new Set(prev); s.delete(next); return s })
+              }}>{g.label}</button>
             ))}
           </div>
           <div className="filter-pills-divider" />
@@ -269,7 +285,8 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
           <div className="desktop-only">
             <MediaTable rows={displayRows} visibleCols={visibleCols} onCellChange={handleCellChange} onFieldChange={handleFieldChange}
               onDeleteRow={requestDeleteRow} totalRows={rows.length} filterQuery={filterInput}
-              onClearFilter={() => setFilterInput('')} onAdd={() => setShowModal(true)} />
+              onClearFilter={() => setFilterInput('')} onAdd={() => setShowModal(true)}
+              collapsedGroups={collapsedGroups} onToggleGroup={toggleGroup} />
           </div>
           <div className="mobile-only">
             <MobileCardView rows={displayRows} onCellChange={handleCellChange} onFieldChange={handleFieldChange}
