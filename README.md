@@ -1,6 +1,6 @@
-# Sistema de Gestión - Mesa de Medios USS
+# Sistema de Gestión - Mesa Editorial y de Medios USS
 
-**Dashboard colaborativo de planificación de medios** para la Dirección de Comunicaciones de la Universidad San Sebastián.
+**Dashboard colaborativo de planificación editorial y de medios** para la Dirección de Comunicaciones de la Universidad San Sebastián.
 
 ---
 
