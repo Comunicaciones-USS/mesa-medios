@@ -71,17 +71,24 @@ export default function MediaTable({ rows, onCellChange, onFieldChange, onDelete
       <div className="table-scroll">
         <table className="media-table">
           <thead>
-            {/* ROW 1: Group headers */}
+            {/* ROW 1: Group headers
+                Groups without subgroups span rows 1+2 (rowSpan=2) so they don't leave
+                an empty cell in the subgroup row that bleeds across other groups. */}
             <tr className="group-header-row">
               <th className="sticky-col col-contenidos group-dark" rowSpan={3}>TEMAS</th>
               <th className="sticky-col col-semana group-dark" rowSpan={3}>FECHA</th>
               {activeGroups.map(g => {
                 const isCollapsed = collapsedGroups.has(g.id)
                 const groupColCount = activeCols.filter(c => c.group === g.id).length
+                const groupSubs = [...new Set(activeCols.filter(c => c.group === g.id).map(c => c.subgroup).filter(Boolean))]
+                const hasSubgroups = groupSubs.length > 0
+                // Expanded groups with no subgroup occupy rows 1+2; collapsed always use rowSpan=1
+                const rowSpan = (!isCollapsed && !hasSubgroups) ? 2 : 1
                 return (
                   <th
                     key={g.id}
                     colSpan={isCollapsed ? 1 : groupColCount}
+                    rowSpan={rowSpan}
                     className={`group-header ${g.className}${isCollapsed ? ' group-collapsed' : ''}`}
                     onClick={() => onToggleGroup?.(g.id)}
                     style={{ cursor: 'pointer', userSelect: 'none' }}
@@ -94,17 +101,23 @@ export default function MediaTable({ rows, onCellChange, onFieldChange, onDelete
               <th className="col-actions group-dark" rowSpan={3} />
             </tr>
 
-            {/* ROW 2: Subgroup headers */}
+            {/* ROW 2: Subgroup headers
+                Only renders cells for: (a) groups with subgroups, (b) collapsed groups.
+                Groups without subgroups are already covered by their rowSpan=2 cell above. */}
             <tr className="subgroup-header-row">
               {activeGroups.map(g => {
                 const isCollapsed = collapsedGroups.has(g.id)
-                if (isCollapsed) return <th key={g.id} className="subgroup-cell subgroup-collapsed" />
                 const cols = activeCols.filter(c => c.group === g.id)
                 const subs = [...new Set(cols.map(c => c.subgroup).filter(Boolean))]
-                if (subs.length > 0) return subs.map(sg => (
+                const hasSubgroups = subs.length > 0
+
+                if (isCollapsed) return <th key={g.id} className="subgroup-cell subgroup-collapsed" />
+                // No cell needed — this group already spans rows 1+2 via rowSpan=2 above
+                if (!hasSubgroups) return null
+                // Render each distinct subgroup spanning its columns
+                return subs.map(sg => (
                   <th key={sg} colSpan={cols.filter(c => c.subgroup === sg).length} className="subgroup-cell">{sg}</th>
                 ))
-                return <th key={g.id} colSpan={cols.length} className="subgroup-cell subgroup-empty" />
               })}
             </tr>
 

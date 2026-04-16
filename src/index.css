@@ -211,6 +211,7 @@ body {
   padding: 10px 12px;
   white-space: nowrap;
   border-bottom: 1px solid rgba(255,255,255,.15);
+  vertical-align: middle; /* centers text in cells that span rows 1+2 (no-subgroup groups) */
 }
 .group-dark {
   background: var(--primary);
