@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { supabase } from '../utils/supabase'
 import { sha256 } from '../utils/crypto'
-import logoUSS from '../../../assets/escudo-uss-horizontal-blanco.svg'
 
 // ── Rate limiting client-side (sessionStorage) ───────────────────
 const BLOCK_THRESHOLD = 5
@@ -174,9 +173,12 @@ export default function Login({ onLogin }) {
         {/* ── Columna derecha: imagen hero (40%) ── */}
         <div className="login-right">
           <div className="login-hero">
-            {/* Logo USS en círculo oscuro */}
+            {/* Wordmark USS */}
             <div className="login-logo-badge">
-              <img src={logoUSS} alt="Universidad San Sebastián" />
+              <span className="login-logo-univ">UNIVERSIDAD</span>
+              <span className="login-logo-name">SAN SEBASTIÁN</span>
+              <div className="login-logo-rule" />
+              <span className="login-logo-slogan">Ilumina el futuro</span>
             </div>
 
             {/* Overlay gradiente para legibilidad del texto */}
