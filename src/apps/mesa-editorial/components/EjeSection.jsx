@@ -109,6 +109,7 @@ export default function EjeSection({ eje, rows, onCellChange, onDeleteRow, colla
                 orphans={orphanBacklogs}
                 resultados={resultados}
                 onAssign={onAssignOrphans}
+                onDeleteRow={onDeleteRow}
               />
             </>
           )}

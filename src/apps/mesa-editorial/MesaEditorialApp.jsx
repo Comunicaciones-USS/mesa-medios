@@ -241,15 +241,28 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
 
   function requestDeleteRow(rowId) {
     const row = rows.find(r => r.id === rowId)
-    setConfirmDelete({ id: rowId, nombre: row?.accion || 'esta acción' })
+    const children = rows.filter(r => r.parent_id === rowId)
+    setConfirmDelete({ id: rowId, nombre: row?.accion || 'esta acción', childCount: children.length })
   }
 
   async function handleDeleteRow(rowId) {
     const row = rows.find(r => r.id === rowId)
-    setRows(prev => prev.filter(r => r.id !== rowId))
+    const children = rows.filter(r => r.parent_id === rowId)
+    const childIds = children.map(c => c.id)
+
+    // Optimistic update — remove row and all its children
+    setRows(prev => prev.filter(r => r.id !== rowId && !childIds.includes(r.id)))
+
+    // Delete children first (in case DB has no CASCADE)
+    if (childIds.length > 0) {
+      await supabase.from(TABLE).delete().in('id', childIds)
+    }
+
     const { error } = await supabase.from(TABLE).delete().eq('id', rowId)
-    if (error) { addToast('Error al eliminar la acción.', 'error'); fetchRows(); return }
+    if (error) { addToast('Error al eliminar.', 'error'); fetchRows(); return }
+
     await logAction('ELIMINAR', rowId, row?.accion, `Eliminó "${row?.accion}"`)
+    addToast(`"${row?.accion || 'Acción'}" eliminada`, 'success')
   }
 
   return (
@@ -443,6 +456,10 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
       {confirmDelete && (
         <ConfirmDialog
           nombre={confirmDelete.nombre}
+          body={confirmDelete.childCount > 0
+            ? `¿Eliminar Resultado "${confirmDelete.nombre}" y sus ${confirmDelete.childCount} backlog${confirmDelete.childCount === 1 ? '' : 's'} asociados?\nEsta acción no se puede deshacer.`
+            : `¿Eliminar "${confirmDelete.nombre}"?\nEsta acción no se puede deshacer.`
+          }
           onConfirm={() => { handleDeleteRow(confirmDelete.id); setConfirmDelete(null) }}
           onCancel={() => setConfirmDelete(null)}
         />

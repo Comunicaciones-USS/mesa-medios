@@ -4270,6 +4270,8 @@ body {
 .orphan-accion { flex: 1; color: #374151; }
 .orphan-fecha { width: 80px; color: #94a3b8; font-size: 0.72rem; }
 .orphan-resp { width: 80px; color: #94a3b8; font-size: 0.72rem; }
+.orphan-delete-btn { opacity: 0; transition: opacity 0.15s; flex-shrink: 0; }
+.orphan-item:hover .orphan-delete-btn { opacity: 1; }
 
 /* ── Resultado toggle/expand ── */
 .resultado-accion-wrap {

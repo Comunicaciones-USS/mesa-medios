@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-export default function OrphanAssigner({ orphans, resultados, onAssign }) {
+export default function OrphanAssigner({ orphans, resultados, onAssign, onDeleteRow }) {
   const [selected, setSelected] = useState(new Set())
   const [targetResultado, setTargetResultado] = useState('')
 
@@ -59,6 +59,17 @@ export default function OrphanAssigner({ orphans, resultados, onAssign }) {
             <span className="orphan-accion">{o.accion || '—'}</span>
             <span className="orphan-fecha">{o.fecha || '—'}</span>
             <span className="orphan-resp">{o.responsable || '—'}</span>
+            {onDeleteRow && (
+              <button
+                className="orphan-delete-btn btn-delete-row"
+                onClick={() => onDeleteRow(o.id)}
+                title="Eliminar backlog"
+              >
+                <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                  <path d="M2 3.5h9M5 3.5V2.5a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v1M5.5 5.5v4M7.5 5.5v4M3.5 3.5l.5 7h5l.5-7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
+            )}
           </div>
         ))}
       </div>
