@@ -66,7 +66,7 @@ export default function Login({ onLogin }) {
 
     if (dbErr || !data) {
       recordFailedAttempt(normalizedEmail)
-      await supabase.from('pin_login_attempts').insert([{ email: normalizedEmail, success: false }]).catch(() => {})
+      try { await supabase.from('pin_login_attempts').insert([{ email: normalizedEmail, success: false }]) } catch { /* ignore */ }
       setLoading(false)
       setError('Credenciales incorrectas')
       return
@@ -82,22 +82,24 @@ export default function Login({ onLogin }) {
     const enteredHash = await sha256(pin.trim())
     if (enteredHash !== data.pin_hash) {
       recordFailedAttempt(normalizedEmail)
-      await supabase.from('pin_login_attempts').insert([{ email: normalizedEmail, success: false }]).catch(() => {})
+      try { await supabase.from('pin_login_attempts').insert([{ email: normalizedEmail, success: false }]) } catch { /* ignore */ }
       setLoading(false)
       setError('Credenciales incorrectas')
       return
     }
 
     // Login exitoso
-    await supabase.from('pin_login_attempts').insert([{ email: normalizedEmail, success: true }]).catch(() => {})
-    await supabase.from('audit_logs').insert([{
-      mesa_type:  null,
-      user_email: normalizedEmail,
-      action:     'login',
-      table_name: null,
-      record_id:  null,
-      details:    JSON.stringify({ description: 'Inició sesión con PIN' }),
-    }]).catch(() => {})
+    try { await supabase.from('pin_login_attempts').insert([{ email: normalizedEmail, success: true }]) } catch { /* ignore */ }
+    try {
+      await supabase.from('audit_logs').insert([{
+        mesa_type:  null,
+        user_email: normalizedEmail,
+        action:     'login',
+        table_name: null,
+        record_id:  null,
+        details:    JSON.stringify({ description: 'Inició sesión con PIN' }),
+      }])
+    } catch { /* ignore */ }
 
     setLoading(false)
     onLogin({ email: normalizedEmail, nombre: data.nombre || normalizedEmail })
