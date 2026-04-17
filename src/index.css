@@ -893,50 +893,14 @@ body {
   background: url('./assets/USS-LL-2.webp') 25% center / cover no-repeat;
 }
 
-.login-logo-badge {
+.login-hero-logo {
   position: absolute;
-  top: 28px;
-  right: 28px;
+  top: 32px;
+  right: 32px;
   z-index: 2;
-  width: 160px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0;
-  text-shadow: 0 1px 6px rgba(0,0,0,0.5);
-}
-.login-logo-univ {
-  font-family: 'Montserrat', sans-serif;
-  font-size: 0.55rem;
-  font-weight: 600;
-  letter-spacing: 0.22em;
-  color: rgba(255,255,255,0.9);
-  text-transform: uppercase;
-  line-height: 1;
-}
-.login-logo-name {
-  font-family: 'Montserrat', sans-serif;
-  font-size: 0.95rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  color: #fff;
-  text-transform: uppercase;
-  line-height: 1.15;
-  margin-top: 3px;
-}
-.login-logo-rule {
-  width: 100%;
-  height: 1px;
-  background: rgba(255,255,255,0.5);
-  margin: 6px 0 5px;
-}
-.login-logo-slogan {
-  font-family: 'Montserrat', sans-serif;
-  font-size: 0.55rem;
-  font-weight: 400;
-  font-style: italic;
-  letter-spacing: 0.08em;
-  color: rgba(255,255,255,0.82);
+  width: 42%;
+  height: auto;
+  filter: drop-shadow(0 2px 12px rgba(0,0,0,0.4));
 }
 
 .login-overlay {
