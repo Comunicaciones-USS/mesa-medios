@@ -39,7 +39,6 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
 
   // Sticky toolbar measurement
   const filterBarRef = useRef(null)
-  const [stickyTop, setStickyTop] = useState(165) // header ≈68px + filterbar ≈97px
 
   // Expanded temas
   const [expandedTemas, setExpandedTemas] = useState(new Set())
@@ -62,14 +61,15 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
     })
   }
 
-  // Measure filter bar height to offset sticky thead correctly
+  // Set --above-table CSS var so .table-scroll height stays within viewport
   useEffect(() => {
     const el = filterBarRef.current
     if (!el) return
     function measure() {
       const headerEl = document.querySelector('.header')
       const headerH = headerEl ? headerEl.getBoundingClientRect().height : 68
-      setStickyTop(Math.round(headerH + el.getBoundingClientRect().height))
+      const total = headerH + el.getBoundingClientRect().height
+      document.documentElement.style.setProperty('--above-table', `${Math.round(total)}px`)
     }
     measure()
     const ro = new ResizeObserver(measure)
@@ -459,7 +459,6 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
               onToggleGroup={toggleGroup}
               expandedTemas={expandedTemas}
               onToggleTema={toggleTema}
-              stickyTop={stickyTop}
             />
           </div>
           <div className="mobile-only">

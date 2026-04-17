@@ -70,7 +70,6 @@ export default function MediaTable({
   onToggleGroup,
   expandedTemas   = new Set(),
   onToggleTema,
-  stickyTop       = 165,
 }) {
   const [popover,          setPopover]          = useState(null)
   const [editingField,     setEditingField]     = useState(null)
@@ -201,7 +200,7 @@ export default function MediaTable({
             <col style={{ width: 42, minWidth: 42 }} />
           </colgroup>
 
-          <thead style={{ top: stickyTop }}>
+          <thead>
             {/* ROW 1: Grupos */}
             <tr className="group-header-row">
               <th className="sticky-col col-contenidos group-dark" rowSpan={3}>TEMAS</th>

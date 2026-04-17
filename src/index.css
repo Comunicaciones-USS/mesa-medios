@@ -181,13 +181,16 @@ body {
 }
 .table-scroll {
   overflow-x: auto;
-  overflow-y: clip;       /* clip ≠ scroll container — thead sticky works on page scroll */
+  overflow-y: auto;
   position: relative;
   border-radius: 10px;
   box-shadow: var(--shadow);
   background: #fff;
+  /* --above-table = header height + filter bar height, set via ResizeObserver in JS */
+  height: calc(100vh - var(--above-table, 165px) - 70px);
+  /* 70px = table-wrapper padding (40px) + shortcuts-hint (~28px) + buffer */
 }
-/* Sticky thead as a single block — prevents row 3 from covering rows 1-2 on scroll */
+/* Sticky thead within .table-scroll (the real scroll container) */
 .media-table thead {
   position: sticky;
   top: 0;
