@@ -3,15 +3,17 @@ import { EJES, TIPOS_CONFIG, TIPO_ACCION_OPTIONS, TIPOLOGIA_RESULTADO_OPTIONS } 
 
 export default function AddActionModal({ onConfirm, onClose, existingResponsables = [], existingTemas = [], prefilled }) {
   const [eje,         setEje]         = useState(prefilled?.eje || EJES[0].label)
-  const [tipo,        setTipo]        = useState('Ancla')
+  const [tipo,        setTipo]        = useState(prefilled?.tipo || 'Ancla')
   const [tema,        setTema]        = useState(prefilled?.tema || '')
   const [accion,      setAccion]      = useState('')
   const [tipoAccion,         setTipoAccion]         = useState('Backlog')
   const [tipologiaResultado, setTipologiaResultado] = useState('')
-  const [fecha,         setFecha]         = useState('')
+  const [fecha,         setFecha]         = useState(prefilled?.tipo === 'Always ON' ? null : '')
   const [responsable,   setResponsable]   = useState('')
   const [syncToMedios,  setSyncToMedios]  = useState(false)
   const firstRef = useRef(null)
+
+  const isAlwaysOn = tipo === 'Always ON'
 
   useEffect(() => { firstRef.current?.focus() }, [])
 
@@ -20,6 +22,14 @@ export default function AddActionModal({ onConfirm, onClose, existingResponsable
     document.addEventListener('keydown', handleKey)
     return () => document.removeEventListener('keydown', handleKey)
   }, [onClose])
+
+  function handleTipoChange(newTipo) {
+    setTipo(newTipo)
+    // Al cambiar a Always ON: limpiar fecha. Al salir de Always ON: también limpiar.
+    if (newTipo === 'Always ON' || tipo === 'Always ON') {
+      setFecha(newTipo === 'Always ON' ? null : '')
+    }
+  }
 
   function handleSubmit(e) {
     e.preventDefault()
@@ -31,7 +41,7 @@ export default function AddActionModal({ onConfirm, onClose, existingResponsable
       accion: accion.trim(),
       tipo_accion: tipoAccion,
       tipologia_resultado: tipoAccion === 'Resultado' ? tipologiaResultado || null : null,
-      fecha: fecha || null,
+      fecha: isAlwaysOn ? null : (fecha || null),
       responsable,
       status: 'Pendiente',
       sync_to_medios: syncToMedios,
@@ -62,22 +72,27 @@ export default function AddActionModal({ onConfirm, onClose, existingResponsable
               </div>
               <div className="form-group">
                 <label>Hito</label>
-                <select value={tipo} onChange={e => setTipo(e.target.value)}>
+                <select value={tipo} onChange={e => handleTipoChange(e.target.value)}>
                   {Object.keys(TIPOS_CONFIG).map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
             </div>
+
             <div className="form-group">
               <label>Tema</label>
-              <input type="text" value={tema} onChange={e => setTema(e.target.value)} placeholder="Ej: Encuesta Chile, Informe Cescro..." list="tema-suggestions" />
+              <input type="text" value={tema} onChange={e => setTema(e.target.value)}
+                placeholder="Ej: Encuesta Chile, Informe Cescro..." list="tema-suggestions" />
               <datalist id="tema-suggestions">
                 {existingTemas.map((t, i) => <option key={i} value={t} />)}
               </datalist>
             </div>
+
             <div className="form-group">
               <label>Acción <span className="required">*</span></label>
-              <input type="text" value={accion} onChange={e => setAccion(e.target.value)} placeholder="Resultado: sustantivo / Backlog: verbo" required />
+              <input type="text" value={accion} onChange={e => setAccion(e.target.value)}
+                placeholder="Resultado: sustantivo / Backlog: verbo" required />
             </div>
+
             <div className="form-row-2">
               <div className="form-group">
                 <label>Tipo de acción</label>
@@ -87,9 +102,18 @@ export default function AddActionModal({ onConfirm, onClose, existingResponsable
               </div>
               <div className="form-group">
                 <label>Fecha</label>
-                <input type="date" value={fecha} onChange={e => setFecha(e.target.value)} />
+                {isAlwaysOn ? (
+                  <div className="fecha-permanente">Permanente</div>
+                ) : (
+                  <input
+                    type="date"
+                    value={fecha || ''}
+                    onChange={e => setFecha(e.target.value || null)}
+                  />
+                )}
               </div>
             </div>
+
             {tipoAccion === 'Resultado' && (
               <div className="form-group">
                 <label>Tipología de resultado</label>
@@ -99,27 +123,30 @@ export default function AddActionModal({ onConfirm, onClose, existingResponsable
                 </select>
               </div>
             )}
+
             <div className="form-group">
               <label>Responsable</label>
-              <input type="text" list="responsable-suggestions" value={responsable} onChange={e => setResponsable(e.target.value)} placeholder="Nombre del responsable" />
+              <input type="text" list="responsable-suggestions" value={responsable}
+                onChange={e => setResponsable(e.target.value)} placeholder="Nombre del responsable" />
               <datalist id="responsable-suggestions">
                 {existingResponsables.map(r => <option key={r} value={r} />)}
               </datalist>
             </div>
-          </div>
 
-          <div className="form-group sync-toggle-group">
-            <label className="sync-toggle-label">
-              <input
-                type="checkbox"
-                checked={syncToMedios}
-                onChange={e => setSyncToMedios(e.target.checked)}
-              />
-              Planificar en Mesa de Medios
-            </label>
-            {syncToMedios && (
-              <p className="sync-toggle-hint">Se creará un tema vinculado en la planificación de medios.</p>
-            )}
+            {/* Sync toggle — dentro del modal-body con separador visual */}
+            <div className="sync-toggle-group">
+              <label className="sync-toggle-label">
+                <input
+                  type="checkbox"
+                  checked={syncToMedios}
+                  onChange={e => setSyncToMedios(e.target.checked)}
+                />
+                Planificar en Mesa de Medios
+              </label>
+              <p className="sync-toggle-hint">
+                Al activar, este tema aparecerá como tema planificable en Mesa de Medios.
+              </p>
+            </div>
           </div>
 
           <div className="modal-footer">

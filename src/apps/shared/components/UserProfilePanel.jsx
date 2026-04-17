@@ -1,5 +1,8 @@
 import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../utils/supabase'
+import { sha256 } from '../utils/crypto'
+
+const ADMIN_EMAIL = 'leonardo.munoz@uss.cl'
 
 const ACTION_STYLE = {
   login:  { bg: '#dbeafe', text: '#1e40af', label: 'Ingreso',   dot: '#3b82f6' },
@@ -42,6 +45,129 @@ function useIsMobile() {
     return () => window.removeEventListener('resize', handler)
   }, [])
   return mobile
+}
+
+// ── Panel admin de PINs (solo para ADMIN_EMAIL) ───────────────────
+function PinAdminSection() {
+  const [users,        setUsers]        = useState([])
+  const [loadingUsers, setLoadingUsers] = useState(true)
+  const [generating,   setGenerating]   = useState(null)   // email en proceso
+  const [revealed,     setRevealed]     = useState(null)   // { pin, userName, userEmail }
+  const [copied,       setCopied]       = useState(false)
+
+  useEffect(() => {
+    supabase
+      .from('usuarios_autorizados')
+      .select('email, nombre, pin_hash, activo')
+      .order('nombre')
+      .then(({ data }) => {
+        setUsers(data || [])
+        setLoadingUsers(false)
+      })
+  }, [])
+
+  async function handleGeneratePin(user) {
+    setGenerating(user.email)
+
+    // Generar PIN de 6 dígitos usando CSPRNG
+    const arr = new Uint32Array(1)
+    crypto.getRandomValues(arr)
+    const pin = String((arr[0] % 900000) + 100000) // 100000–999999
+
+    // Hashear
+    const hash = await sha256(pin)
+
+    // Guardar en DB
+    const { error } = await supabase
+      .from('usuarios_autorizados')
+      .update({ pin_hash: hash, pin_updated_at: new Date().toISOString() })
+      .eq('email', user.email)
+
+    if (!error) {
+      setUsers(prev => prev.map(u =>
+        u.email === user.email ? { ...u, pin_hash: hash } : u
+      ))
+      setRevealed({ pin, userName: user.nombre, userEmail: user.email })
+      setCopied(false)
+    }
+    setGenerating(null)
+  }
+
+  async function handleCopy() {
+    if (!revealed) return
+    await navigator.clipboard.writeText(revealed.pin).catch(() => {})
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2500)
+  }
+
+  return (
+    <div className="profile-section pin-admin-section">
+      <h3 className="profile-section-title">Gestión de PINs</h3>
+
+      {loadingUsers ? (
+        <div className="loading-state" style={{ padding: '20px 0' }}>
+          <div className="spinner" /><span>Cargando usuarios...</span>
+        </div>
+      ) : (
+        <div className="pin-admin-list">
+          {users.map(user => (
+            <div key={user.email} className="pin-admin-row">
+              <div className="pin-admin-user-info">
+                <span className="pin-admin-name">{user.nombre}</span>
+                <span className="pin-admin-email">{user.email}</span>
+              </div>
+              <span className={`pin-status-badge ${user.pin_hash ? 'pin-badge-ok' : 'pin-badge-missing'}`}>
+                {user.pin_hash ? 'PIN configurado' : 'Sin PIN'}
+              </span>
+              <button
+                className="btn-secondary pin-gen-btn"
+                onClick={() => handleGeneratePin(user)}
+                disabled={generating === user.email}
+              >
+                {generating === user.email
+                  ? 'Generando...'
+                  : user.pin_hash ? 'Resetear PIN' : 'Generar PIN'}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Modal one-shot — solo se muestra una vez y se cierra */}
+      {revealed && (
+        <div className="modal-backdrop" onClick={() => setRevealed(null)}>
+          <div className="modal pin-reveal-modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header" style={{ background: '#0f2b41', color: '#fff' }}>
+              <h2>PIN generado</h2>
+              <button className="modal-close" onClick={() => setRevealed(null)} aria-label="Cerrar">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                </svg>
+              </button>
+            </div>
+            <div className="pin-reveal-body">
+              <p className="pin-reveal-user">
+                PIN para <strong>{revealed.userName}</strong>
+              </p>
+              <div className="pin-reveal-code">{revealed.pin}</div>
+              <p className="pin-reveal-warning">
+                Copia este PIN y entrégalo al usuario por canal seguro.{' '}
+                <strong>No se mostrará de nuevo.</strong>
+              </p>
+              <div className="pin-reveal-actions">
+                <button className="btn-primary" onClick={handleCopy}>
+                  {copied ? '✓ Copiado' : 'Copiar al portapapeles'}
+                </button>
+                <button className="btn-secondary" onClick={() => setRevealed(null)}>
+                  Cerrar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
 }
 
 export default function UserProfilePanel({ userEmail, userName, onClose }) {
@@ -229,6 +355,9 @@ export default function UserProfilePanel({ userEmail, userName, onClose }) {
               </div>
             )}
           </div>
+
+          {/* Panel admin — solo visible para Leonardo */}
+          {userEmail === ADMIN_EMAIL && <PinAdminSection />}
 
         </div>
       )}

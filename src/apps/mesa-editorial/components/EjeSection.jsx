@@ -126,12 +126,28 @@ function ResultadoRow({ row, onCellChange, onDeleteRow, backlogCount, onAddBackl
     if (value !== row[field]) onCellChange(row.id, field, value)
   }
 
+  function handleTipoChange(newTipo) {
+    handleInlineEdit('tipo', newTipo)
+    // Al cambiar a o desde Always ON, limpiar fecha inmediatamente
+    if (newTipo === 'Always ON') {
+      onCellChange(row.id, 'fecha', null)
+    } else if (row.tipo === 'Always ON') {
+      onCellChange(row.id, 'fecha', null)
+    }
+  }
+
+  const isAlwaysOn = row.tipo === 'Always ON'
+
   return (
     <tr className="editorial-row resultado-row">
       {/* Hito — select */}
       <td className="col-tipo">
-        <select value={row.tipo || 'Ancla'} onChange={e => handleInlineEdit('tipo', e.target.value)}
-          className="tipo-select" style={{ color: tipoCfg.color, background: tipoCfg.bg, border: 'none', fontWeight: 600, fontSize: '0.75rem', borderRadius: '4px', padding: '2px 6px', cursor: 'pointer' }}>
+        <select
+          value={row.tipo || 'Ancla'}
+          onChange={e => handleTipoChange(e.target.value)}
+          className="tipo-select"
+          style={{ color: tipoCfg.color, background: tipoCfg.bg, border: 'none', fontWeight: 600, fontSize: '0.75rem', borderRadius: '4px', padding: '2px 6px', cursor: 'pointer' }}
+        >
           {TIPOS_ORDER.map(t => <option key={t} value={t}>{t}</option>)}
         </select>
       </td>
@@ -178,10 +194,21 @@ function ResultadoRow({ row, onCellChange, onDeleteRow, backlogCount, onAddBackl
         </div>
       </td>
 
-      {/* Fecha */}
-      <td className="col-fecha" title={formatDate(row.fecha)}>
-        <input type="date" defaultValue={row.fecha || ''} onBlur={e => handleInlineEdit('fecha', e.target.value || null)} className="editorial-date-input" />
-        <span className="fecha-display">{formatDate(row.fecha)}</span>
+      {/* Fecha — muestra "Permanente" si tipo es Always ON */}
+      <td className="col-fecha" title={isAlwaysOn ? 'Permanente' : formatDate(row.fecha)}>
+        {isAlwaysOn ? (
+          <span className="fecha-permanente-inline">Permanente</span>
+        ) : (
+          <>
+            <input
+              type="date"
+              defaultValue={row.fecha || ''}
+              onBlur={e => handleInlineEdit('fecha', e.target.value || null)}
+              className="editorial-date-input"
+            />
+            <span className="fecha-display">{formatDate(row.fecha)}</span>
+          </>
+        )}
       </td>
 
       {/* Responsable */}
@@ -238,13 +265,28 @@ function BacklogRow({ row, onCellChange, onDeleteRow, onSyncToggle }) {
     if (value !== row[field]) onCellChange(row.id, field, value)
   }
 
+  function handleTipoChange(newTipo) {
+    handleInlineEdit('tipo', newTipo)
+    if (newTipo === 'Always ON') {
+      onCellChange(row.id, 'fecha', null)
+    } else if (row.tipo === 'Always ON') {
+      onCellChange(row.id, 'fecha', null)
+    }
+  }
+
+  const isAlwaysOn = row.tipo === 'Always ON'
+
   return (
     <tr className="editorial-row backlog-row">
       {/* Hito — con indentación */}
       <td className="col-tipo backlog-indent">
         <span className="backlog-connector">└</span>
-        <select value={row.tipo || 'Ancla'} onChange={e => handleInlineEdit('tipo', e.target.value)}
-          className="tipo-select" style={{ color: tipoCfg.color, background: tipoCfg.bg, border: 'none', fontWeight: 600, fontSize: '0.75rem', borderRadius: '4px', padding: '2px 6px', cursor: 'pointer' }}>
+        <select
+          value={row.tipo || 'Ancla'}
+          onChange={e => handleTipoChange(e.target.value)}
+          className="tipo-select"
+          style={{ color: tipoCfg.color, background: tipoCfg.bg, border: 'none', fontWeight: 600, fontSize: '0.75rem', borderRadius: '4px', padding: '2px 6px', cursor: 'pointer' }}
+        >
           {TIPOS_ORDER.map(t => <option key={t} value={t}>{t}</option>)}
         </select>
       </td>
@@ -274,10 +316,21 @@ function BacklogRow({ row, onCellChange, onDeleteRow, onSyncToggle }) {
         </span>
       </td>
 
-      {/* Fecha */}
-      <td className="col-fecha" title={formatDate(row.fecha)}>
-        <input type="date" defaultValue={row.fecha || ''} onBlur={e => handleInlineEdit('fecha', e.target.value || null)} className="editorial-date-input" />
-        <span className="fecha-display">{formatDate(row.fecha)}</span>
+      {/* Fecha — muestra "Permanente" si tipo es Always ON */}
+      <td className="col-fecha" title={isAlwaysOn ? 'Permanente' : formatDate(row.fecha)}>
+        {isAlwaysOn ? (
+          <span className="fecha-permanente-inline">Permanente</span>
+        ) : (
+          <>
+            <input
+              type="date"
+              defaultValue={row.fecha || ''}
+              onBlur={e => handleInlineEdit('fecha', e.target.value || null)}
+              className="editorial-date-input"
+            />
+            <span className="fecha-display">{formatDate(row.fecha)}</span>
+          </>
+        )}
       </td>
 
       {/* Responsable */}
