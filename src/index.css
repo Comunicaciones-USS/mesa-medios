@@ -2087,7 +2087,7 @@ body {
 }
 
 /* ── Medios filter bar ───────────────────────────────────────── */
-.medios-filter-bar { background: #fff; border-bottom: 1px solid #e5e7eb; padding: 10px 16px; display: flex; flex-direction: column; gap: 8px; }
+.medios-filter-bar { background: #fff; border-bottom: 1px solid #e5e7eb; padding: 10px 16px; display: flex; flex-direction: column; gap: 8px; position: sticky; top: 68px; z-index: 90; box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
 .medios-filter-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .medios-filter-pills-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .filter-date-range { display: flex; align-items: center; gap: 4px; }

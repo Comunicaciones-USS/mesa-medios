@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { supabase } from '../shared/utils/supabase'
 import { MEDIA_COLS, GROUPS } from './config'
 import { getCellData, setCellData } from './utils'
@@ -37,6 +37,10 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
   // Collapsed column groups
   const [collapsedGroups, setCollapsedGroups] = useState(new Set())
 
+  // Sticky toolbar measurement
+  const filterBarRef = useRef(null)
+  const [stickyTop, setStickyTop] = useState(165) // header ≈68px + filterbar ≈97px
+
   // Expanded temas
   const [expandedTemas, setExpandedTemas] = useState(new Set())
 
@@ -57,6 +61,23 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
       return next
     })
   }
+
+  // Measure filter bar height to offset sticky thead correctly
+  useEffect(() => {
+    const el = filterBarRef.current
+    if (!el) return
+    function measure() {
+      const headerEl = document.querySelector('.header')
+      const headerH = headerEl ? headerEl.getBoundingClientRect().height : 68
+      setStickyTop(Math.round(headerH + el.getBoundingClientRect().height))
+    }
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    const headerEl = document.querySelector('.header')
+    if (headerEl) ro.observe(headerEl)
+    return () => ro.disconnect()
+  }, [])
 
   // Realtime subscriptions
   useEffect(() => {
@@ -350,7 +371,7 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
         otherDashboardName={otherDashboardName}
       />
 
-      <div className="medios-filter-bar">
+      <div className="medios-filter-bar" ref={filterBarRef}>
         {/* Fila 1: Buscador + Fechas + Orden */}
         <div className="medios-filter-row">
           <div className="filter-search">
@@ -438,6 +459,7 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
               onToggleGroup={toggleGroup}
               expandedTemas={expandedTemas}
               onToggleTema={toggleTema}
+              stickyTop={stickyTop}
             />
           </div>
           <div className="mobile-only">
