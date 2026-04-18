@@ -54,6 +54,22 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
     return () => supabase.removeChannel(channel)
   }, [])
 
+  // Warn before unload if a contentEditable has unsaved input (onBlur not yet fired)
+  useEffect(() => {
+    let dirty = false
+    const onInput  = (e) => { if (e.target?.isContentEditable) dirty = true }
+    const onBlur   = (e) => { if (e.target?.isContentEditable) dirty = false }
+    const onBefore = (e) => { if (dirty) { e.preventDefault(); e.returnValue = '' } }
+    document.addEventListener('input', onInput, true)
+    document.addEventListener('blur',  onBlur,  true)
+    window.addEventListener('beforeunload', onBefore)
+    return () => {
+      document.removeEventListener('input', onInput, true)
+      document.removeEventListener('blur',  onBlur,  true)
+      window.removeEventListener('beforeunload', onBefore)
+    }
+  }, [])
+
   // Keyboard shortcuts
   useEffect(() => {
     function handleKeyDown(e) {
