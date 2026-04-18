@@ -2961,9 +2961,6 @@ body {
 
 /* KPI Bar — navy background, white text */
 .editorial-kpi-bar {
-  position: sticky;
-  top: 42px;
-  z-index: 19;
   background: #0f2b41;
   color: #ffffff;
   display: flex;
@@ -2987,9 +2984,6 @@ body {
 
 /* Filter bar editorial */
 .editorial-filter-bar {
-  position: sticky;
-  top: 82px;
-  z-index: 20;
   background: white;
   border-bottom: 1px solid #e2e8f0;
   padding: 8px 16px;
@@ -4303,12 +4297,26 @@ body {
 }
 
 /* ══════════════════════════════════════════════════════════════════
+   CONTENEDOR STICKY ÚNICO — Mesa Editorial
+   ══════════════════════════════════════════════════════════════════ */
+.editorial-sticky-block {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* Dentro del bloque sticky, el header no necesita ser sticky por sí solo */
+.app-editorial .header {
+  position: relative;
+  top: auto;
+  z-index: auto;
+}
+
+/* ══════════════════════════════════════════════════════════════════
    TABS ACTIVAS / ARCHIVADAS
    ══════════════════════════════════════════════════════════════════ */
 .editorial-tabs {
-  position: sticky;
-  top: 0;
-  z-index: 21;
   display: flex;
   align-items: center;
   gap: 2px;

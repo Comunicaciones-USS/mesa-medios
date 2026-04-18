@@ -355,159 +355,164 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
 
   return (
     <div className="app app-editorial">
-      <HeaderEditorial
-        userName={userName}
-        userEmail={session.user.email}
-        onLogout={onLogout}
-        onBackToSelector={onBackToSelector}
-        onShowLogs={() => setShowLogs(true)}
-        onShowProfile={() => setShowProfile(true)}
-        onSwitchDashboard={onSwitchDashboard}
-        otherDashboardName={otherDashboardName}
-      />
 
-      {/* ── Tabs Activas / Archivadas ── */}
-      <div className="editorial-tabs">
-        <button
-          className={`tab-btn${activeTab === 'active' ? ' tab-active' : ''}`}
-          onClick={() => switchTab('active')}
-        >
-          <span className="tab-dot" />
-          Activas
-          <span className="tab-badge">{activeCount}</span>
-        </button>
-        <button
-          className={`tab-btn${activeTab === 'archived' ? ' tab-active' : ''}`}
-          onClick={() => switchTab('archived')}
-        >
-          Archivadas
-          <span className="tab-badge">{archivedCount}</span>
-        </button>
-      </div>
+      {/* ── Bloque sticky unificado: header + tabs + KPI + filtros ── */}
+      <div className="editorial-sticky-block">
+        <HeaderEditorial
+          userName={userName}
+          userEmail={session.user.email}
+          onLogout={onLogout}
+          onBackToSelector={onBackToSelector}
+          onShowLogs={() => setShowLogs(true)}
+          onShowProfile={() => setShowProfile(true)}
+          onSwitchDashboard={onSwitchDashboard}
+          otherDashboardName={otherDashboardName}
+        />
 
-      {/* ── KPI Bar ── */}
-      <div className={`editorial-kpi-bar${activeTab === 'archived' ? ' kpi-bar-archived' : ''}`}>
-        {kpi.mode === 'archived' ? (
-          <>
-            <span className="kpi-item"><strong>{kpi.total}</strong> archivadas</span>
-            <span className="kpi-dot" style={{ background: '#94a3b8' }} />
-            <span className="kpi-item"><strong>{kpi.estesMes}</strong> este mes</span>
-            <span className="kpi-dot" style={{ background: '#94a3b8' }} />
-            <span className="kpi-item"><strong>{kpi.esteAno}</strong> este año</span>
-            <span className="kpi-sep" />
-            <span style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.5)', letterSpacing: '.04em' }}>historial</span>
-          </>
-        ) : (
-          <>
-            <span className="kpi-item"><strong>{kpi.total}</strong> acciones</span>
-            <span className="kpi-dot" style={{ background: '#16A34A' }} />
-            <span className="kpi-item"><strong>{kpi.completadas}</strong> completadas</span>
-            <span className="kpi-dot" style={{ background: '#D97706' }} />
-            <span className="kpi-item"><strong>{kpi.enDesarrollo}</strong> en desarrollo</span>
-            <span className="kpi-dot" style={{ background: '#DC2626' }} />
-            <span className="kpi-item"><strong>{kpi.pendientes}</strong> pendientes</span>
-            <span className="kpi-sep" />
-            <span className="kpi-pct"><strong>{kpi.pct}%</strong> avance</span>
-            <button className="btn-explorer" onClick={() => setShowExplorer(true)} title="Explorar por eje y tema">
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <path d="M2 4h10M2 7h10M2 10h6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-              </svg>
-              Explorar
-            </button>
-            <button className="btn-add btn-add-sm" onClick={() => setShowModal(true)}>
-              <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-                <path d="M6.5 1v11M1 6.5h11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-              </svg>
-              Nueva acción
-            </button>
-          </>
-        )}
-      </div>
-
-      {/* ── Filter bar ── */}
-      <div className="editorial-filter-bar">
-        <div className="editorial-filter-row">
-          <div className="filter-search">
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.3" />
-              <path d="M9.5 9.5L13 13" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-            </svg>
-            <input
-              type="text"
-              placeholder={activeTab === 'archived' ? 'Buscar en archivadas...' : 'Buscar tema, acción, responsable...'}
-              value={filterInput}
-              onChange={e => setFilterInput(e.target.value)}
-              className="editorial-filter-input filter-input"
-            />
-            {filterInput && (
-              <button className="filter-clear" onClick={() => setFilterInput('')}>
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                  <path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                </svg>
-              </button>
-            )}
-          </div>
-          {activeTab === 'active' && (
-            <button className="sort-btn"
-              onClick={() => setSortDir(d => d === 'asc' ? 'desc' : d === 'desc' ? null : 'asc')}
-              title={sortDir === 'asc' ? 'Más antigua primero' : sortDir === 'desc' ? 'Más reciente primero' : 'Ordenar por fecha'}>
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <path d="M7 2v10M4 4l3-2.5L10 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: sortDir === 'asc' ? 1 : 0.3 }} />
-                <path d="M4 10l3 2.5L10 10" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: sortDir === 'desc' ? 1 : 0.3 }} />
-              </svg>
-              <span>Fecha</span>
-            </button>
-          )}
+        {/* ── Tabs Activas / Archivadas ── */}
+        <div className="editorial-tabs">
+          <button
+            className={`tab-btn${activeTab === 'active' ? ' tab-active' : ''}`}
+            onClick={() => switchTab('active')}
+          >
+            <span className="tab-dot" />
+            Activas
+            <span className="tab-badge">{activeCount}</span>
+          </button>
+          <button
+            className={`tab-btn${activeTab === 'archived' ? ' tab-active' : ''}`}
+            onClick={() => switchTab('archived')}
+          >
+            Archivadas
+            <span className="tab-badge">{archivedCount}</span>
+          </button>
         </div>
 
-        <div className="editorial-filter-pills-row">
-          <div className="filter-pills">
-            <button className={`pill ${filterEje === 'all' ? 'pill-active' : ''}`} onClick={() => setFilterEje('all')}>
-              Todos los ejes
-            </button>
-            {EJES.map(eje => (
-              <button
-                key={eje.id}
-                className={`pill ${filterEje === eje.label ? 'pill-active' : ''}`}
-                style={filterEje === eje.label ? { background: eje.color, color: 'white', borderColor: eje.color } : {}}
-                onClick={() => setFilterEje(filterEje === eje.label ? 'all' : eje.label)}
-              >
-                {eje.label}
-              </button>
-            ))}
-          </div>
-
-          {activeTab === 'active' && (
+        {/* ── KPI Bar ── */}
+        <div className={`editorial-kpi-bar${activeTab === 'archived' ? ' kpi-bar-archived' : ''}`}>
+          {kpi.mode === 'archived' ? (
             <>
-              <div className="filter-pills-divider" />
-              <div className="filter-pills">
-                {['all', 'Pendiente', 'En desarrollo', 'Completado'].map(s => (
-                  <button key={s} className={`pill ${filterStatus === s ? 'pill-active' : ''}`}
-                    onClick={() => setFilterStatus(s)}>
-                    {s === 'all' ? 'Todos los status' : s}
-                  </button>
-                ))}
-              </div>
-              <div className="filter-pills-divider" />
-              <div className="filter-pills">
-                {['all', 'Backlog', 'Resultado'].map(t => (
-                  <button key={t} className={`pill ${filterTipoAccion === t ? 'pill-active' : ''}`}
-                    onClick={() => setFilterTipoAccion(t)}>
-                    {t === 'all' ? 'Todos los tipos' : t}
-                  </button>
-                ))}
-              </div>
+              <span className="kpi-item"><strong>{kpi.total}</strong> archivadas</span>
+              <span className="kpi-dot" style={{ background: '#94a3b8' }} />
+              <span className="kpi-item"><strong>{kpi.estesMes}</strong> este mes</span>
+              <span className="kpi-dot" style={{ background: '#94a3b8' }} />
+              <span className="kpi-item"><strong>{kpi.esteAno}</strong> este año</span>
+              <span className="kpi-sep" />
+              <span style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.5)', letterSpacing: '.04em' }}>historial</span>
+            </>
+          ) : (
+            <>
+              <span className="kpi-item"><strong>{kpi.total}</strong> acciones</span>
+              <span className="kpi-dot" style={{ background: '#16A34A' }} />
+              <span className="kpi-item"><strong>{kpi.completadas}</strong> completadas</span>
+              <span className="kpi-dot" style={{ background: '#D97706' }} />
+              <span className="kpi-item"><strong>{kpi.enDesarrollo}</strong> en desarrollo</span>
+              <span className="kpi-dot" style={{ background: '#DC2626' }} />
+              <span className="kpi-item"><strong>{kpi.pendientes}</strong> pendientes</span>
+              <span className="kpi-sep" />
+              <span className="kpi-pct"><strong>{kpi.pct}%</strong> avance</span>
+              <button className="btn-explorer" onClick={() => setShowExplorer(true)} title="Explorar por eje y tema">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <path d="M2 4h10M2 7h10M2 10h6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                </svg>
+                Explorar
+              </button>
+              <button className="btn-add btn-add-sm" onClick={() => setShowModal(true)}>
+                <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                  <path d="M6.5 1v11M1 6.5h11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                </svg>
+                Nueva acción
+              </button>
             </>
           )}
         </div>
-      </div>
 
-      {activeTab === 'active' && explorerFilter && (
-        <div className="explorer-active-filter">
-          <span>Filtrando: {explorerFilter.eje}{explorerFilter.tema ? ` › ${explorerFilter.tema}` : ''}</span>
-          <button onClick={() => setExplorerFilter(null)}>✕</button>
+        {/* ── Filter bar ── */}
+        <div className="editorial-filter-bar">
+          <div className="editorial-filter-row">
+            <div className="filter-search">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.3" />
+                <path d="M9.5 9.5L13 13" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+              </svg>
+              <input
+                type="text"
+                placeholder={activeTab === 'archived' ? 'Buscar en archivadas...' : 'Buscar tema, acción, responsable...'}
+                value={filterInput}
+                onChange={e => setFilterInput(e.target.value)}
+                className="editorial-filter-input filter-input"
+              />
+              {filterInput && (
+                <button className="filter-clear" onClick={() => setFilterInput('')}>
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                    <path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
+                </button>
+              )}
+            </div>
+            {activeTab === 'active' && (
+              <button className="sort-btn"
+                onClick={() => setSortDir(d => d === 'asc' ? 'desc' : d === 'desc' ? null : 'asc')}
+                title={sortDir === 'asc' ? 'Más antigua primero' : sortDir === 'desc' ? 'Más reciente primero' : 'Ordenar por fecha'}>
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <path d="M7 2v10M4 4l3-2.5L10 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: sortDir === 'asc' ? 1 : 0.3 }} />
+                  <path d="M4 10l3 2.5L10 10" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: sortDir === 'desc' ? 1 : 0.3 }} />
+                </svg>
+                <span>Fecha</span>
+              </button>
+            )}
+          </div>
+
+          <div className="editorial-filter-pills-row">
+            <div className="filter-pills">
+              <button className={`pill ${filterEje === 'all' ? 'pill-active' : ''}`} onClick={() => setFilterEje('all')}>
+                Todos los ejes
+              </button>
+              {EJES.map(eje => (
+                <button
+                  key={eje.id}
+                  className={`pill ${filterEje === eje.label ? 'pill-active' : ''}`}
+                  style={filterEje === eje.label ? { background: eje.color, color: 'white', borderColor: eje.color } : {}}
+                  onClick={() => setFilterEje(filterEje === eje.label ? 'all' : eje.label)}
+                >
+                  {eje.label}
+                </button>
+              ))}
+            </div>
+
+            {activeTab === 'active' && (
+              <>
+                <div className="filter-pills-divider" />
+                <div className="filter-pills">
+                  {['all', 'Pendiente', 'En desarrollo', 'Completado'].map(s => (
+                    <button key={s} className={`pill ${filterStatus === s ? 'pill-active' : ''}`}
+                      onClick={() => setFilterStatus(s)}>
+                      {s === 'all' ? 'Todos los status' : s}
+                    </button>
+                  ))}
+                </div>
+                <div className="filter-pills-divider" />
+                <div className="filter-pills">
+                  {['all', 'Backlog', 'Resultado'].map(t => (
+                    <button key={t} className={`pill ${filterTipoAccion === t ? 'pill-active' : ''}`}
+                      onClick={() => setFilterTipoAccion(t)}>
+                      {t === 'all' ? 'Todos los tipos' : t}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
         </div>
-      )}
+
+        {activeTab === 'active' && explorerFilter && (
+          <div className="explorer-active-filter">
+            <span>Filtrando: {explorerFilter.eje}{explorerFilter.tema ? ` › ${explorerFilter.tema}` : ''}</span>
+            <button onClick={() => setExplorerFilter(null)}>✕</button>
+          </div>
+        )}
+      </div>
+      {/* ── fin editorial-sticky-block ── */}
 
       {loading && <div className="loading-state"><div className="spinner" /><span>Cargando acciones...</span></div>}
       {error && <div className="error-state"><strong>Error de conexión:</strong> {error}</div>}
