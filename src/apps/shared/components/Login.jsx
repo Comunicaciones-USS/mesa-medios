@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { supabase } from '../utils/supabase'
 import { sha256 } from '../utils/crypto'
+import { logAuditEntry } from '../utils/audit'
 import logoUSS from '../../../assets/escudo-uss-horizontal-blanco.svg'
 
 // ── Rate limiting client-side (sessionStorage) ───────────────────
@@ -91,14 +92,11 @@ export default function Login({ onLogin }) {
     // Login exitoso
     try { await supabase.from('pin_login_attempts').insert([{ email: normalizedEmail, success: true }]) } catch { /* ignore */ }
     try {
-      await supabase.from('audit_logs').insert([{
-        mesa_type:  null,
+      await logAuditEntry(supabase, {
         user_email: normalizedEmail,
         action:     'login',
-        table_name: null,
-        record_id:  null,
-        details:    JSON.stringify({ description: 'Inició sesión con PIN' }),
-      }])
+        details:    { description: 'Inició sesión con PIN' },
+      })
     } catch { /* ignore */ }
 
     setLoading(false)

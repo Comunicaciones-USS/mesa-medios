@@ -11,6 +11,7 @@ import ExplorerSidebar from './components/ExplorerSidebar'
 import AuditLogPanel from '../mesa-medios/components/AuditLogPanel'
 import Toaster from '../shared/components/Toaster'
 import ConfirmDialog from '../shared/components/ConfirmDialog'
+import { logAuditEntry } from '../shared/utils/audit'
 import UserProfilePanel from '../shared/components/UserProfilePanel'
 
 const TABLE = 'mesa_editorial_acciones'
@@ -54,6 +55,22 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
     return () => supabase.removeChannel(channel)
   }, [])
 
+  // Warn before unload if a contentEditable has unsaved input (onBlur not yet fired)
+  useEffect(() => {
+    let dirty = false
+    const onInput  = (e) => { if (e.target?.isContentEditable) dirty = true }
+    const onBlur   = (e) => { if (e.target?.isContentEditable) dirty = false }
+    const onBefore = (e) => { if (dirty) { e.preventDefault(); e.returnValue = '' } }
+    document.addEventListener('input', onInput, true)
+    document.addEventListener('blur',  onBlur,  true)
+    window.addEventListener('beforeunload', onBefore)
+    return () => {
+      document.removeEventListener('input', onInput, true)
+      document.removeEventListener('blur',  onBlur,  true)
+      window.removeEventListener('beforeunload', onBefore)
+    }
+  }, [])
+
   // Keyboard shortcuts
   useEffect(() => {
     function handleKeyDown(e) {
@@ -92,14 +109,14 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
   async function logAction(accion, itemId, itemNombre, detalle = '') {
     if (!session) return
     const actionMap = { AGREGAR: 'create', MODIFICAR: 'update', ELIMINAR: 'delete', LOGIN: 'login' }
-    await supabase.from('audit_logs').insert([{
+    await logAuditEntry(supabase, {
       mesa_type:  'editorial',
       user_email: session.user.email,
       action:     actionMap[accion] || accion.toLowerCase(),
       table_name: 'mesa_editorial_acciones',
       record_id:  itemId || null,
-      details:    JSON.stringify({ content_name: itemNombre || null, description: detalle || null }),
-    }])
+      details:    { content_name: itemNombre || null, description: detalle || null },
+    })
   }
 
   // Tab counts

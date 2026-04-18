@@ -12,6 +12,7 @@ import { useToast } from '../shared/hooks/useToast'
 import { useDebounce } from '../shared/hooks/useDebounce'
 import ConfirmDialog from '../shared/components/ConfirmDialog'
 import UserProfilePanel from '../shared/components/UserProfilePanel'
+import { logAuditEntry } from '../shared/utils/audit'
 
 export default function MesaMediosApp({ session, userName, onLogout, onBackToSelector, onSwitchDashboard, otherDashboardName }) {
   const [temas,         setTemas]         = useState([])
@@ -170,14 +171,14 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
   async function logAction(accion, contenidoId, contenidoNombre, detalle = '') {
     if (!session) return
     const actionMap = { AGREGAR: 'create', MODIFICAR: 'update', ELIMINAR: 'delete' }
-    await supabase.from('audit_logs').insert([{
+    await logAuditEntry(supabase, {
       mesa_type:  'medios',
       user_email: session.user.email,
       action:     actionMap[accion] || accion.toLowerCase(),
       table_name: 'mesa_medios_contenidos',
       record_id:  contenidoId || null,
-      details:    JSON.stringify({ content_name: contenidoNombre || null, description: detalle || null }),
-    }])
+      details:    { content_name: contenidoNombre || null, description: detalle || null },
+    })
   }
 
   const displayTemas = useMemo(() => {
