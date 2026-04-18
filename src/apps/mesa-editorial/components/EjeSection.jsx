@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { TIPOS_CONFIG, TIPOS_ORDER, STATUS_CONFIG, STATUS_OPTIONS, TIPOLOGIA_RESULTADO_OPTIONS } from '../config'
 import OrphanAssigner from './OrphanAssigner'
 
@@ -141,6 +141,11 @@ export default function EjeSection({ eje, rows, onCellChange, onDeleteRow, colla
 function ResultadoRow({ row, onCellChange, onDeleteRow, backlogCount, onAddBacklog, expanded, onToggleExpand, onSyncToggle, isArchived, onReactivate }) {
   const tipoCfg   = TIPOS_CONFIG[row.tipo]   || {}
   const statusCfg = STATUS_CONFIG[row.status] || STATUS_CONFIG['Pendiente']
+  const [localFecha, setLocalFecha] = useState(row.fecha || '')
+  const fechaInputRef = useRef(null)
+  useEffect(() => {
+    if (document.activeElement !== fechaInputRef.current) setLocalFecha(row.fecha || '')
+  }, [row.fecha])
 
   function handleInlineEdit(field, value) {
     if (!isArchived && value !== row[field]) onCellChange(row.id, field, value)
@@ -228,8 +233,10 @@ function ResultadoRow({ row, onCellChange, onDeleteRow, backlogCount, onAddBackl
         ) : (
           <>
             <input
+              ref={fechaInputRef}
               type="date"
-              defaultValue={row.fecha || ''}
+              value={localFecha}
+              onChange={e => setLocalFecha(e.target.value)}
               onBlur={e => handleInlineEdit('fecha', e.target.value || null)}
               className="editorial-date-input"
             />
@@ -303,6 +310,11 @@ function ResultadoRow({ row, onCellChange, onDeleteRow, backlogCount, onAddBackl
 function BacklogRow({ row, onCellChange, onDeleteRow, onSyncToggle, isArchived, onReactivate }) {
   const tipoCfg   = TIPOS_CONFIG[row.tipo]   || {}
   const statusCfg = STATUS_CONFIG[row.status] || STATUS_CONFIG['Pendiente']
+  const [localFecha, setLocalFecha] = useState(row.fecha || '')
+  const fechaInputRef = useRef(null)
+  useEffect(() => {
+    if (document.activeElement !== fechaInputRef.current) setLocalFecha(row.fecha || '')
+  }, [row.fecha])
 
   function handleInlineEdit(field, value) {
     if (!isArchived && value !== row[field]) onCellChange(row.id, field, value)
@@ -373,8 +385,10 @@ function BacklogRow({ row, onCellChange, onDeleteRow, onSyncToggle, isArchived, 
         ) : (
           <>
             <input
+              ref={fechaInputRef}
               type="date"
-              defaultValue={row.fecha || ''}
+              value={localFecha}
+              onChange={e => setLocalFecha(e.target.value)}
               onBlur={e => handleInlineEdit('fecha', e.target.value || null)}
               className="editorial-date-input"
             />
