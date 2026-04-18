@@ -195,7 +195,7 @@ export default function UserProfilePanel({ userEmail, userName, onClose }) {
           .limit(200),
         supabase.from('mesa_editorial_acciones')
           .select('id, responsable, status, created_at, completed_at')
-          .ilike('responsable', `%${userName.split(' ')[0]}%`),
+          .ilike('responsable', userName),
       ])
       setLogs(logsRes.data || [])
       setEditorialRows(editorialRes.data || [])
