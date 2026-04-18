@@ -11,6 +11,7 @@ import ExplorerSidebar from './components/ExplorerSidebar'
 import AuditLogPanel from '../mesa-medios/components/AuditLogPanel'
 import Toaster from '../shared/components/Toaster'
 import ConfirmDialog from '../shared/components/ConfirmDialog'
+import { logAuditEntry } from '../shared/utils/audit'
 import UserProfilePanel from '../shared/components/UserProfilePanel'
 
 const TABLE = 'mesa_editorial_acciones'
@@ -108,14 +109,14 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
   async function logAction(accion, itemId, itemNombre, detalle = '') {
     if (!session) return
     const actionMap = { AGREGAR: 'create', MODIFICAR: 'update', ELIMINAR: 'delete', LOGIN: 'login' }
-    await supabase.from('audit_logs').insert([{
+    await logAuditEntry(supabase, {
       mesa_type:  'editorial',
       user_email: session.user.email,
       action:     actionMap[accion] || accion.toLowerCase(),
       table_name: 'mesa_editorial_acciones',
       record_id:  itemId || null,
-      details:    JSON.stringify({ content_name: itemNombre || null, description: detalle || null }),
-    }])
+      details:    { content_name: itemNombre || null, description: detalle || null },
+    })
   }
 
   // Tab counts
