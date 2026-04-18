@@ -3,4 +3,6 @@ dist
 .env
 .env.local
 .DS_Store
-ESTADO-PROYECTO-v2.md
+.vscode/
+.idea/
+*.log

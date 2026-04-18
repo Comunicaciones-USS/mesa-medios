@@ -29,23 +29,23 @@ El sistema fue desarrollado **por una sola persona** (iterando con Claude Code) 
 
 - ✅ Actualización en tiempo real (Supabase Realtime)
 - ✅ Dos módulos integrados: Mesa de Medios y Mesa Editorial
-- ✅ Sistema de perfiles de usuario y login
+- ✅ Sistema de perfiles de usuario y login con PIN
 - ✅ Historial completo de auditoría (`audit_logs`)
 - ✅ Edición inline (ContentEditable) con guardado optimista
+- ✅ Archivado de registros con reactivación
 - ✅ Atajos de teclado
 - ✅ Responsive (funciona en móvil y escritorio)
 - ✅ Despliegue automático en GitHub Pages
-- ✅ Seguridad básica a nivel de Supabase (RLS)
+- ✅ Seguridad a nivel de Supabase (RLS)
 
 ---
 
 ## 🛠️ Tecnologías
 
 - **Frontend**: React 18 + Vite
-- **Backend**: Supabase (PostgreSQL + Auth + Realtime + Storage)
-- **Estilos**: Tailwind CSS
+- **Backend**: Supabase (PostgreSQL + Auth + Realtime)
+- **Estilos**: CSS vanilla (sin frameworks CSS)
 - **Despliegue**: GitHub Pages (CI/CD automático)
-- **Otros**: React Router, date-fns, lucide-react
 
 ---
 
@@ -75,9 +75,9 @@ La aplicación estará disponible en http://localhost:5173
 
 En la raíz del repositorio encontrarás tres scripts SQL listos para ejecutar:
 
-- supabase-setup.sql → Tablas principales y funciones
-- supabase-editorial-setup.sql → Tablas específicas de Mesa Editorial
-- supabase-security-setup.sql → Políticas RLS y seguridad
+- `supabase-setup.sql` → Tablas principales y funciones
+- `supabase-editorial-setup.sql` → Tablas específicas de Mesa Editorial
+- `supabase-security-setup.sql` → Políticas RLS y seguridad
 
 Ejecútalos en orden en tu proyecto de Supabase.
 
@@ -85,31 +85,16 @@ Ejecútalos en orden en tu proyecto de Supabase.
 
 ## 📸 Capturas de pantalla
 
->***Próximamente***<br>
-> *Aún estamos puliendo la interfaz y agregando mejoras. Tan pronto como el diseño se estabilice, se agregarán capturas.*
-
----
-
-## 🤝 Cómo contribuir
-
-El proyecto está en desarrollo activo y es usado diariamente por el equipo.
-Revisa el archivo DIAGNOSTICO.md (contiene los issues técnicos conocidos y deuda técnica priorizada).
-Si encuentras un bug o tienes una mejora: Abre un Issue describiendo el problema.
-O crea un Pull Request directamente.
-
-Cualquier feedback es bienvenido. ¡Gracias por ayudar a mantener y mejorar la herramienta!
+> ***Próximamente***
 
 ---
 
 ## 🛤️ Roadmap / Próximas mejoras
 
-- Limpieza de código muerto (src/components/, hooks antiguos, etc.)
-- Corrección de bugs identificados en DIAGNOSTICO.md
 - ESLint + Prettier
 - Tests básicos
 - Migración progresiva a TypeScript
 - Filtros avanzados y virtualización de tablas
-- Mejoras en UX (inputs de fecha controlados, guardado automático, etc.)
 
 ---
 
@@ -117,14 +102,3 @@ Cualquier feedback es bienvenido. ¡Gracias por ayudar a mantener y mejorar la h
 
 Este proyecto es privado e interno de la Dirección de Comunicaciones USS.
 Todos los derechos reservados © 2025-2026.
-
----
-
-
-
-
-
-
-
-
-
