@@ -1,7 +1,7 @@
 // src/components/ConfirmDialog.jsx
 import { useEffect, useRef } from 'react'
 
-export default function ConfirmDialog({ nombre, title, body, onConfirm, onCancel }) {
+export default function ConfirmDialog({ nombre, title, body, confirmLabel, confirmClass, onConfirm, onCancel }) {
   const cancelRef = useRef(null)
 
   // Focus on "Cancelar" on open to prevent accidental deletion with Enter
@@ -40,8 +40,8 @@ export default function ConfirmDialog({ nombre, title, body, onConfirm, onCancel
           <button ref={cancelRef} className="btn-ghost-cancel" onClick={onCancel}>
             Cancelar
           </button>
-          <button className="btn-danger-confirm" onClick={onConfirm}>
-            Eliminar
+          <button className={confirmClass || 'btn-danger-confirm'} onClick={onConfirm}>
+            {confirmLabel || 'Eliminar'}
           </button>
         </div>
       </div>

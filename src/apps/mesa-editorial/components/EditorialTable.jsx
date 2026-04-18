@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { EJES } from '../config'
 import EjeSection from './EjeSection'
 
-export default function EditorialTable({ rows, onCellChange, onDeleteRow, onAddBacklog, onAssignOrphans, filterQuery, totalRows, onClearFilter, onAdd, onSyncToggle }) {
+export default function EditorialTable({ rows, onCellChange, onDeleteRow, onAddBacklog, onAssignOrphans, filterQuery, totalRows, onClearFilter, onAdd, onSyncToggle, isArchived, onReactivate }) {
   const [collapsedEjes, setCollapsedEjes] = useState({})
 
   function toggleEje(ejeLabel) {
@@ -23,9 +23,9 @@ export default function EditorialTable({ rows, onCellChange, onDeleteRow, onAddB
           <rect x="8" y="8" width="32" height="32" rx="6" stroke="#ceb37c" strokeWidth="2" fill="none"/>
           <path d="M16 20h16M16 26h10" stroke="#ceb37c" strokeWidth="2" strokeLinecap="round"/>
         </svg>
-        <h3>Sin acciones registradas</h3>
-        <p>Comienza agregando la primera acción editorial.</p>
-        <button className="btn-add" onClick={onAdd}>+ Agregar acción</button>
+        <h3>{isArchived ? 'Sin acciones archivadas' : 'Sin acciones registradas'}</h3>
+        <p>{isArchived ? 'Las acciones completadas aparecerán aquí.' : 'Comienza agregando la primera acción editorial.'}</p>
+        {!isArchived && <button className="btn-add" onClick={onAdd}>+ Agregar acción</button>}
       </div>
     )
   }
@@ -49,8 +49,8 @@ export default function EditorialTable({ rows, onCellChange, onDeleteRow, onAddB
     <div className="editorial-table-container">
       {EJES.map(eje => {
         const ejeRows = rowsByEje[eje.label] || []
-        // Skip empty ejes when filter is active
-        if (ejeRows.length === 0 && filterQuery) return null
+        // Skip empty ejes when filter is active or in archived tab
+        if (ejeRows.length === 0 && (filterQuery || isArchived)) return null
         return (
           <EjeSection
             key={eje.id}
@@ -63,6 +63,8 @@ export default function EditorialTable({ rows, onCellChange, onDeleteRow, onAddB
             collapsed={!!collapsedEjes[eje.label]}
             onToggle={() => toggleEje(eje.label)}
             onSyncToggle={onSyncToggle}
+            isArchived={isArchived}
+            onReactivate={onReactivate}
           />
         )
       })}

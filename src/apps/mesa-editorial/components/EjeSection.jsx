@@ -8,7 +8,13 @@ function formatDate(dateStr) {
   return d.toLocaleDateString('es-CL', { day: 'numeric', month: 'short', year: '2-digit' })
 }
 
-export default function EjeSection({ eje, rows, onCellChange, onDeleteRow, collapsed, onToggle, onAddBacklog, onAssignOrphans, onSyncToggle }) {
+function formatArchivedAt(isoStr) {
+  if (!isoStr) return '—'
+  const d = new Date(isoStr)
+  return d.toLocaleDateString('es-CL', { day: 'numeric', month: 'short', year: '2-digit' })
+}
+
+export default function EjeSection({ eje, rows, onCellChange, onDeleteRow, collapsed, onToggle, onAddBacklog, onAssignOrphans, onSyncToggle, isArchived, onReactivate }) {
   const [expandedResults, setExpandedResults] = useState({})
 
   function toggleResult(id) {
@@ -40,16 +46,20 @@ export default function EjeSection({ eje, rows, onCellChange, onDeleteRow, colla
   })
 
   return (
-    <div className="eje-section">
+    <div className={`eje-section${isArchived ? ' eje-section-archived' : ''}`}>
       {/* ── Header del eje ── */}
       <div className="eje-header" onClick={onToggle} style={{ '--eje-color': eje.color }}>
         <div className="eje-stripe" style={{ background: eje.color }} />
         <h2 className="eje-title">{eje.label}</h2>
         <span className="eje-count">{rows.length} {rows.length === 1 ? 'acción' : 'acciones'}</span>
-        <div className="eje-progress-track">
-          <div className="eje-progress-fill" style={{ width: `${pct}%`, background: eje.color }} />
-        </div>
-        <span className="eje-pct">{pct}%</span>
+        {!isArchived && (
+          <>
+            <div className="eje-progress-track">
+              <div className="eje-progress-fill" style={{ width: `${pct}%`, background: eje.color }} />
+            </div>
+            <span className="eje-pct">{pct}%</span>
+          </>
+        )}
         <svg
           className={`eje-chevron ${collapsed ? '' : 'eje-chevron-open'}`}
           width="14" height="14" viewBox="0 0 14 14" fill="none"
@@ -60,7 +70,7 @@ export default function EjeSection({ eje, rows, onCellChange, onDeleteRow, colla
 
       {/* ── Tabla de acciones del eje ── */}
       {!collapsed && (
-        <div className="eje-table-wrap">
+        <div className={`eje-table-wrap${isArchived ? ' eje-table-archived' : ''}`}>
           {rows.length === 0 ? (
             <div className="eje-empty">Sin acciones en este eje.</div>
           ) : (
@@ -75,7 +85,10 @@ export default function EjeSection({ eje, rows, onCellChange, onDeleteRow, colla
                     <th className="col-fecha">Fecha</th>
                     <th className="col-resp">Responsable</th>
                     <th className="col-status">Status</th>
-                    <th className="col-del"></th>
+                    {isArchived
+                      ? <th className="col-archived-at">Archivado el</th>
+                      : <th className="col-del"></th>
+                    }
                   </tr>
                 </thead>
                 <tbody>
@@ -91,6 +104,8 @@ export default function EjeSection({ eje, rows, onCellChange, onDeleteRow, colla
                         expanded={!!expandedResults[resultado.id]}
                         onToggleExpand={() => toggleResult(resultado.id)}
                         onSyncToggle={onSyncToggle}
+                        isArchived={isArchived}
+                        onReactivate={onReactivate}
                       />
                       {expandedResults[resultado.id] && (backlogsByParent[resultado.id] || []).map(backlog => (
                         <BacklogRow
@@ -99,18 +114,22 @@ export default function EjeSection({ eje, rows, onCellChange, onDeleteRow, colla
                           onCellChange={onCellChange}
                           onDeleteRow={onDeleteRow}
                           onSyncToggle={onSyncToggle}
+                          isArchived={isArchived}
+                          onReactivate={onReactivate}
                         />
                       ))}
                     </>
                   ))}
                 </tbody>
               </table>
-              <OrphanAssigner
-                orphans={orphanBacklogs}
-                resultados={resultados}
-                onAssign={onAssignOrphans}
-                onDeleteRow={onDeleteRow}
-              />
+              {!isArchived && (
+                <OrphanAssigner
+                  orphans={orphanBacklogs}
+                  resultados={resultados}
+                  onAssign={onAssignOrphans}
+                  onDeleteRow={onDeleteRow}
+                />
+              )}
             </>
           )}
         </div>
@@ -119,17 +138,16 @@ export default function EjeSection({ eje, rows, onCellChange, onDeleteRow, colla
   )
 }
 
-function ResultadoRow({ row, onCellChange, onDeleteRow, backlogCount, onAddBacklog, expanded, onToggleExpand, onSyncToggle }) {
+function ResultadoRow({ row, onCellChange, onDeleteRow, backlogCount, onAddBacklog, expanded, onToggleExpand, onSyncToggle, isArchived, onReactivate }) {
   const tipoCfg   = TIPOS_CONFIG[row.tipo]   || {}
   const statusCfg = STATUS_CONFIG[row.status] || STATUS_CONFIG['Pendiente']
 
   function handleInlineEdit(field, value) {
-    if (value !== row[field]) onCellChange(row.id, field, value)
+    if (!isArchived && value !== row[field]) onCellChange(row.id, field, value)
   }
 
   function handleTipoChange(newTipo) {
     handleInlineEdit('tipo', newTipo)
-    // Al cambiar a o desde Always ON, limpiar fecha inmediatamente
     if (newTipo === 'Always ON') {
       onCellChange(row.id, 'fecha', null)
     } else if (row.tipo === 'Always ON') {
@@ -140,14 +158,15 @@ function ResultadoRow({ row, onCellChange, onDeleteRow, backlogCount, onAddBackl
   const isAlwaysOn = row.tipo === 'Always ON'
 
   return (
-    <tr className="editorial-row resultado-row">
+    <tr className={`editorial-row resultado-row${isArchived ? ' row-archived' : ''}`}>
       {/* Hito — select */}
       <td className="col-tipo">
         <select
           value={row.tipo || 'Ancla'}
           onChange={e => handleTipoChange(e.target.value)}
           className="tipo-select"
-          style={{ color: tipoCfg.color, background: tipoCfg.bg, border: 'none', fontWeight: 600, fontSize: '0.75rem', borderRadius: '4px', padding: '2px 6px', cursor: 'pointer' }}
+          disabled={isArchived}
+          style={{ color: tipoCfg.color, background: tipoCfg.bg, border: 'none', fontWeight: 600, fontSize: '0.75rem', borderRadius: '4px', padding: '2px 6px', cursor: isArchived ? 'default' : 'pointer' }}
         >
           {TIPOS_ORDER.map(t => <option key={t} value={t}>{t}</option>)}
         </select>
@@ -155,7 +174,9 @@ function ResultadoRow({ row, onCellChange, onDeleteRow, backlogCount, onAddBackl
 
       {/* Tema */}
       <td className="col-tema">
-        <span contentEditable suppressContentEditableWarning
+        <span
+          contentEditable={!isArchived}
+          suppressContentEditableWarning
           onBlur={e => handleInlineEdit('tema', e.currentTarget.textContent.trim())}
           onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur() } }}
           className="editorial-editable">
@@ -166,7 +187,8 @@ function ResultadoRow({ row, onCellChange, onDeleteRow, backlogCount, onAddBackl
       {/* Tipología */}
       <td className="col-canal">
         <select value={row.tipologia_resultado || ''} onChange={e => handleInlineEdit('tipologia_resultado', e.target.value)}
-          className="tipologia-select" style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '0.8rem', color: '#374151' }}>
+          className="tipologia-select" disabled={isArchived}
+          style={{ border: 'none', background: 'transparent', cursor: isArchived ? 'default' : 'pointer', fontSize: '0.8rem', color: '#374151' }}>
           <option value="">Sin tipología</option>
           {TIPOLOGIA_RESULTADO_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
         </select>
@@ -184,7 +206,9 @@ function ResultadoRow({ row, onCellChange, onDeleteRow, backlogCount, onAddBackl
             </button>
           )}
           <div>
-            <span contentEditable suppressContentEditableWarning
+            <span
+              contentEditable={!isArchived}
+              suppressContentEditableWarning
               onBlur={e => handleInlineEdit('accion', e.currentTarget.textContent.trim())}
               onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur() } }}
               className="editorial-editable resultado-accion-text">
@@ -195,10 +219,12 @@ function ResultadoRow({ row, onCellChange, onDeleteRow, backlogCount, onAddBackl
         </div>
       </td>
 
-      {/* Fecha — muestra "Permanente" si tipo es Always ON */}
+      {/* Fecha */}
       <td className="col-fecha" title={isAlwaysOn ? 'Permanente' : formatDate(row.fecha)}>
         {isAlwaysOn ? (
           <span className="fecha-permanente-inline">Permanente</span>
+        ) : isArchived ? (
+          <span className="fecha-display">{formatDate(row.fecha)}</span>
         ) : (
           <>
             <input
@@ -214,7 +240,9 @@ function ResultadoRow({ row, onCellChange, onDeleteRow, backlogCount, onAddBackl
 
       {/* Responsable */}
       <td className="col-resp">
-        <span contentEditable suppressContentEditableWarning
+        <span
+          contentEditable={!isArchived}
+          suppressContentEditableWarning
           onBlur={e => handleInlineEdit('responsable', e.currentTarget.textContent.trim())}
           onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur() } }}
           className="editorial-editable">
@@ -225,45 +253,59 @@ function ResultadoRow({ row, onCellChange, onDeleteRow, backlogCount, onAddBackl
       {/* Status */}
       <td className="col-status">
         <select value={row.status || 'Pendiente'} onChange={e => handleInlineEdit('status', e.target.value)}
-          className="status-select" style={{ color: statusCfg.text, background: statusCfg.bg }}>
+          className="status-select" disabled={isArchived}
+          style={{ color: statusCfg.text, background: statusCfg.bg, cursor: isArchived ? 'default' : 'pointer' }}>
           {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
       </td>
 
-      {/* Acciones: sync + agregar backlog + eliminar */}
-      <td className="col-del">
-        <button
-          className={`btn-sync-medios${row.sync_to_medios ? ' synced' : ''}`}
-          onClick={() => onSyncToggle?.(row.id, !row.sync_to_medios)}
-          title={row.sync_to_medios ? 'Desvinc. de Mesa de Medios' : 'Vincular a Mesa de Medios'}
-        >
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-            <path d="M2 6a4 4 0 014-4M10 6a4 4 0 01-4 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-            <path d="M9 4l1.5-1.5M9 4l1.5 1.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-            <path d="M3 8L1.5 9.5M3 8L1.5 6.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </button>
-        <button className="btn-add-backlog" onClick={() => onAddBacklog(row.id)} title="Agregar backlog a este resultado">
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-            <path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-          </svg>
-        </button>
-        <button className="btn-delete-row" onClick={() => onDeleteRow(row.id)} title="Eliminar resultado">
-          <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-            <path d="M2 3.5h9M5 3.5V2.5a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v1M5.5 5.5v4M7.5 5.5v4M3.5 3.5l.5 7h5l.5-7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </button>
-      </td>
+      {/* Acciones o Archivado el */}
+      {isArchived ? (
+        <td className="col-archived-at">
+          <span className="archived-at-date">{formatArchivedAt(row.archived_at)}</span>
+          <button className="btn-reactivate" onClick={() => onReactivate?.(row.id)} title="Reactivar esta acción">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M2 6a4 4 0 014-4 4 4 0 014 4 4 4 0 01-4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+              <path d="M6 2L4 4l2 2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            Reactivar
+          </button>
+        </td>
+      ) : (
+        <td className="col-del">
+          <button
+            className={`btn-sync-medios${row.sync_to_medios ? ' synced' : ''}`}
+            onClick={() => onSyncToggle?.(row.id, !row.sync_to_medios)}
+            title={row.sync_to_medios ? 'Desvinc. de Mesa de Medios' : 'Vincular a Mesa de Medios'}
+          >
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M2 6a4 4 0 014-4M10 6a4 4 0 01-4 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+              <path d="M9 4l1.5-1.5M9 4l1.5 1.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M3 8L1.5 9.5M3 8L1.5 6.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+          <button className="btn-add-backlog" onClick={() => onAddBacklog(row.id)} title="Agregar backlog a este resultado">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+          </button>
+          <button className="btn-delete-row" onClick={() => onDeleteRow(row.id)} title="Eliminar resultado">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+              <path d="M2 3.5h9M5 3.5V2.5a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v1M5.5 5.5v4M7.5 5.5v4M3.5 3.5l.5 7h5l.5-7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+        </td>
+      )}
     </tr>
   )
 }
 
-function BacklogRow({ row, onCellChange, onDeleteRow, onSyncToggle }) {
+function BacklogRow({ row, onCellChange, onDeleteRow, onSyncToggle, isArchived, onReactivate }) {
   const tipoCfg   = TIPOS_CONFIG[row.tipo]   || {}
   const statusCfg = STATUS_CONFIG[row.status] || STATUS_CONFIG['Pendiente']
 
   function handleInlineEdit(field, value) {
-    if (value !== row[field]) onCellChange(row.id, field, value)
+    if (!isArchived && value !== row[field]) onCellChange(row.id, field, value)
   }
 
   function handleTipoChange(newTipo) {
@@ -278,7 +320,7 @@ function BacklogRow({ row, onCellChange, onDeleteRow, onSyncToggle }) {
   const isAlwaysOn = row.tipo === 'Always ON'
 
   return (
-    <tr className="editorial-row backlog-row">
+    <tr className={`editorial-row backlog-row${isArchived ? ' row-archived' : ''}`}>
       {/* Hito — con indentación */}
       <td className="col-tipo backlog-indent">
         <span className="backlog-connector">└</span>
@@ -286,7 +328,8 @@ function BacklogRow({ row, onCellChange, onDeleteRow, onSyncToggle }) {
           value={row.tipo || 'Ancla'}
           onChange={e => handleTipoChange(e.target.value)}
           className="tipo-select"
-          style={{ color: tipoCfg.color, background: tipoCfg.bg, border: 'none', fontWeight: 600, fontSize: '0.75rem', borderRadius: '4px', padding: '2px 6px', cursor: 'pointer' }}
+          disabled={isArchived}
+          style={{ color: tipoCfg.color, background: tipoCfg.bg, border: 'none', fontWeight: 600, fontSize: '0.75rem', borderRadius: '4px', padding: '2px 6px', cursor: isArchived ? 'default' : 'pointer' }}
         >
           {TIPOS_ORDER.map(t => <option key={t} value={t}>{t}</option>)}
         </select>
@@ -294,7 +337,9 @@ function BacklogRow({ row, onCellChange, onDeleteRow, onSyncToggle }) {
 
       {/* Tema */}
       <td className="col-tema">
-        <span contentEditable suppressContentEditableWarning
+        <span
+          contentEditable={!isArchived}
+          suppressContentEditableWarning
           onBlur={e => handleInlineEdit('tema', e.currentTarget.textContent.trim())}
           onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur() } }}
           className="editorial-editable">
@@ -309,7 +354,9 @@ function BacklogRow({ row, onCellChange, onDeleteRow, onSyncToggle }) {
 
       {/* Descripción - Acción */}
       <td className="col-accion">
-        <span contentEditable suppressContentEditableWarning
+        <span
+          contentEditable={!isArchived}
+          suppressContentEditableWarning
           onBlur={e => handleInlineEdit('accion', e.currentTarget.textContent.trim())}
           onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur() } }}
           className="editorial-editable">
@@ -317,10 +364,12 @@ function BacklogRow({ row, onCellChange, onDeleteRow, onSyncToggle }) {
         </span>
       </td>
 
-      {/* Fecha — muestra "Permanente" si tipo es Always ON */}
+      {/* Fecha */}
       <td className="col-fecha" title={isAlwaysOn ? 'Permanente' : formatDate(row.fecha)}>
         {isAlwaysOn ? (
           <span className="fecha-permanente-inline">Permanente</span>
+        ) : isArchived ? (
+          <span className="fecha-display">{formatDate(row.fecha)}</span>
         ) : (
           <>
             <input
@@ -336,7 +385,9 @@ function BacklogRow({ row, onCellChange, onDeleteRow, onSyncToggle }) {
 
       {/* Responsable */}
       <td className="col-resp">
-        <span contentEditable suppressContentEditableWarning
+        <span
+          contentEditable={!isArchived}
+          suppressContentEditableWarning
           onBlur={e => handleInlineEdit('responsable', e.currentTarget.textContent.trim())}
           onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur() } }}
           className="editorial-editable">
@@ -347,30 +398,44 @@ function BacklogRow({ row, onCellChange, onDeleteRow, onSyncToggle }) {
       {/* Status */}
       <td className="col-status">
         <select value={row.status || 'Pendiente'} onChange={e => handleInlineEdit('status', e.target.value)}
-          className="status-select" style={{ color: statusCfg.text, background: statusCfg.bg }}>
+          className="status-select" disabled={isArchived}
+          style={{ color: statusCfg.text, background: statusCfg.bg, cursor: isArchived ? 'default' : 'pointer' }}>
           {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
       </td>
 
-      {/* Sync + Eliminar */}
-      <td className="col-del">
-        <button
-          className={`btn-sync-medios${row.sync_to_medios ? ' synced' : ''}`}
-          onClick={() => onSyncToggle?.(row.id, !row.sync_to_medios)}
-          title={row.sync_to_medios ? 'Desvinc. de Mesa de Medios' : 'Vincular a Mesa de Medios'}
-        >
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-            <path d="M2 6a4 4 0 014-4M10 6a4 4 0 01-4 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-            <path d="M9 4l1.5-1.5M9 4l1.5 1.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-            <path d="M3 8L1.5 9.5M3 8L1.5 6.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </button>
-        <button className="btn-delete-row" onClick={() => onDeleteRow(row.id)} title="Eliminar backlog">
-          <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-            <path d="M2 3.5h9M5 3.5V2.5a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v1M5.5 5.5v4M7.5 5.5v4M3.5 3.5l.5 7h5l.5-7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </button>
-      </td>
+      {/* Acciones o Archivado el */}
+      {isArchived ? (
+        <td className="col-archived-at">
+          <span className="archived-at-date">{formatArchivedAt(row.archived_at)}</span>
+          <button className="btn-reactivate" onClick={() => onReactivate?.(row.id)} title="Reactivar este backlog">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M2 6a4 4 0 014-4 4 4 0 014 4 4 4 0 01-4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+              <path d="M6 2L4 4l2 2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            Reactivar
+          </button>
+        </td>
+      ) : (
+        <td className="col-del">
+          <button
+            className={`btn-sync-medios${row.sync_to_medios ? ' synced' : ''}`}
+            onClick={() => onSyncToggle?.(row.id, !row.sync_to_medios)}
+            title={row.sync_to_medios ? 'Desvinc. de Mesa de Medios' : 'Vincular a Mesa de Medios'}
+          >
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M2 6a4 4 0 014-4M10 6a4 4 0 01-4 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+              <path d="M9 4l1.5-1.5M9 4l1.5 1.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M3 8L1.5 9.5M3 8L1.5 6.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+          <button className="btn-delete-row" onClick={() => onDeleteRow(row.id)} title="Eliminar backlog">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+              <path d="M2 3.5h9M5 3.5V2.5a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v1M5.5 5.5v4M7.5 5.5v4M3.5 3.5l.5 7h5l.5-7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+        </td>
+      )}
     </tr>
   )
 }

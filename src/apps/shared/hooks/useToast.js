@@ -4,11 +4,11 @@ export function useToast() {
   const [toasts, setToasts] = useState([])
   const timers = useRef(new Map())
 
-  const addToast = useCallback((message, type = 'info', duration) => {
+  const addToast = useCallback((message, type = 'info', duration, action) => {
     const id = Date.now() + Math.random()
     const ms = duration ?? (type === 'error' ? 6000 : 4000)
     setToasts(prev => {
-      const next = [...prev, { id, message, type }]
+      const next = [...prev, { id, message, type, action }]
       return next.slice(-3) // máximo 3 apilados
     })
     const timer = setTimeout(() => {

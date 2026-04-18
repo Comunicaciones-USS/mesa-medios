@@ -17,6 +17,11 @@ export default function Toaster({ toasts, onRemove }) {
             {t.type === 'info'    && 'ℹ'}
           </span>
           <span className="toast-message">{t.message}</span>
+          {t.action && (
+            <button className="toast-action" onClick={(e) => { e.stopPropagation(); t.action.onClick(); onRemove(t.id) }}>
+              {t.action.label}
+            </button>
+          )}
           <button className="toast-close" onClick={(e) => { e.stopPropagation(); onRemove(t.id); }} aria-label="Cerrar">×</button>
         </div>
       ))}
