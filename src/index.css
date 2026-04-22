@@ -3000,7 +3000,29 @@ body {
 
 .editorial-filter-row .filter-search {
   flex: 1;
-  min-width: 200px;
+  min-width: 0;
+}
+
+/* Grupo de acciones al extremo derecho de la filter row (desktop) */
+.filter-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.filter-kpi-pct {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #275da5;
+  white-space: nowrap;
+  padding-right: 10px;
+  border-right: 1px solid #e2e8f0;
+}
+
+@media (max-width: 768px) {
+  .filter-row-actions { display: none; }
 }
 
 .editorial-filter-pills-row {
@@ -4556,6 +4578,8 @@ body {
     align-items: center;
     gap: 8px;
     padding: 8px 12px;
+    width: 100%;
+    box-sizing: border-box;
     background: #ffffff;
     border-bottom: 1px solid #e5e7eb;
   }
@@ -4566,6 +4590,7 @@ body {
 
 .mobile-search-wrap {
   flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 6px;

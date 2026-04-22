@@ -458,20 +458,6 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
                 <span className="kpi-item"><strong>{kpi.enDesarrollo}</strong> en desarrollo</span>
                 <span className="kpi-dot" style={{ background: '#DC2626' }} />
                 <span className="kpi-item"><strong>{kpi.pendientes}</strong> pendientes</span>
-                <span className="kpi-sep" />
-                <span className="kpi-pct"><strong>{kpi.pct}%</strong> avance</span>
-                <button className="btn-explorer" onClick={() => setShowExplorer(true)} title="Explorar por eje y tema">
-                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                    <path d="M2 4h10M2 7h10M2 10h6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-                  </svg>
-                  Explorar
-                </button>
-                <button className="btn-add btn-add-sm" onClick={() => setShowModal(true)}>
-                  <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-                    <path d="M6.5 1v11M1 6.5h11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-                  </svg>
-                  Nueva acción
-                </button>
               </>
             )}
           </div>
@@ -510,6 +496,23 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
                 </svg>
                 <span>Fecha</span>
               </button>
+            )}
+            {activeTab === 'active' && (
+              <div className="filter-row-actions">
+                <span className="filter-kpi-pct"><strong>{kpi.pct}%</strong> avance</span>
+                <button className="btn-explorer" onClick={() => setShowExplorer(true)} title="Explorar por eje y tema">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <path d="M2 4h10M2 7h10M2 10h6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                  </svg>
+                  Explorar
+                </button>
+                <button className="btn-add btn-add-sm" onClick={() => setShowModal(true)}>
+                  <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                    <path d="M6.5 1v11M1 6.5h11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                  </svg>
+                  Nueva acción
+                </button>
+              </div>
             )}
           </div>
 
