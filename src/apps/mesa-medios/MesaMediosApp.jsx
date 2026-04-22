@@ -13,6 +13,7 @@ import { useDebounce } from '../shared/hooks/useDebounce'
 import ConfirmDialog from '../shared/components/ConfirmDialog'
 import UserProfilePanel from '../shared/components/UserProfilePanel'
 import { logAuditEntry } from '../shared/utils/audit'
+import BottomSheet from '../shared/components/BottomSheet'
 
 export default function MesaMediosApp({ session, userName, onLogout, onBackToSelector, onSwitchDashboard, otherDashboardName }) {
   const [temas,         setTemas]         = useState([])
@@ -43,6 +44,9 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
 
   // Expanded temas
   const [expandedTemas, setExpandedTemas] = useState(new Set())
+
+  // Mobile filters sheet
+  const [showMobileFilters, setShowMobileFilters] = useState(false)
 
   function toggleGroup(groupId) {
     setCollapsedGroups(prev => {
@@ -358,19 +362,64 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
   const totalPlanifs = temas.reduce((acc, t) => acc + t.planificaciones.length, 0)
   const displayPlanifs = displayTemas.reduce((acc, t) => acc + t.planificaciones.length, 0)
 
+  const mobileActiveFilterCount = [
+    filterGroup !== 'all',
+    filterCellStatus !== 'all',
+    filterDateRange.from || filterDateRange.to,
+  ].filter(Boolean).length
+
   return (
     <div className="app">
-      <Header
-        userName={userName}
-        userEmail={session.user.email}
-        onAdd={() => setShowModal('new')}
-        onLogout={onLogout}
-        onShowLogs={() => setShowLogs(true)}
-        onBackToSelector={onBackToSelector}
-        onShowProfile={() => setShowProfile(true)}
-        onSwitchDashboard={onSwitchDashboard}
-        otherDashboardName={otherDashboardName}
-      />
+      <div className="mm-mobile-header-wrap">
+        <Header
+          userName={userName}
+          userEmail={session.user.email}
+          onAdd={() => setShowModal('new')}
+          onLogout={onLogout}
+          onShowLogs={() => setShowLogs(true)}
+          onBackToSelector={onBackToSelector}
+          onShowProfile={() => setShowProfile(true)}
+          onSwitchDashboard={onSwitchDashboard}
+          otherDashboardName={otherDashboardName}
+        />
+        {/* Mobile: línea única de acción (search + filtros + añadir) */}
+        <div className="mobile-action-line">
+          <div className="mobile-search-wrap">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.3"/>
+              <path d="M9.5 9.5L13 13" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+            </svg>
+            <input
+              type="text"
+              placeholder="Buscar..."
+              value={filterInput}
+              onChange={e => setFilterInput(e.target.value)}
+              className="filter-input mobile-search-input"
+            />
+            {filterInput && (
+              <button className="filter-clear" onClick={() => setFilterInput('')}>
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                  <path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                </svg>
+              </button>
+            )}
+          </div>
+          <button className="mobile-filter-btn" onClick={() => setShowMobileFilters(true)}>
+            <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+              <path d="M1 3h13M3 7h9M5 11h5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+            </svg>
+            <span>Filtros</span>
+            {mobileActiveFilterCount > 0 && (
+              <span className="mobile-filter-badge">{mobileActiveFilterCount}</span>
+            )}
+          </button>
+          <button className="mobile-add-btn" onClick={() => setShowModal('new')} aria-label="Agregar tema">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M8 2v12M2 8h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
+          </button>
+        </div>
+      </div>
 
       <div className="medios-filter-bar" ref={filterBarRef}>
         {/* Fila 1: Buscador + Fechas + Orden */}
@@ -521,6 +570,60 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
           onCancel={() => setConfirmDelete(null)}
         />
       )}
+      {/* Mobile: filtros en bottom sheet */}
+      <BottomSheet
+        isOpen={showMobileFilters}
+        onClose={() => setShowMobileFilters(false)}
+        title="Filtros"
+        onApply={() => setShowMobileFilters(false)}
+        applyLabel={`Aplicar filtros (${displayTemas.length} ${displayTemas.length === 1 ? 'tema' : 'temas'})`}
+      >
+        <div className="sheet-clear-row">
+          <button className="sheet-clear-btn" onClick={() => { setFilterGroup('all'); setFilterCellStatus('all'); setFilterDateRange({ from: '', to: '' }) }}>
+            Limpiar todo
+          </button>
+        </div>
+        <div className="sheet-filter-group">
+          <p className="sheet-filter-label">GRUPO DE MEDIOS</p>
+          <div className="sheet-pills">
+            <button className={`sheet-pill${filterGroup === 'all' ? ' sheet-pill-active' : ''}`} onClick={() => setFilterGroup('all')}>Todos</button>
+            {GROUPS.map(g => (
+              <button
+                key={g.id}
+                className={`sheet-pill${filterGroup === g.id ? ' sheet-pill-active' : ''}`}
+                onClick={() => setFilterGroup(filterGroup === g.id ? 'all' : g.id)}
+              >{g.label}</button>
+            ))}
+          </div>
+        </div>
+        <div className="sheet-filter-group">
+          <p className="sheet-filter-label">ESTADO DE CELDA</p>
+          <div className="sheet-pills">
+            {[
+              { value: 'all',   label: 'Todas' },
+              { value: 'si',    label: 'Confirmado' },
+              { value: 'pd',    label: 'Por definir' },
+              { value: 'no',    label: 'No aplica' },
+              { value: 'empty', label: 'Vacías' },
+            ].map(f => (
+              <button
+                key={f.value}
+                className={`sheet-pill${filterCellStatus === f.value ? ' sheet-pill-active' : ''}`}
+                onClick={() => setFilterCellStatus(f.value)}
+              >{f.label}</button>
+            ))}
+          </div>
+        </div>
+        <div className="sheet-filter-group">
+          <p className="sheet-filter-label">RANGO DE FECHAS</p>
+          <div className="sheet-date-range">
+            <input type="date" value={filterDateRange.from} onChange={e => setFilterDateRange(p => ({ ...p, from: e.target.value }))} className="sheet-date-input" />
+            <span className="sheet-date-sep">→</span>
+            <input type="date" value={filterDateRange.to} onChange={e => setFilterDateRange(p => ({ ...p, to: e.target.value }))} className="sheet-date-input" />
+          </div>
+        </div>
+      </BottomSheet>
+
       <Toaster toasts={toasts} onRemove={removeToast} />
     </div>
   )
