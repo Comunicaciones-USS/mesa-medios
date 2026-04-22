@@ -1,5 +1,5 @@
 # Estado del Proyecto — Mesa de Medios USS
-**Actualizado:** 2026-04-18 | **Branch:** `main` | **Commit:** `02f4bc7`
+**Actualizado:** 2026-04-21 | **Branch:** `main` | **Commit:** `04fdd76`
 
 ---
 
@@ -455,6 +455,8 @@ git push && npm run deploy
 
 ### Últimos 20 commits:
 ```
+04fdd76 merge(feat/mobile-ux-bottom-sheet): UX mobile bottom sheet + compact header
+d5a5836 feat(mobile): bottom sheet filters + compact header + KPI colapsable
 02f4bc7 merge(fix/deuda-tecnica-seccion-10): resolver deuda técnica sección 10
 15eadb6 refactor(audit): standardize new details entries to JSON via helper
 c49dbd6 fix(editorial): make date inputs controlled to reflect realtime changes
@@ -518,7 +520,7 @@ Todos en `scripts/`. Ejecutar en **Supabase SQL Editor** (no en producción auto
 
 ## 10. Deuda Técnica
 
-### Sin deuda activa conocida
+### Sin deuda activa conocida — última revisión 2026-04-21
 
 Todos los ítems documentados anteriormente fueron resueltos o verificados como inexistentes:
 
