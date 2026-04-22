@@ -13,6 +13,7 @@ import Toaster from '../shared/components/Toaster'
 import ConfirmDialog from '../shared/components/ConfirmDialog'
 import { logAuditEntry } from '../shared/utils/audit'
 import UserProfilePanel from '../shared/components/UserProfilePanel'
+import BottomSheet from '../shared/components/BottomSheet'
 
 const TABLE = 'mesa_editorial_acciones'
 
@@ -37,7 +38,12 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
   const [filterEje,        setFilterEje]        = useState('all')
   const [filterStatus,     setFilterStatus]     = useState('all')
   const [filterTipoAccion, setFilterTipoAccion] = useState('all')
+  const [filterDateRange,  setFilterDateRange]  = useState({ from: '', to: '' })
   const [sortDir,          setSortDir]          = useState(null)
+
+  // Mobile UI states
+  const [showMobileFilters, setShowMobileFilters] = useState(false)
+  const [kpiExpanded,       setKpiExpanded]       = useState(false)
 
   const { toasts, addToast, removeToast } = useToast()
 
@@ -134,6 +140,8 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
     if (activeTab === 'active') {
       if (filterStatus !== 'all')     result = result.filter(r => r.status === filterStatus)
       if (filterTipoAccion !== 'all') result = result.filter(r => r.tipo_accion === filterTipoAccion)
+      if (filterDateRange.from)       result = result.filter(r => r.fecha && r.fecha >= filterDateRange.from)
+      if (filterDateRange.to)         result = result.filter(r => r.fecha && r.fecha <= filterDateRange.to)
       if (explorerFilter) {
         if (explorerFilter.eje)  result = result.filter(r => r.eje === explorerFilter.eje)
         if (explorerFilter.tema) result = result.filter(r => r.tema === explorerFilter.tema)
@@ -161,7 +169,7 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
     }
 
     return result
-  }, [rows, activeTab, filterEje, filterStatus, filterTipoAccion, filterText, sortDir, explorerFilter])
+  }, [rows, activeTab, filterEje, filterStatus, filterTipoAccion, filterDateRange, filterText, sortDir, explorerFilter])
 
   // KPI values — different per tab
   const kpi = useMemo(() => {
@@ -367,8 +375,17 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
     setFilterEje('all')
     setFilterStatus('all')
     setFilterTipoAccion('all')
+    setFilterDateRange({ from: '', to: '' })
     setExplorerFilter(null)
+    setKpiExpanded(false)
   }
+
+  const mobileActiveFilterCount = [
+    filterEje !== 'all',
+    activeTab === 'active' && filterStatus !== 'all',
+    activeTab === 'active' && filterTipoAccion !== 'all',
+    filterDateRange.from || filterDateRange.to,
+  ].filter(Boolean).length
 
   return (
     <div className="app app-editorial">
@@ -405,43 +422,59 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
           </button>
         </div>
 
-        {/* ── KPI Bar ── */}
-        <div className={`editorial-kpi-bar${activeTab === 'archived' ? ' kpi-bar-archived' : ''}`}>
-          {kpi.mode === 'archived' ? (
-            <>
-              <span className="kpi-item"><strong>{kpi.total}</strong> archivadas</span>
-              <span className="kpi-dot" style={{ background: '#94a3b8' }} />
-              <span className="kpi-item"><strong>{kpi.estesMes}</strong> este mes</span>
-              <span className="kpi-dot" style={{ background: '#94a3b8' }} />
-              <span className="kpi-item"><strong>{kpi.esteAno}</strong> este año</span>
-              <span className="kpi-sep" />
-              <span style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.5)', letterSpacing: '.04em' }}>historial</span>
-            </>
-          ) : (
-            <>
-              <span className="kpi-item"><strong>{kpi.total}</strong> acciones</span>
-              <span className="kpi-dot" style={{ background: '#16A34A' }} />
-              <span className="kpi-item"><strong>{kpi.completadas}</strong> completadas</span>
-              <span className="kpi-dot" style={{ background: '#D97706' }} />
-              <span className="kpi-item"><strong>{kpi.enDesarrollo}</strong> en desarrollo</span>
-              <span className="kpi-dot" style={{ background: '#DC2626' }} />
-              <span className="kpi-item"><strong>{kpi.pendientes}</strong> pendientes</span>
-              <span className="kpi-sep" />
-              <span className="kpi-pct"><strong>{kpi.pct}%</strong> avance</span>
-              <button className="btn-explorer" onClick={() => setShowExplorer(true)} title="Explorar por eje y tema">
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                  <path d="M2 4h10M2 7h10M2 10h6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-                </svg>
-                Explorar
-              </button>
-              <button className="btn-add btn-add-sm" onClick={() => setShowModal(true)}>
-                <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-                  <path d="M6.5 1v11M1 6.5h11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-                </svg>
-                Nueva acción
-              </button>
-            </>
-          )}
+        {/* ── KPI Bar — colapsable en mobile ── */}
+        <div className={`editorial-kpi-bar${activeTab === 'archived' ? ' kpi-bar-archived' : ''}${kpiExpanded ? ' kpi-expanded' : ''}`}>
+          {/* Resumen mobile (solo visible en mobile, siempre) */}
+          <button className="kpi-mobile-summary" onClick={() => setKpiExpanded(v => !v)}>
+            <span>
+              {kpi.mode === 'archived'
+                ? `${kpi.total} archivadas · ${kpi.estesMes} este mes`
+                : `${kpi.total} acciones · ${kpi.pct}% avance`
+              }
+            </span>
+            <svg className="kpi-chevron" width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d={kpiExpanded ? 'M3 9l4-4 4 4' : 'M3 5l4 4 4-4'} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+
+          {/* Contenido completo: siempre en desktop, toggle en mobile */}
+          <div className="kpi-full-content">
+            {kpi.mode === 'archived' ? (
+              <>
+                <span className="kpi-item"><strong>{kpi.total}</strong> archivadas</span>
+                <span className="kpi-dot" style={{ background: '#94a3b8' }} />
+                <span className="kpi-item"><strong>{kpi.estesMes}</strong> este mes</span>
+                <span className="kpi-dot" style={{ background: '#94a3b8' }} />
+                <span className="kpi-item"><strong>{kpi.esteAno}</strong> este año</span>
+                <span className="kpi-sep" />
+                <span style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.5)', letterSpacing: '.04em' }}>historial</span>
+              </>
+            ) : (
+              <>
+                <span className="kpi-item"><strong>{kpi.total}</strong> acciones</span>
+                <span className="kpi-dot" style={{ background: '#16A34A' }} />
+                <span className="kpi-item"><strong>{kpi.completadas}</strong> completadas</span>
+                <span className="kpi-dot" style={{ background: '#D97706' }} />
+                <span className="kpi-item"><strong>{kpi.enDesarrollo}</strong> en desarrollo</span>
+                <span className="kpi-dot" style={{ background: '#DC2626' }} />
+                <span className="kpi-item"><strong>{kpi.pendientes}</strong> pendientes</span>
+                <span className="kpi-sep" />
+                <span className="kpi-pct"><strong>{kpi.pct}%</strong> avance</span>
+                <button className="btn-explorer" onClick={() => setShowExplorer(true)} title="Explorar por eje y tema">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <path d="M2 4h10M2 7h10M2 10h6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                  </svg>
+                  Explorar
+                </button>
+                <button className="btn-add btn-add-sm" onClick={() => setShowModal(true)}>
+                  <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                    <path d="M6.5 1v11M1 6.5h11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                  </svg>
+                  Nueva acción
+                </button>
+              </>
+            )}
+          </div>
         </div>
 
         {/* ── Filter bar ── */}
@@ -528,6 +561,46 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
             <button onClick={() => setExplorerFilter(null)}>✕</button>
           </div>
         )}
+
+        {/* Mobile: línea única de acción (search + filtros + añadir) */}
+        <div className="mobile-action-line editorial-mobile-action-line">
+          <div className="mobile-search-wrap">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.3"/>
+              <path d="M9.5 9.5L13 13" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+            </svg>
+            <input
+              type="text"
+              placeholder={activeTab === 'archived' ? 'Buscar archivadas...' : 'Buscar...'}
+              value={filterInput}
+              onChange={e => setFilterInput(e.target.value)}
+              className="filter-input mobile-search-input"
+            />
+            {filterInput && (
+              <button className="filter-clear" onClick={() => setFilterInput('')}>
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                  <path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                </svg>
+              </button>
+            )}
+          </div>
+          <button className="mobile-filter-btn" onClick={() => setShowMobileFilters(true)}>
+            <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+              <path d="M1 3h13M3 7h9M5 11h5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+            </svg>
+            <span>Filtros</span>
+            {mobileActiveFilterCount > 0 && (
+              <span className="mobile-filter-badge">{mobileActiveFilterCount}</span>
+            )}
+          </button>
+          {activeTab === 'active' && (
+            <button className="mobile-add-btn" onClick={() => setShowModal(true)} aria-label="Nueva acción">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M8 2v12M2 8h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
       {/* ── fin editorial-sticky-block ── */}
 
@@ -597,6 +670,81 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
       )}
       {showLogs && <AuditLogPanel onClose={() => setShowLogs(false)} mesaType="editorial" />}
       {showProfile && <UserProfilePanel userEmail={session.user.email} userName={userName} onClose={() => setShowProfile(false)} />}
+
+      {/* Mobile: filtros en bottom sheet */}
+      <BottomSheet
+        isOpen={showMobileFilters}
+        onClose={() => setShowMobileFilters(false)}
+        title="Filtros"
+        onApply={() => setShowMobileFilters(false)}
+        applyLabel={`Aplicar filtros (${displayRows.length})`}
+      >
+        <div className="sheet-clear-row">
+          <button className="sheet-clear-btn" onClick={() => { setFilterEje('all'); setFilterStatus('all'); setFilterTipoAccion('all'); setFilterDateRange({ from: '', to: '' }) }}>
+            Limpiar todo
+          </button>
+        </div>
+        <div className="sheet-filter-group">
+          <p className="sheet-filter-label">EJE</p>
+          <div className="sheet-pills">
+            <button className={`sheet-pill${filterEje === 'all' ? ' sheet-pill-active' : ''}`} onClick={() => setFilterEje('all')}>Todos</button>
+            {EJES.map(eje => (
+              <button
+                key={eje.id}
+                className={`sheet-pill${filterEje === eje.label ? ' sheet-pill-active' : ''}`}
+                style={filterEje === eje.label ? { background: eje.color, borderColor: eje.color } : {}}
+                onClick={() => setFilterEje(filterEje === eje.label ? 'all' : eje.label)}
+              >{eje.label}</button>
+            ))}
+          </div>
+        </div>
+        {activeTab === 'active' && (
+          <>
+            <div className="sheet-filter-group">
+              <p className="sheet-filter-label">STATUS</p>
+              <div className="sheet-pills">
+                {['all', 'Pendiente', 'En desarrollo', 'Completado'].map(s => (
+                  <button
+                    key={s}
+                    className={`sheet-pill${filterStatus === s ? ' sheet-pill-active' : ''}`}
+                    onClick={() => setFilterStatus(s)}
+                  >{s === 'all' ? 'Todos' : s}</button>
+                ))}
+              </div>
+            </div>
+            <div className="sheet-filter-group">
+              <p className="sheet-filter-label">TIPO</p>
+              <div className="sheet-pills">
+                {['all', 'Backlog', 'Resultado'].map(t => (
+                  <button
+                    key={t}
+                    className={`sheet-pill${filterTipoAccion === t ? ' sheet-pill-active' : ''}`}
+                    onClick={() => setFilterTipoAccion(t)}
+                  >{t === 'all' ? 'Todos' : t}</button>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+        <div className="sheet-filter-group">
+          <p className="sheet-filter-label">RANGO DE FECHAS</p>
+          <div className="sheet-date-range">
+            <input type="date" value={filterDateRange.from} onChange={e => setFilterDateRange(p => ({ ...p, from: e.target.value }))} className="sheet-date-input" />
+            <span className="sheet-date-sep">→</span>
+            <input type="date" value={filterDateRange.to} onChange={e => setFilterDateRange(p => ({ ...p, to: e.target.value }))} className="sheet-date-input" />
+          </div>
+        </div>
+        {activeTab === 'active' && (
+          <div className="sheet-explorer-section">
+            <button className="sheet-explorer-btn" onClick={() => { setShowMobileFilters(false); setShowExplorer(true) }}>
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <path d="M2 4h10M2 7h10M2 10h6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+              </svg>
+              Explorar temas
+            </button>
+          </div>
+        )}
+      </BottomSheet>
 
       {/* Confirmar eliminar */}
       {confirmDelete && (

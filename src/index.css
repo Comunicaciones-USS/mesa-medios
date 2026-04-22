@@ -4440,3 +4440,454 @@ body {
 
 /* KPI bar archived variant */
 .kpi-bar-archived { background: #334155; }
+
+/* ══════════════════════════════════════════════════════════════════
+   MOBILE UX REFACTOR — Bottom Sheet, Compact Header, Avatar Dropdown
+   TODO el código de esta sección está dentro de @media (max-width: 768px)
+   o define elementos que solo son visibles en mobile.
+   DESKTOP NO SE MODIFICA.
+   ══════════════════════════════════════════════════════════════════ */
+
+/* ── Ocultar "USS" en título mobile ── */
+.header-title-suffix { display: inline; }
+@media (max-width: 768px) {
+  .header-title-suffix { display: none; }
+}
+
+/* ── Header desktop user — ocultar en mobile ── */
+.header-desktop-user { display: flex; }
+@media (max-width: 768px) {
+  .header-desktop-user { display: none !important; }
+}
+
+/* ── header-row-actions — ocultar en mobile (movido al dropdown) ── */
+@media (max-width: 768px) {
+  .header-row-actions { display: none !important; }
+}
+
+/* ── Mobile avatar dropdown ── */
+.mobile-avatar-wrap { display: none; position: relative; }
+@media (max-width: 768px) {
+  .mobile-avatar-wrap { display: flex; align-items: center; }
+}
+
+.mobile-avatar-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px 4px;
+  border-radius: 8px;
+  color: white;
+  min-height: 44px;
+  min-width: 44px;
+  justify-content: center;
+}
+.mobile-avatar-btn:hover { background: rgba(255,255,255,0.12); }
+
+.mobile-avatar-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.1);
+  min-width: 220px;
+  z-index: 500;
+  overflow: hidden;
+  border: 1px solid rgba(0,0,0,0.06);
+}
+
+.mobile-avatar-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 13px 16px;
+  background: none;
+  border: none;
+  font-size: 0.9rem;
+  color: #1a2b3c;
+  cursor: pointer;
+  text-align: left;
+  min-height: 44px;
+  transition: background 0.12s;
+}
+.mobile-avatar-item:hover { background: #f0f6fc; }
+.mobile-avatar-item svg { flex-shrink: 0; opacity: 0.65; }
+
+.mobile-avatar-divider { height: 1px; background: #e5e7eb; margin: 3px 0; }
+
+.mobile-avatar-item--danger { color: #dc2626; }
+.mobile-avatar-item--danger svg { opacity: 0.7; color: #dc2626; }
+.mobile-avatar-item--danger:hover { background: #fef2f2; }
+
+/* ── Mesa Medios: sticky wrap para header + action line en mobile ── */
+.mm-mobile-header-wrap { display: contents; }
+@media (max-width: 768px) {
+  .mm-mobile-header-wrap {
+    display: block;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+  }
+  .mm-mobile-header-wrap .header {
+    position: relative !important;
+    top: auto !important;
+    z-index: auto !important;
+    box-shadow: none !important;
+  }
+}
+
+/* ── Ocultar filter bars desktop en mobile ── */
+@media (max-width: 768px) {
+  .medios-filter-bar { display: none !important; }
+  .editorial-filter-bar { display: none !important; }
+}
+
+/* ── Mobile action line ── */
+.mobile-action-line { display: none; }
+@media (max-width: 768px) {
+  .mobile-action-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: #ffffff;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  .editorial-mobile-action-line {
+    background: #ffffff;
+  }
+}
+
+.mobile-search-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #f3f6fa;
+  border: 1px solid #d0dce8;
+  border-radius: 8px;
+  padding: 8px 10px;
+  min-height: 44px;
+}
+.mobile-search-wrap svg { flex-shrink: 0; color: #6b7280; }
+.mobile-search-input {
+  flex: 1;
+  border: none;
+  background: none;
+  outline: none;
+  font-size: 0.9rem;
+  color: #1a2b3c;
+  min-width: 0;
+}
+.mobile-search-input::placeholder { color: #94a3b8; }
+
+.mobile-filter-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 12px;
+  height: 44px;
+  background: #f3f6fa;
+  border: 1px solid #d0dce8;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #1a2b3c;
+  cursor: pointer;
+  white-space: nowrap;
+  position: relative;
+  flex-shrink: 0;
+  transition: background 0.12s;
+}
+.mobile-filter-btn:hover { background: #e3edf8; }
+.mobile-filter-btn svg { flex-shrink: 0; }
+
+.mobile-filter-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #ceb37c;
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  border-radius: 50%;
+  width: 17px;
+  height: 17px;
+  min-width: 17px;
+  line-height: 1;
+}
+
+.mobile-add-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  background: #ceb37c;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.12s, transform 0.1s;
+}
+.mobile-add-btn:hover { background: #b89660; }
+.mobile-add-btn:active { transform: scale(0.95); }
+
+/* ── KPI Bar colapsable en mobile ── */
+.kpi-mobile-summary { display: none; }
+.kpi-full-content { display: flex; align-items: center; flex-wrap: wrap; gap: 0; flex: 1; }
+
+@media (max-width: 768px) {
+  .kpi-mobile-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    background: none;
+    border: none;
+    color: white;
+    font-size: 0.82rem;
+    font-weight: 500;
+    padding: 0;
+    cursor: pointer;
+    gap: 8px;
+    min-height: 36px;
+  }
+  .kpi-mobile-summary:hover { opacity: 0.85; }
+
+  .kpi-full-content {
+    display: none;
+    width: 100%;
+    margin-top: 8px;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .editorial-kpi-bar.kpi-expanded .kpi-full-content {
+    display: flex;
+  }
+  .editorial-kpi-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 10px 14px;
+  }
+  .kpi-chevron {
+    flex-shrink: 0;
+    transition: transform 0.2s ease;
+  }
+  /* En expanded el chevron ya cambia de path via JS (▴), no necesita transform CSS */
+}
+
+/* ── Bottom Sheet ── */
+.bs-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 800;
+  display: flex;
+  align-items: flex-end;
+  animation: bs-fade-in 0.2s ease;
+}
+@keyframes bs-fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+.bs-sheet {
+  background: #ffffff;
+  border-radius: 20px 20px 0 0;
+  width: 100%;
+  max-height: 82vh;
+  display: flex;
+  flex-direction: column;
+  animation: bs-slide-up 0.25s cubic-bezier(0.32, 0.72, 0, 1);
+}
+@keyframes bs-slide-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+.bs-handle {
+  width: 40px;
+  height: 4px;
+  background: #d1d5db;
+  border-radius: 2px;
+  margin: 10px auto 0;
+  flex-shrink: 0;
+}
+
+.bs-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px 10px;
+  flex-shrink: 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+.bs-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1a2b3c;
+}
+.bs-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: #f3f4f6;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #6b7280;
+  transition: background 0.12s;
+}
+.bs-close:hover { background: #e5e7eb; }
+
+.bs-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.bs-footer {
+  padding: 12px 20px 20px;
+  flex-shrink: 0;
+  border-top: 1px solid #e5e7eb;
+}
+.bs-apply-btn {
+  width: 100%;
+  padding: 14px;
+  background: #0f2b41;
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  min-height: 48px;
+}
+.bs-apply-btn:hover { background: #163d5a; }
+
+/* ── Contenido de filtros en sheet ── */
+.sheet-clear-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 4px;
+}
+.sheet-clear-btn {
+  background: none;
+  border: none;
+  color: #275da5;
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 4px 0;
+  min-height: 36px;
+}
+.sheet-clear-btn:hover { text-decoration: underline; }
+
+.sheet-filter-group {
+  margin-bottom: 20px;
+}
+.sheet-filter-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #64748b;
+  margin: 0 0 10px;
+  text-transform: uppercase;
+}
+.sheet-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 8px;
+}
+.sheet-pill {
+  padding: 8px 14px;
+  border: 1.5px solid #d0dce8;
+  border-radius: 20px;
+  background: #ffffff;
+  color: #4b6075;
+  font-size: 0.83rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+  min-height: 36px;
+  white-space: nowrap;
+}
+.sheet-pill:hover { background: #f0f6fc; border-color: #275da5; }
+.sheet-pill-active {
+  background: #0f2b41 !important;
+  border-color: #0f2b41 !important;
+  color: #ffffff !important;
+}
+
+.sheet-date-range {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.sheet-date-input {
+  flex: 1;
+  min-width: 130px;
+  padding: 10px 12px;
+  border: 1.5px solid #d0dce8;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  color: #1a2b3c;
+  background: #f9fafb;
+  min-height: 44px;
+}
+.sheet-date-sep { color: #94a3b8; font-size: 0.9rem; flex-shrink: 0; }
+
+.sheet-explorer-section {
+  margin-top: 8px;
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;
+}
+.sheet-explorer-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 16px;
+  background: #f0f6fc;
+  border: 1.5px solid #d0dce8;
+  border-radius: 10px;
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: #1a2b3c;
+  cursor: pointer;
+  min-height: 44px;
+  transition: background 0.12s;
+}
+.sheet-explorer-btn:hover { background: #e3edf8; }
+.sheet-explorer-btn svg { opacity: 0.65; flex-shrink: 0; }
+
+/* ── Tap target mínimo 44px para botones existentes en mobile ── */
+@media (max-width: 768px) {
+  .tab-btn { min-height: 44px; padding: 8px 16px; }
+  .btn-back-selector { min-height: 44px; min-width: 44px; }
+  .filter-clear { min-height: 36px; min-width: 36px; padding: 6px; }
+}
+
+/* ── Evitar overflow horizontal en mobile ── */
+@media (max-width: 768px) {
+  .app, .app-editorial { overflow-x: hidden; }
+  .editorial-sticky-block { overflow-x: hidden; }
+}
+
+/* ── Header: ocultar subtítulo en mobile (ahorra espacio) ── */
+@media (max-width: 768px) {
+  .header-subtitle { display: none !important; }
+  .header { flex-direction: row; align-items: center; padding: 0 14px; min-height: 52px; }
+  .header-row-top { flex: 1; }
+}
