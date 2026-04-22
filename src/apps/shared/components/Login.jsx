@@ -57,31 +57,65 @@ export default function Login({ onLogin }) {
 
     setLoading(true)
 
-    // Consultar usuarios_autorizados
-    const { data, error: dbErr } = await supabase
-      .from('usuarios_autorizados')
-      .select('email, nombre, pin_hash')
-      .eq('email', normalizedEmail)
-      .eq('activo', true)
-      .single()
+    // ═══════════════════════════════════════════════════════════
+    // 🔙 ROLLBACK DE EMERGENCIA
+    // Si el login nuevo con RPC falla en producción:
+    // 1. Descomenta este bloque (Cmd+/ en el bloque seleccionado)
+    // 2. Comenta el bloque nuevo de validación (marcado abajo)
+    // 3. Commit desde github.com con mensaje "rollback: login v1"
+    // El sistema volverá a funcionar en ~1 minuto tras el deploy.
+    // ═══════════════════════════════════════════════════════════
+    // const { data, error: dbErr } = await supabase
+    //   .from('usuarios_autorizados')
+    //   .select('email, nombre, pin_hash')
+    //   .eq('email', normalizedEmail)
+    //   .eq('activo', true)
+    //   .single()
+    //
+    // if (dbErr || !data) {
+    //   recordFailedAttempt(normalizedEmail)
+    //   try { await supabase.from('pin_login_attempts').insert([{ email: normalizedEmail, success: false }]) } catch { /* ignore */ }
+    //   setLoading(false)
+    //   setError('Credenciales incorrectas')
+    //   return
+    // }
+    //
+    // if (!data.pin_hash) {
+    //   setLoading(false)
+    //   setError('No tienes PIN configurado. Contacta al administrador.')
+    //   return
+    // }
+    //
+    // const enteredHash = await sha256(pin.trim())
+    // if (enteredHash !== data.pin_hash) {
+    //   recordFailedAttempt(normalizedEmail)
+    //   try { await supabase.from('pin_login_attempts').insert([{ email: normalizedEmail, success: false }]) } catch { /* ignore */ }
+    //   setLoading(false)
+    //   setError('Credenciales incorrectas')
+    //   return
+    // }
+    //
+    // try { await supabase.from('pin_login_attempts').insert([{ email: normalizedEmail, success: true }]) } catch { /* ignore */ }
+    // try {
+    //   await logAuditEntry(supabase, {
+    //     user_email: normalizedEmail,
+    //     action:     'login',
+    //     details:    { description: 'Inició sesión con PIN' },
+    //   })
+    // } catch { /* ignore */ }
+    // setLoading(false)
+    // onLogin({ email: normalizedEmail, nombre: data.nombre || normalizedEmail })
+    // ── FIN ROLLBACK ─────────────────────────────────────────────
 
-    if (dbErr || !data) {
-      recordFailedAttempt(normalizedEmail)
-      try { await supabase.from('pin_login_attempts').insert([{ email: normalizedEmail, success: false }]) } catch { /* ignore */ }
-      setLoading(false)
-      setError('Credenciales incorrectas')
-      return
-    }
-
-    if (!data.pin_hash) {
-      setLoading(false)
-      setError('No tienes PIN configurado. Contacta al administrador.')
-      return
-    }
-
-    // Hashear y comparar
+    // 🆕 NUEVO: validación vía RPC (comentar si se hace rollback)
     const enteredHash = await sha256(pin.trim())
-    if (enteredHash !== data.pin_hash) {
+
+    const { data: rpcData, error: rpcErr } = await supabase
+      .rpc('validate_pin', { p_email: normalizedEmail, p_pin_hash: enteredHash })
+
+    const result = rpcData?.[0]
+
+    if (rpcErr || !result || !result.valid) {
       recordFailedAttempt(normalizedEmail)
       try { await supabase.from('pin_login_attempts').insert([{ email: normalizedEmail, success: false }]) } catch { /* ignore */ }
       setLoading(false)
@@ -100,7 +134,8 @@ export default function Login({ onLogin }) {
     } catch { /* ignore */ }
 
     setLoading(false)
-    onLogin({ email: normalizedEmail, nombre: data.nombre || normalizedEmail })
+    onLogin({ email: normalizedEmail, nombre: result.nombre || normalizedEmail })
+    // ── FIN NUEVO ─────────────────────────────────────────────────
   }
 
   return (

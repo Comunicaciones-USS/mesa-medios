@@ -55,16 +55,33 @@ function PinAdminSection() {
   const [revealed,     setRevealed]     = useState(null)   // { pin, userName, userEmail }
   const [copied,       setCopied]       = useState(false)
 
+  // ═══════════════════════════════════════════════════════════
+  // 🔙 ROLLBACK DE EMERGENCIA — carga de usuarios
+  // Si admin_list_users falla, descomentar este bloque y
+  // comentar el bloque 🆕 de abajo.
+  // ═══════════════════════════════════════════════════════════
+  // useEffect(() => {
+  //   supabase
+  //     .from('usuarios_autorizados')
+  //     .select('email, nombre, pin_hash, activo')
+  //     .order('nombre')
+  //     .then(({ data }) => {
+  //       setUsers((data || []).map(u => ({ ...u, has_pin: !!u.pin_hash })))
+  //       setLoadingUsers(false)
+  //     })
+  // }, [])
+  // ── FIN ROLLBACK ─────────────────────────────────────────────
+
+  // 🆕 NUEVO: carga vía RPC (comentar si se hace rollback)
   useEffect(() => {
     supabase
-      .from('usuarios_autorizados')
-      .select('email, nombre, pin_hash, activo')
-      .order('nombre')
+      .rpc('admin_list_users')
       .then(({ data }) => {
         setUsers(data || [])
         setLoadingUsers(false)
       })
   }, [])
+  // ── FIN NUEVO ─────────────────────────────────────────────────
 
   async function handleGeneratePin(user) {
     setGenerating(user.email)
@@ -77,19 +94,41 @@ function PinAdminSection() {
     // Hashear
     const hash = await sha256(pin)
 
-    // Guardar en DB
-    const { error } = await supabase
-      .from('usuarios_autorizados')
-      .update({ pin_hash: hash, pin_updated_at: new Date().toISOString() })
-      .eq('email', user.email)
+    // ═══════════════════════════════════════════════════════════
+    // 🔙 ROLLBACK DE EMERGENCIA — guardar PIN
+    // Si admin_set_pin falla, descomentar y comentar el bloque 🆕.
+    // ═══════════════════════════════════════════════════════════
+    // const { error } = await supabase
+    //   .from('usuarios_autorizados')
+    //   .update({ pin_hash: hash, pin_updated_at: new Date().toISOString() })
+    //   .eq('email', user.email)
+    //
+    // if (!error) {
+    //   setUsers(prev => prev.map(u =>
+    //     u.email === user.email ? { ...u, has_pin: true } : u
+    //   ))
+    //   setRevealed({ pin, userName: user.nombre, userEmail: user.email })
+    //   setCopied(false)
+    // }
+    // ── FIN ROLLBACK ─────────────────────────────────────────────
 
-    if (!error) {
+    // 🆕 NUEVO: guardar PIN vía RPC (comentar si se hace rollback)
+    const { data: ok, error } = await supabase
+      .rpc('admin_set_pin', {
+        p_admin_email:  ADMIN_EMAIL,
+        p_target_email: user.email,
+        p_new_hash:     hash,
+      })
+
+    if (!error && ok) {
       setUsers(prev => prev.map(u =>
-        u.email === user.email ? { ...u, pin_hash: hash } : u
+        u.email === user.email ? { ...u, has_pin: true } : u
       ))
       setRevealed({ pin, userName: user.nombre, userEmail: user.email })
       setCopied(false)
     }
+    // ── FIN NUEVO ─────────────────────────────────────────────────
+
     setGenerating(null)
   }
 
@@ -116,8 +155,8 @@ function PinAdminSection() {
                 <span className="pin-admin-name">{user.nombre}</span>
                 <span className="pin-admin-email">{user.email}</span>
               </div>
-              <span className={`pin-status-badge ${user.pin_hash ? 'pin-badge-ok' : 'pin-badge-missing'}`}>
-                {user.pin_hash ? 'PIN configurado' : 'Sin PIN'}
+              <span className={`pin-status-badge ${user.has_pin ? 'pin-badge-ok' : 'pin-badge-missing'}`}>
+                {user.has_pin ? 'PIN configurado' : 'Sin PIN'}
               </span>
               <button
                 className="btn-secondary pin-gen-btn"
@@ -126,7 +165,7 @@ function PinAdminSection() {
               >
                 {generating === user.email
                   ? 'Generando...'
-                  : user.pin_hash ? 'Resetear PIN' : 'Generar PIN'}
+                  : user.has_pin ? 'Resetear PIN' : 'Generar PIN'}
               </button>
             </div>
           ))}
