@@ -335,9 +335,19 @@ const TemaRow = memo(function TemaRow({
     </Fragment>
   )
 }, (prevProps, nextProps) => {
-  // Comparación custom: solo re-renderiza si cambió algo relevante para este tema
+  // Comparación por contenido: displayTemas crea nuevos wrappers { ...tema } en cada render,
+  // por lo que la comparación por referencia (===) siempre falla. Comparamos campos escalares
+  // y verificamos identidad de cada planificacion individualmente.
+  const pt = prevProps.tema
+  const nt = nextProps.tema
+  const samePlanifs =
+    pt.planificaciones.length === nt.planificaciones.length &&
+    pt.planificaciones.every((p, i) => p === nt.planificaciones[i])
   return (
-    prevProps.tema === nextProps.tema &&
+    pt.id === nt.id &&
+    pt.nombre === nt.nombre &&
+    pt.origen === nt.origen &&
+    samePlanifs &&
     prevProps.isExpanded === nextProps.isExpanded &&
     prevProps.collapsedGroups === nextProps.collapsedGroups &&
     prevProps.activeCols === nextProps.activeCols &&
