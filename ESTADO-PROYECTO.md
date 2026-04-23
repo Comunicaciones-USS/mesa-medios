@@ -1,5 +1,5 @@
 # Estado del Proyecto — Mesa de Medios USS
-**Actualizado:** 2026-04-23 | **Branch:** `main` | **Commit:** `7411bf6`
+**Actualizado:** 2026-04-23 | **Branch:** `main` | **Commit:** `0c9428a`
 
 ---
 
@@ -517,10 +517,12 @@ git push && npm run deploy
 
 ## 8. Estado del Git
 
-### Branch actual: `main` (HEAD: `7411bf6`)
+### Branch actual: `main` (HEAD: `0c9428a`)
 
 ### Últimos commits:
 ```
+0c9428a fix(medios): fix TemaRow memo comparator to use content-based tema comparison
+44d36e3 docs: update ESTADO-PROYECTO.md after MediaTable performance optimization
 7411bf6 perf(medios): memoize rows and handlers in MediaTable
 4650896 feat(editorial): rename ejes + editable eje field per row
 3d4fe60 fix(desktop): KPI gap + Explorar button style on white background
@@ -586,6 +588,7 @@ Todos en `scripts/`. Ejecutar en **Supabase SQL Editor** (no en producción auto
 | pin_hash expuesto a anon directamente | Resuelto — RPC SECURITY DEFINER + policy eliminada |
 | Falta de índices en queries frecuentes | Resuelto — script add-performance-indexes.sql |
 | Performance MediaTable (re-render completo por edición) | Resuelto — memoización `TemaRow` + patrón `temasRef` + `ResizeObserver` debounced |
+| Virtualización vertical `react-window` (MediaTable) | Evaluado — umbral no alcanzado (18 temas en producción vs. umbral 30). Implementar si temas > 30. Nota: requeriría refactorizar `<table>` → `<div>` grid por incompatibilidad de `react-window` con `position: sticky` horizontal. |
 
 > Si surge nueva deuda técnica, documentarla aquí con: **Problema · Ubicación · Impacto**.
 
