@@ -1,5 +1,5 @@
 # Estado del Proyecto — Mesa de Medios USS
-**Actualizado:** 2026-04-21 | **Branch:** `main` | **Commit:** `04fdd76`
+**Actualizado:** 2026-04-23 | **Branch:** `main` | **Commit:** `4650896`
 
 ---
 
@@ -29,7 +29,7 @@ Dashboard colaborativo en tiempo real para el equipo de Comunicaciones USS. Tien
 
 **URL producción:** https://comunicaciones-uss.github.io/sistema-gestion/
 
-**Autenticación:** Email @uss.cl + PIN de 6 dígitos por usuario (hash SHA-256, rate limiting).
+**Autenticación:** Email @uss.cl + PIN por usuario (hash SHA-256). Validación vía RPC SECURITY DEFINER. Sesión almacenada en `localStorage` (sin Supabase Auth).
 
 ---
 
@@ -41,7 +41,7 @@ Dashboard colaborativo en tiempo real para el equipo de Comunicaciones USS. Tien
 | Build | Vite + @vitejs/plugin-react | 5.0 / 4.2 |
 | Backend / DB | Supabase (PostgreSQL + Realtime) | ^2.39 |
 | Deploy | GitHub Pages via `gh-pages` | ^6.1 |
-| Estilos | CSS puro (index.css, 4400+ líneas) | — |
+| Estilos | CSS puro (index.css, ~4900 líneas) | — |
 | Runtime | Browser (SPA, sin SSR) | — |
 
 **Variables de entorno (`.env`):**
@@ -62,57 +62,59 @@ npm run deploy   # Build + push a gh-pages (publica en producción)
 ## 3. Estructura de Carpetas
 
 ```
-mesa-medios-main/
+sistema-gestion-main/
 ├── src/
 │   ├── main.jsx                        # Entry point
 │   ├── App.jsx                         # Router: auth → selector → módulo
-│   ├── index.css                       # Estilos globales (~4440 líneas)
+│   ├── index.css                       # Estilos globales (~4900 líneas)
 │   ├── assets/
 │   │   ├── escudo-uss-horizontal-azul.svg
-│   │   └── escudo-uss-horizontal-blanco.svg
+│   │   ├── escudo-uss-horizontal-blanco.svg
+│   │   └── USS-LL-2.webp               # Imagen hero login (columna derecha)
 │   └── apps/
 │       ├── shared/
 │       │   ├── DashboardSelector.jsx   # Selector Mesa Medios / Editorial
 │       │   ├── components/
-│       │   │   ├── Login.jsx           # Auth PIN + rate limiting
-│       │   │   ├── UserProfilePanel.jsx # Stats + audit log + gestión PINs
-│       │   │   ├── Toaster.jsx         # Notificaciones toast (máx 3)
+│       │   │   ├── Login.jsx           # Auth PIN + rate limiting + RPC validate_pin
+│       │   │   ├── UserProfilePanel.jsx # Stats + audit log + gestión PINs (admin)
+│       │   │   ├── Toaster.jsx         # Notificaciones toast (máx 3, con action button)
 │       │   │   ├── ConfirmDialog.jsx   # Modal confirmación genérico
-│       │   │   └── USSLoader.jsx       # Spinner animado USS
+│       │   │   ├── USSLoader.jsx       # Spinner animado USS
+│       │   │   └── BottomSheet.jsx     # Bottom sheet para filtros mobile
 │       │   ├── hooks/
 │       │   │   ├── useToast.js         # Toast state: addToast / removeToast
 │       │   │   └── useDebounce.js      # 300ms debounce para filtros
 │       │   └── utils/
 │       │       ├── supabase.js         # Cliente Supabase (NO MODIFICAR)
-│       │       ├── crypto.js           # SHA-256 hash de PINs
+│       │       ├── crypto.js           # SHA-256 hash de PINs via crypto.subtle
 │       │       └── audit.js            # logAuditEntry() — helper centralizado audit_logs
 │       │
 │       ├── mesa-medios/
-│       │   ├── MesaMediosApp.jsx       # App principal (~1500 líneas)
+│       │   ├── MesaMediosApp.jsx       # App principal
 │       │   ├── config.js               # MEDIA_COLS (39 cols) + GROUPS (3 grupos)
 │       │   ├── utils.js                # getCellData / setCellData (JSONB dual format)
 │       │   └── components/
 │       │       ├── Header.jsx          # Header con logo, filtros, botones
 │       │       ├── MediaTable.jsx      # Tabla principal con grupos colapsables
-│       │       ├── MobileCardView.jsx  # Vista mobile
+│       │       ├── MobileCardView.jsx  # Vista mobile (cards por tema)
 │       │       ├── AddRowModal.jsx     # Modal nuevo tema / nueva fecha
 │       │       ├── AuditLogPanel.jsx   # Panel historial de actividad
-│       │       └── CellPopover.jsx     # Popover edición de celdas media
+│       │       └── CellPopover.jsx     # Popover edición de celdas (si/pd/no + notas)
 │       │
 │       └── mesa-editorial/
-│           ├── MesaEditorialApp.jsx    # App principal (~900 líneas)
-│           ├── config.js               # EJES (5) + TIPOS + STATUS configs
+│           ├── MesaEditorialApp.jsx    # App principal
+│           ├── config.js               # EJES (5) + TIPOS + STATUS + TIPOLOGIAS
 │           └── components/
 │               ├── Header.jsx          # Header Mesa Editorial
-│               ├── EditorialTable.jsx  # Tabla por ejes
-│               ├── EjeSection.jsx      # Sección colapsable: resultados + backlogs
-│               ├── MobileCardView.jsx  # Vista mobile
-│               ├── AddActionModal.jsx  # Modal nueva acción
+│               ├── EditorialTable.jsx  # Tabla por ejes (usa EJES para grouping)
+│               ├── EjeSection.jsx      # Sección colapsable: resultados + backlogs + col eje editable
+│               ├── MobileCardView.jsx  # Vista mobile (cards; eje badge = select)
+│               ├── AddActionModal.jsx  # Modal nueva acción (con selector de eje)
 │               ├── ExplorerSidebar.jsx # Sidebar exploración de temas (z-index: 201)
 │               └── OrphanAssigner.jsx  # Asignador de backlogs huérfanos
 │
 ├── scripts/                            # SQL de migración para Supabase
-│   ├── add-archived-field.sql          # ← PENDIENTE EJECUTAR EN SUPABASE
+│   ├── add-archived-field.sql
 │   ├── add-completed-at.sql
 │   ├── add-parent-and-tipologia.sql
 │   ├── add-pin-per-user.sql
@@ -120,12 +122,13 @@ mesa-medios-main/
 │   ├── migrate-rrss-split.sql
 │   ├── migrate-tipo-accion.sql
 │   ├── refactor-temas-sincronizacion.sql
-│   └── rename-ejes.sql
+│   ├── rename-ejes.sql
+│   ├── security-rpc-cleanup.sql
+│   └── security-rpc-usuarios.sql
 │
 ├── dist/                               # Build de producción (ignorado en .gitignore)
 ├── vite.config.js
 ├── package.json
-├── DIAGNOSTICO.md                      # Deuda técnica (referencia histórica)
 └── ESTADO-PROYECTO.md                 # Este archivo
 ```
 
@@ -137,12 +140,18 @@ mesa-medios-main/
 
 **Flujo:**
 ```
-Carga → Supabase session check
+Carga → check localStorage 'uss_local_session'
   ↓ sin sesión → Login.jsx
   ↓ con sesión → DashboardSelector.jsx
     ↓ elige "Medios"    → MesaMediosApp.jsx
     ↓ elige "Editorial" → MesaEditorialApp.jsx
 ```
+
+**Session management:**
+- Login guarda `{ email, nombre }` en `localStorage` con clave `uss_local_session`
+- No se usa Supabase Auth. El cliente Supabase se usa solo para queries DB y Realtime.
+- El módulo usado por última vez se guarda en `localStorage` clave `uss_last_dashboard`
+- Para los módulos se construye un `sessionCompat = { user: { email } }` que imita la estructura de Supabase session
 
 El registro de LOGIN lo hace únicamente `Login.jsx` via `logAuditEntry()`. `App.jsx` no inserta nada en `audit_logs`.
 
@@ -156,23 +165,24 @@ El registro de LOGIN lo hace únicamente `Login.jsx` via `logAuditEntry()`. `App
 | Estado | Tipo | Descripción |
 |---|---|---|
 | `temas[]` | Array | Temas con `planificaciones[]` anidadas |
-| `filterInput` | String | Búsqueda por texto (debounced) |
+| `filterInput` | String | Búsqueda por texto (debounced 300ms) |
 | `filterDateRange` | Object | Rango de fechas |
 | `filterGroup` | String | Filtro por grupo de medios |
 | `filterCellStatus` | String | Filtro `si`/`pd`/`no` |
-| `collapsedGroups` | Object | Estado colapsado de grupos |
-| `expandedTemas` | Object | Qué temas tienen filas expandidas |
+| `collapsedGroups` | Set | IDs de grupos colapsados |
+| `expandedTemas` | Set | IDs de temas con filas expandidas |
+| `showMobileFilters` | Boolean | Bottom sheet de filtros mobile visible |
 
 **Funciones clave:**
 - `handleCellChange(temaId, planId, colId, value)` — Guarda celda en BD (optimistic)
-- `handleDeleteRow(planId)` — Elimina planificación
-- `handleAddTema(nombre)` — Crea nuevo tema canónico
+- `handleDeleteRow(planId)` — Elimina planificación (con confirmación)
+- `handleAddTema(nombre)` — Crea nuevo tema canónico en tabla `temas`
 - `handleAddPlanificacion(temaId, fecha)` — Agrega fila de fecha a tema existente
 - `logAction(accion, itemId, nombre, detalle)` — Registra en `audit_logs`
 
 **Realtime:** Escucha cambios en `temas`, `contenidos`, `usuarios_autorizados`.
 
-**Sticky:** Header a `top: 0` (z-index 100), filter bar a `top: 68px` (z-index 90). Tabla con scroll vertical interno usando `height: calc(100vh - var(--above-table, 165px) - 70px)` y `thead { position: sticky; top: 0 }`.
+**Sticky:** Header a `top: 0` (z-index 100), filter bar a `top: 68px` (z-index 90). Tabla con scroll vertical interno usando `height: calc(100vh - var(--above-table, 165px) - 70px)` y `thead { position: sticky; top: 0 }`. La variable `--above-table` se mide con `ResizeObserver`.
 
 ---
 
@@ -180,12 +190,16 @@ El registro de LOGIN lo hace únicamente `Login.jsx` via `logAuditEntry()`. `App
 
 **Propósito:** Gestión de acciones editoriales clasificadas por eje, tipo (Resultado/Backlog) y status.
 
-**Ejes (5):**
-- Discusión País
-- Innovación y Emprendimiento
-- Comunidad y Territorio
-- Ciencia y Sustentabilidad
-- Cultura y Deporte
+**Ejes (5) — valores exactos en BD y config.js:**
+```
+Conversación País        (color #2A5BA8, responsable Yaritza Ross)
+Orgullo USS              (color #C8102E, responsable Natalie Traverso)
+Salud                    (color #1D7A4F, responsable Esteban López)
+Investigación y Tecnología (color #7A2AB8, responsable Bárbara Ruiz)
+Impacto Territorial      (color #B06A00, responsable Sebastián Fuentes)
+```
+
+> Historial de renombres: "Discusión País" → "Conversación País", "Salud y Medicina" → "Salud" (migración `rename-ejes.sql`)
 
 **Estado principal:**
 | Estado | Tipo | Descripción |
@@ -196,17 +210,27 @@ El registro de LOGIN lo hace únicamente `Login.jsx` via `logAuditEntry()`. `App
 | `filterEje` | String | Filtro por eje |
 | `filterStatus` | String | Filtro por status (solo tab Activas) |
 | `filterTipoAccion` | String | Filtro Backlog/Resultado (solo tab Activas) |
+| `filterDateRange` | Object | Rango de fechas |
+| `sortDir` | String \| null | `'asc'` \| `'desc'` \| null |
 | `confirmDelete` | Object \| null | `{ id, nombre, childCount }` |
 | `confirmArchive` | Object \| null | `{ id, nombre, pendingChildCount }` |
 | `confirmReactivate` | Object \| null | `{ id, nombre, tipo }` |
 | `showExplorer` | Boolean | Sidebar exploración activo |
 | `explorerFilter` | Object \| null | `{ eje, tema }` desde ExplorerSidebar |
+| `kpiExpanded` | Boolean | KPI bar expandida en mobile |
+| `showMobileFilters` | Boolean | Bottom sheet de filtros mobile visible |
 
-**Archivado (feature reciente):**
+**Archivado:**
 - Al marcar status → `'Completado'` se activa `handleInitiateArchive()`
 - Backlogs: archivado inmediato
-- Resultados con backlogs pendientes: muestra `ConfirmDialog` para archivar todo en cascada
+- Resultados con backlogs pendientes: muestra `ConfirmDialog` para archivar en cascada
 - Tab "Archivadas": modo solo lectura, columna "Archivado el", botón "Reactivar" por fila
+
+**Eje editable por fila:**
+- En la tabla desktop (`EjeSection`): columna "Eje" con `<select>` en cada fila (ResultadoRow y BacklogRow)
+- Al cambiar el eje, la fila se mueve visualmente a la sección del nuevo eje (via re-render del `groupByEje`)
+- En la vista mobile (`MobileCardView`): el badge de eje en las cards de resultado y backlogs huérfanos es un `<select>` con los 5 ejes
+- Guarda con `onCellChange(id, 'eje', nuevoEje)`
 
 **Sticky:** Bloque unificado `.editorial-sticky-block { position: sticky; top: 0; z-index: 100 }` que envuelve Header + Tabs + KPI bar + Filter bar. El header dentro del editorial no tiene sticky propio (`.app-editorial .header { position: relative }`).
 
@@ -215,48 +239,72 @@ El registro de LOGIN lo hace únicamente `Login.jsx` via `logAuditEntry()`. `App
 - `handleDoArchive(rowId, archiveChildren)` — Archiva en BD + cascade
 - `handleReactivate(rowId)` — Reactiva acción (status → 'En desarrollo')
 - `handleCellChange(rowId, field, value)` — Edición inline (intercepta status → Completado)
-- `switchTab(tab)` — Cambia tab y resetea filtros
+- `switchTab(tab)` — Cambia tab y resetea todos los filtros
 - `handleSyncToggle(rowId, enable)` — Vincula/desvincula tema a Mesa de Medios
 - `logAction()` — Usa `logAuditEntry()` de `shared/utils/audit.js`
 
-**beforeunload:** Delegación de eventos en `document` detecta campos contentEditable con input sin blur y muestra confirmación nativa del browser antes de cerrar la pestaña.
+**beforeunload:** Delegación de eventos en `document` detecta campos `contentEditable` con input sin blur y muestra confirmación nativa del browser antes de cerrar la pestaña.
 
 ---
 
 ### 4.4 Componentes Compartidos
 
 #### Login.jsx
-- Email @uss.cl + PIN 6 dígitos
-- SHA-256 hash → query `usuarios_autorizados`
-- Rate limiting: 5 intentos fallidos en 10 min → bloqueo temporal
-- Registra en `pin_login_attempts` y `audit_logs`
+- Email @uss.cl + PIN (cualquier longitud, hash SHA-256 via `crypto.subtle`)
+- Validación vía RPC `validate_pin(p_email, p_pin_hash)` — SECURITY DEFINER, nunca expone `pin_hash`
+- Rate limiting client-side: 5 intentos fallidos en 10 min → bloqueo temporal (sessionStorage)
+- Registra en `pin_login_attempts` (success true/false) y `audit_logs` (solo en login exitoso)
+- Diseño split: formulario izquierda (60%), imagen hero derecha (40%) con USS-LL-2.webp
+- **Rollback de emergencia:** comentarios en el código permiten revertir a query directa en caso de falla del RPC
 
 #### ConfirmDialog.jsx
 Props: `nombre`, `title`, `body`, `confirmLabel`, `confirmClass`, `onConfirm`, `onCancel`
 - Foco automático en "Cancelar" (previene delete accidental con Enter)
 - Escape = cancelar
-- Dos variantes de botón confirm: `.btn-danger-confirm` (rojo) y `.btn-confirm-action` (navy, no destructivo)
+- Dos variantes: `.btn-danger-confirm` (rojo, destructivo) y `.btn-confirm-action` (navy, no destructivo)
 
 #### Toaster.jsx / useToast.js
 - Máximo 3 toasts simultáneos
-- Auto-dismiss: 4s (info/success), 6s (error)
-- Soporte para `action: { label, onClick }` — botón inline en el toast (ej. "Ver archivadas")
+- Auto-dismiss: 4s (info/success), 6s (error). Configurable por toast.
+- Soporte para `action: { label, onClick }` — botón inline (ej. "Ver archivadas")
+
+#### BottomSheet.jsx
+- Componente genérico de bottom sheet para filtros mobile
+- Usado en MesaMediosApp y MesaEditorialApp
 
 #### UserProfilePanel.jsx
-- **Admin** (`leonardo.munoz@uss.cl`): Gestión de PINs (generar, resetear)
-- **Todos:** Stats de actividad, audit log personal filtrado
-- Filtra acciones editoriales con `.ilike('responsable', userName)` — match exacto case-insensitive por nombre completo
+- **Admin** (`leonardo.munoz@uss.cl`): sección `PinAdminSection` — lista usuarios, genera/resetea PINs
+  - Genera PINs random de 6 dígitos, los muestra una sola vez con botón copiar
+  - Llama RPC `admin_set_pin(p_admin_email, p_target_email, p_new_hash)`
+  - Lista usuarios via RPC `admin_list_users()` (retorna email, nombre, has_pin, activo — nunca pin_hash)
+  - **Rollback de emergencia:** comentarios permiten revertir a query directa si RPCs fallan
+- **Todos:** stats de actividad, audit log personal filtrado por `user_email`
+- Filtro responsable editorial usa `.ilike('responsable', userName)` — match case-insensitive por nombre completo
 
 ---
 
 ## 5. Base de Datos (Supabase)
 
-### Tabla: `contenidos` (Mesa Medios)
+### Tabla: `temas` (entidad canónica de topic)
 ```sql
-id          UUID PRIMARY KEY DEFAULT gen_random_uuid()
-nombre      TEXT NOT NULL             -- Nombre del tema
-semana      DATE                      -- Semana de planificación
-medios      JSONB                     -- { canal_id: "si/Juan" | {valor, notas} }
+id          UUID        PRIMARY KEY DEFAULT gen_random_uuid()
+nombre      TEXT        NOT NULL
+origen      TEXT        NOT NULL DEFAULT 'medios'   -- 'medios' | 'editorial'
+eje         TEXT
+created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()     -- Auto-actualizado por trigger
+```
+> Trigger `temas_updated_at_trigger` actualiza `updated_at` en cada UPDATE.
+
+---
+
+### Tabla: `contenidos` (planificaciones Mesa Medios)
+```sql
+id          UUID    PRIMARY KEY DEFAULT gen_random_uuid()
+nombre      TEXT    NOT NULL             -- Nombre del tema (legacy, ahora usar temas.nombre)
+semana      DATE                         -- Semana de planificación
+medios      JSONB                        -- { canal_id: "si/Juan" | {valor, notas} }
+tema_id     UUID    REFERENCES temas(id) ON DELETE CASCADE  -- FK al tema canónico
 created_at  TIMESTAMPTZ DEFAULT NOW()
 updated_at  TIMESTAMPTZ DEFAULT NOW()
 ```
@@ -264,77 +312,76 @@ updated_at  TIMESTAMPTZ DEFAULT NOW()
 
 ---
 
-### Tabla: `mesa_editorial_acciones` (Mesa Editorial)
+### Tabla: `mesa_editorial_acciones`
 ```sql
-id                   UUID PRIMARY KEY DEFAULT gen_random_uuid()
-eje                  TEXT NOT NULL          -- Eje temático
-tipo                 TEXT                   -- "Ancla" | "Soporte" | "Always ON"
+id                   UUID        PRIMARY KEY DEFAULT gen_random_uuid()
+eje                  TEXT        NOT NULL    -- Ver sección 4.3 para valores válidos
+tipo                 TEXT                    -- "Ancla" | "Soporte" | "Always ON"
 tema                 TEXT
-accion               TEXT                   -- Descripción de la acción
-tipo_accion          TEXT                   -- "Resultado" | "Backlog"
-tipologia_resultado  TEXT                   -- Tipología (solo Resultados)
-fecha                DATE                   -- null si tipo = "Always ON"
+accion               TEXT                    -- Descripción de la acción
+tipo_accion          TEXT                    -- "Resultado" | "Backlog"
+tipologia_resultado  TEXT                    -- Solo para Resultados
+fecha                DATE                    -- null si tipo = "Always ON"
 responsable          TEXT
 status               TEXT DEFAULT 'Pendiente' -- "Pendiente" | "En desarrollo" | "Completado"
-parent_id            UUID REFERENCES mesa_editorial_acciones(id) -- FK Backlog → Resultado
-sync_to_medios       BOOLEAN DEFAULT FALSE  -- Si está vinculado a Mesa de Medios
-tema_id              UUID                   -- ID del tema en tabla temas (si sincronizado)
-archived             BOOLEAN DEFAULT FALSE  -- Archivado (requiere SQL: add-archived-field.sql)
-archived_at          TIMESTAMPTZ            -- Timestamp de archivado
-completed_at         TIMESTAMPTZ            -- Timestamp cuando se marcó Completado
+parent_id            UUID REFERENCES mesa_editorial_acciones(id) ON DELETE SET NULL
+sync_to_medios       BOOLEAN     NOT NULL DEFAULT FALSE
+tema_id              UUID        REFERENCES temas(id) ON DELETE SET NULL
+archived             BOOLEAN     DEFAULT FALSE
+archived_at          TIMESTAMPTZ
+completed_at         TIMESTAMPTZ
 created_at           TIMESTAMPTZ DEFAULT NOW()
 updated_at           TIMESTAMPTZ DEFAULT NOW()
 ```
-
-> **IMPORTANTE:** Las columnas `archived` y `archived_at` requieren ejecutar `scripts/add-archived-field.sql` en el SQL Editor de Supabase.
 
 ---
 
 ### Tabla: `audit_logs`
 ```sql
-id          UUID PRIMARY KEY DEFAULT gen_random_uuid()
-mesa_type   TEXT        -- null | "medios" | "editorial"
+id          UUID        PRIMARY KEY DEFAULT gen_random_uuid()
+mesa_type   TEXT                    -- null | "medios" | "editorial"
 user_email  TEXT
-action      TEXT        -- "login" | "create" | "update" | "delete"
+action      TEXT                    -- "login" | "create" | "update" | "delete"
 table_name  TEXT
 record_id   UUID
-details     TEXT        -- JSON stringificado via logAuditEntry() (registros viejos pueden ser string plano)
+details     TEXT                    -- JSON stringificado via logAuditEntry()
 created_at  TIMESTAMPTZ DEFAULT NOW()
 ```
-> `parseDetails()` en UserProfilePanel usa try/catch para compatibilidad con registros legacy.
+> `parseDetails()` en UserProfilePanel usa try/catch para compatibilidad con registros legacy (string plano).
 
 ---
 
 ### Tabla: `usuarios_autorizados`
 ```sql
-email           TEXT PRIMARY KEY
+email           TEXT        PRIMARY KEY
 nombre          TEXT
-pin_hash        TEXT        -- SHA-256(PIN) — nunca plaintext
+pin_hash        TEXT        -- SHA-256(PIN) en hex — nunca plaintext. Protegido por RPC.
 pin_updated_at  TIMESTAMPTZ
-activo          BOOLEAN DEFAULT true
+activo          BOOLEAN     DEFAULT true
 ```
 
 ---
 
 ### Tabla: `pin_login_attempts`
 ```sql
-id          UUID PRIMARY KEY DEFAULT gen_random_uuid()
-email       TEXT
-success     BOOLEAN
-created_at  TIMESTAMPTZ DEFAULT NOW()
+id           UUID        PRIMARY KEY DEFAULT gen_random_uuid()
+email        TEXT        NOT NULL
+attempted_at TIMESTAMPTZ DEFAULT NOW()
+success      BOOLEAN     DEFAULT FALSE
 ```
+> Índice en `(email, attempted_at)` para rate limiting.
 
 ---
 
-### Tabla: `temas`
-```sql
-id          UUID PRIMARY KEY DEFAULT gen_random_uuid()
-nombre      TEXT NOT NULL
-origen      TEXT        -- "editorial" | "manual"
-eje         TEXT
-created_at  TIMESTAMPTZ DEFAULT NOW()
-```
-> Usada para sincronización Editorial → Medios. Referenciada por `mesa_editorial_acciones.tema_id`.
+### Funciones RPC (SECURITY DEFINER)
+
+| Función | Parámetros | Retorno | Propósito |
+|---|---|---|---|
+| `validate_pin` | `p_email TEXT, p_pin_hash TEXT` | `TABLE(valid BOOLEAN, email TEXT, nombre TEXT)` | Valida PIN sin exponer pin_hash |
+| `admin_list_users` | — | `TABLE(email, nombre, has_pin BOOLEAN, activo)` | Lista usuarios para admin (sin pin_hash) |
+| `admin_set_pin` | `p_admin_email, p_target_email, p_new_hash` | `BOOLEAN` | Actualiza pin_hash; solo funciona si p_admin_email = 'leonardo.munoz@uss.cl' |
+
+> Todas revocadas de PUBLIC, concedidas a `anon` y `authenticated`.
 
 ---
 
@@ -370,12 +417,12 @@ created_at  TIMESTAMPTZ DEFAULT NOW()
 **Mesa de Medios:**
 | Clase | Propósito |
 |---|---|
-| `.table-scroll` | Contenedor con scroll vertical interno (`height: calc(100vh - var(--above-table) - 70px)`) |
+| `.table-scroll` | Scroll vertical interno (`height: calc(100vh - var(--above-table) - 70px)`) |
 | `.media-table` | `<table>` principal |
 | `.sticky-col` | `position: sticky` para "Contenidos" y "Semana" |
 | `.col-contenidos` | `left: 0; z-index: 30` |
 | `.col-semana` | `left: 200px; z-index: 30` |
-| `.group-header-row` | Fila header de grupos (ORGANICOS, ALIANZAS, PUB_PAGADA) |
+| `.group-header-row` | Fila header de grupos |
 | `.sub-header-row` | Fila de sub-headers (nombres de canales) |
 | `.data-row` | Fila de datos, `height: 38px` |
 | `.medios-filter-bar` | `position: sticky; top: 68px; z-index: 90` |
@@ -387,25 +434,42 @@ created_at  TIMESTAMPTZ DEFAULT NOW()
 | `.editorial-tabs` | Tabs Activas/Archivadas (dentro del sticky block) |
 | `.tab-btn` / `.tab-active` | Botones de tab |
 | `.tab-badge` | Contador circular en cada tab |
-| `.editorial-kpi-bar` | Barra de KPIs (dentro del sticky block) |
+| `.editorial-kpi-bar` | Barra de KPIs navy (dentro del sticky block) |
 | `.kpi-bar-archived` | Variante gris para tab Archivadas |
+| `.kpi-full-content` | `display: flex; gap: 16px` — items del KPI separados (desktop) |
+| `.kpi-mobile-summary` | Resumen colapsado del KPI bar (solo mobile, siempre visible) |
+| `.kpi-chevron` | Flecha toggle del KPI mobile |
 | `.editorial-filter-bar` | Toolbar de filtros (dentro del sticky block) |
+| `.filter-row-actions` | Grupo derecho: % avance + Explorar + Nueva acción (solo desktop) |
+| `.btn-explorer` | Botón "Explorar" — borde gris `#d1d5db`, fondo transparente, texto `#374151` |
 | `.eje-section` | Sección colapsable por eje |
 | `.eje-section-archived` | Variante con opacity reducida en tab Archivadas |
 | `.editorial-table` | `<table>` de acciones por eje |
+| `.col-eje` | `width: 120px` — columna eje editable (nueva) |
 | `.resultado-row` / `.backlog-row` | Filas de la tabla |
 | `.row-archived` | Fila archivada: `opacity: 0.75; color: #64748b` |
-| `.col-archived-at` | Columna "Archivado el" |
+| `.col-archived-at` | Columna "Archivado el" (solo tab Archivadas) |
 | `.btn-reactivate` | Botón reactivar (solo tab Archivadas) |
 | `.explorer-overlay` | `z-index: 200` — sobre sticky block |
 | `.explorer-sidebar` | `z-index: 201; position: fixed; right: 0` |
+
+**Mobile:**
+| Clase | Propósito |
+|---|---|
+| `.mobile-action-line` | Línea única mobile: search + filtros + add |
+| `.editorial-mobile-action-line` | Variante editorial de la línea de acción |
+| `.mobile-filter-btn` | Botón "Filtros" que abre bottom sheet |
+| `.mobile-filter-badge` | Contador de filtros activos |
+| `.mobile-add-btn` | Botón dorado añadir (mobile) |
+| `.mobile-eje-select` | Select de eje en cards mobile (estilos inline) |
+| `.bs-overlay` / `.bs-sheet` | Bottom sheet overlay y panel |
 
 **Compartidos:**
 | Clase | Propósito |
 |---|---|
 | `.toast-container` | `position: fixed; bottom-right` |
 | `.toast` / `.toast-success` / `.toast-error` / `.toast-info` | Estados de toast |
-| `.toast-action` | Botón inline en toast (ej. "Ver archivadas") |
+| `.toast-action` | Botón inline en toast |
 | `.confirm-overlay` / `.confirm-dialog` | Modal de confirmación |
 | `.btn-danger-confirm` | Botón confirm destructivo (rojo) |
 | `.btn-confirm-action` | Botón confirm no-destructivo (navy) |
@@ -451,52 +515,31 @@ git push && npm run deploy
 
 ## 8. Estado del Git
 
-### Branch actual: `main` (HEAD: `02f4bc7`)
+### Branch actual: `main` (HEAD: `4650896`)
 
-### Últimos 20 commits:
+### Últimos commits:
 ```
+4650896 feat(editorial): rename ejes + editable eje field per row
+3d4fe60 fix(desktop): KPI gap + Explorar button style on white background
+01c937e fix(mobile): fix action bar overflow + desktop KPI spacing
+9b611d0 feat(security): migrate PIN validation to SECURITY DEFINER RPC
 04fdd76 merge(feat/mobile-ux-bottom-sheet): UX mobile bottom sheet + compact header
 d5a5836 feat(mobile): bottom sheet filters + compact header + KPI colapsable
 02f4bc7 merge(fix/deuda-tecnica-seccion-10): resolver deuda técnica sección 10
 15eadb6 refactor(audit): standardize new details entries to JSON via helper
 c49dbd6 fix(editorial): make date inputs controlled to reflect realtime changes
 4ea6e17 feat(editorial): warn before unload if there are unsaved edits
-77aa856 perf(profile): scope editorial responsable filter to exact full name
-3c8a7ab fix(editorial): raise ExplorerSidebar z-index above sticky header block
 95c48db merge(fix/sticky-header-editorial): sticky header unificado Mesa Editorial
-04e7c67 fix(editorial): unify sticky header into single sticky block
 baee408 merge(feat/editorial-archive): sistema de archivado Mesa Editorial
-9cf6847 feat(editorial): sistema de archivado con tabs Activas/Archivadas
-bbab9ab fix(mesa-medios): correct sticky headers by using table-scroll as vertical scroll container
-d15ec4a fix(mesa-medios): sticky filter toolbar and table headers on scroll
-daadde0 fix(login): restore official USS SVG logo with drop-shadow for contrast
-8b99d43 fix(login): replace SVG logo badge with CSS wordmark
-5519682 fix(editorial): add delete button to orphan backlogs + cascade delete for resultados
-edac8cd style(login): remove logo badge circle, enlarge logo, reposition image, dark gradient bg
-4ee7215 fix(login): replace .catch() with try/catch on Supabase insert calls
-a49a1d9 feat(login): redesign split layout + PIN-per-user auth + Always ON fecha + checkbox fix
-63deb17 chore: cleanup obsolete SQL scripts and gitignore state file
+a49a1d9 feat(login): redesign split layout + PIN-per-user auth + Always ON fecha
 a19f700 release(medios): Release 2 — UX refactor Mesa de Medios, temas canónicos, sync Editorial↔Medios
 ```
 
-### Branches locales activas:
+### Branches:
 ```
-main                             ← producción
-arquitectura-dual                ← refactor en progreso (explorar antes de retomar)
-mejoras-quick-wins               ← pendiente (tasks 4-9)
-fix/deuda-tecnica-seccion-10     ← merged a main ✅
-fix/sticky-header-editorial      ← merged a main ✅
-feat/editorial-archive           ← merged a main ✅
-feat/login-redesign-and-security ← merged a main ✅
-feature/estadisticas-perfil      ← merged a main ✅
-fix/ajustes-ronda-2              ← estado desconocido
-fix/cambios-barbara              ← estado desconocido
-fix/delete-backlogs              ← merged o integrado
-fix/diagnostico-cleanup          ← integrado en chore commit
-fix/editorial-urgente            ← estado desconocido
-fix/favicon                      ← integrado
-fix/perfil-ux                    ← integrado
+main                              ← producción ✅
 ```
+> Todas las branches de features previas fueron mergeadas a main.
 
 ---
 
@@ -506,34 +549,37 @@ Todos en `scripts/`. Ejecutar en **Supabase SQL Editor** (no en producción auto
 
 | Archivo | Estado | Descripción |
 |---|---|---|
-| `add-archived-field.sql` | ✅ Ejecutado | Agrega `archived BOOLEAN` y `archived_at TIMESTAMPTZ` a `mesa_editorial_acciones` | 
-| `add-completed-at.sql` | Ejecutado ✅ | Timestamp `completed_at` |
-| `add-parent-and-tipologia.sql` | Ejecutado ✅ | `parent_id` + `tipologia_resultado` |
-| `add-pin-per-user.sql` | Ejecutado ✅ | Tabla `usuarios_autorizados` + `pin_hash` |
-| `migrate-ao-to-always-on.sql` | Ejecutado ✅ | Rename `"AO"` → `"Always ON"` |
-| `migrate-rrss-split.sql` | Ejecutado ✅ | Split columnas RRSS |
-| `migrate-tipo-accion.sql` | Ejecutado ✅ | Campo `tipo_accion` |
-| `refactor-temas-sincronizacion.sql` | Ejecutado ✅ | Temas canónicos para sync |
-| `rename-ejes.sql` | Ejecutado ✅ | Labels de ejes actualizados |
+| `add-archived-field.sql` | ✅ Ejecutado | `archived BOOLEAN` + `archived_at TIMESTAMPTZ` en `mesa_editorial_acciones` |
+| `add-completed-at.sql` | ✅ Ejecutado | `completed_at TIMESTAMPTZ` en `mesa_editorial_acciones` |
+| `add-parent-and-tipologia.sql` | ✅ Ejecutado | `parent_id UUID` + `tipologia_resultado TEXT` |
+| `add-pin-per-user.sql` | ✅ Ejecutado | `pin_hash` + `pin_updated_at` en `usuarios_autorizados`; tabla `pin_login_attempts` |
+| `migrate-ao-to-always-on.sql` | ✅ Ejecutado | Renombra `tipo = 'AO'` → `'Always ON'` |
+| `migrate-rrss-split.sql` | ✅ Ejecutado | Migra `rrss` → `instagram` en JSONB de `contenidos` |
+| `migrate-tipo-accion.sql` | ✅ Ejecutado | Normaliza valores del campo `tipo_accion` |
+| `refactor-temas-sincronizacion.sql` | ✅ Ejecutado | Crea tabla `temas`; agrega `tema_id` a `contenidos` y `mesa_editorial_acciones` |
+| `rename-ejes.sql` | ✅ Ejecutado | `'Discusión País'` → `'Conversación País'`; `'Salud y Medicina'` → `'Salud'` |
+| `security-rpc-usuarios.sql` | ✅ Ejecutado | Crea funciones RPC `validate_pin`, `admin_list_users`, `admin_set_pin` (SECURITY DEFINER) |
+| `security-rpc-cleanup.sql` | ✅ Ejecutado | Elimina policy `anon_can_read_active_users` (ya no necesaria con RPC) |
 
 ---
 
 ## 10. Deuda Técnica
 
-### Sin deuda activa conocida — última revisión 2026-04-21
-
-Todos los ítems documentados anteriormente fueron resueltos o verificados como inexistentes:
+### Sin deuda activa conocida — última revisión 2026-04-23
 
 | Ítem | Resolución |
 |---|---|
-| Dead code en `src/` raíz | No existía — doc estaba desactualizada |
-| Login duplicado en audit_logs | No existía — `App.jsx` nunca insertó en audit_logs |
-| N+1 query en UserProfilePanel | Resuelto — query ya filtraba columnas; se mejoró el filtro |
-| Matching frágil por primer nombre | Resuelto — `.ilike('responsable', userName)` (nombre completo) |
-| `isContentEditable` faltante en atajos | No existía — ya estaba implementado en línea 130 |
-| Sin beforeunload en editorial | Resuelto — delegación de eventos en `MesaEditorialApp` |
-| Date input no controlado en EjeSection | Resuelto — `value` + `useState` + `useRef` en ResultadoRow y BacklogRow |
-| `audit_logs.details` inconsistente | Resuelto — helper `logAuditEntry()` en `shared/utils/audit.js` |
+| Dead code en `src/` raíz | No existía |
+| Login duplicado en audit_logs | No existía |
+| N+1 query en UserProfilePanel | Resuelto |
+| Matching frágil por primer nombre | Resuelto — `.ilike('responsable', userName)` |
+| `isContentEditable` faltante en atajos teclado | No existía — ya implementado |
+| Sin beforeunload en editorial | Resuelto |
+| Date input no controlado en EjeSection | Resuelto |
+| `audit_logs.details` inconsistente | Resuelto — helper `logAuditEntry()` |
+| KPI items sin separación visual (gap: 0) | Resuelto — `gap: 16px` en `.kpi-full-content` |
+| Botón "Explorar" invisible sobre fondo blanco | Resuelto — colores corregidos para fondo claro |
+| pin_hash expuesto a anon directamente | Resuelto — RPC SECURITY DEFINER + policy eliminada |
 
 > Si surge nueva deuda técnica, documentarla aquí con: **Problema · Ubicación · Impacto**.
 
@@ -557,7 +603,8 @@ Todos los ítems documentados anteriormente fueron resueltos o verificados como 
 | Eliminar planificación (con confirmación) | ✅ |
 | Realtime (cambios de otros usuarios) | ✅ |
 | Audit log de actividad | ✅ |
-| Vista mobile (cards) | ✅ |
+| Vista mobile (cards por tema) | ✅ |
+| Bottom sheet de filtros mobile | ✅ |
 | Sync de temas desde Editorial | ✅ |
 
 ### Mesa Editorial
@@ -565,22 +612,26 @@ Todos los ítems documentados anteriormente fueron resueltos o verificados como 
 | Funcionalidad | Estado |
 |---|---|
 | 5 ejes colapsables con progress bar | ✅ |
+| Ejes actualizados: Conversación País, Salud (renombrados) | ✅ |
 | Tipos: Ancla, Soporte, Always ON | ✅ |
 | Resultados con backlogs vinculados (expandibles) | ✅ |
 | Backlogs huérfanos con asignador | ✅ |
-| Edición inline de todos los campos | ✅ |
+| Edición inline de todos los campos (tema, acción, fecha, responsable, status, tipo, eje) | ✅ |
+| **Eje editable por fila (columna select en desktop, badge select en mobile)** | ✅ |
 | Status: Pendiente / En desarrollo / Completado | ✅ |
-| Filtros: texto, eje, status, tipo acción | ✅ |
+| Filtros: texto, eje, status, tipo acción, rango de fechas | ✅ |
 | Explorador por eje y tema (sidebar) | ✅ |
 | Ordenar por fecha | ✅ |
 | Agregar acción con modal | ✅ |
 | Eliminar con confirmación (cascade backlogs) | ✅ |
-| **Tab Archivadas / Activas** | ✅ |
-| **Auto-archivo al marcar Completado** | ✅ |
-| **Reactivar acción archivada** | ✅ |
+| Tab Archivadas / Activas | ✅ |
+| Auto-archivo al marcar Completado | ✅ |
+| Reactivar acción archivada | ✅ |
 | Sync tema → Mesa de Medios | ✅ |
 | KPI bar (completadas, en desarrollo, pendientes, %) | ✅ |
 | KPI bar historial (tab Archivadas) | ✅ |
+| KPI bar colapsable en mobile | ✅ |
+| Bottom sheet de filtros mobile | ✅ |
 | Header sticky unificado (bloque único) | ✅ |
 | Realtime | ✅ |
 | Audit log | ✅ |
@@ -590,9 +641,12 @@ Todos los ítems documentados anteriormente fueron resueltos o verificados como 
 
 | Funcionalidad | Estado |
 |---|---|
-| Login PIN por usuario (SHA-256) | ✅ |
-| Rate limiting 5 intentos / 10 min | ✅ |
-| Panel de usuario con stats | ✅ |
+| Login PIN por usuario (SHA-256, sin Supabase Auth) | ✅ |
+| Validación PIN via RPC SECURITY DEFINER (pin_hash nunca expuesto) | ✅ |
+| Sesión local en localStorage (sin cookie Supabase) | ✅ |
+| Rate limiting 5 intentos / 10 min (sessionStorage) | ✅ |
+| Panel de usuario con stats de actividad | ✅ |
 | Historial de actividad personal | ✅ |
-| Gestión de PINs (solo admin) | ✅ |
+| Gestión de PINs via RPC (solo leonardo.munoz@uss.cl) | ✅ |
 | Selector de módulo con "último usado" | ✅ |
+| Rollback de emergencia documentado en Login.jsx y UserProfilePanel.jsx | ✅ |
