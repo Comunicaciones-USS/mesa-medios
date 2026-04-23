@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { TIPOS_CONFIG, TIPOS_ORDER, STATUS_CONFIG, STATUS_OPTIONS, TIPOLOGIA_RESULTADO_OPTIONS } from '../config'
+import { EJES, EJE_COLOR_MAP, TIPOS_CONFIG, TIPOS_ORDER, STATUS_CONFIG, STATUS_OPTIONS, TIPOLOGIA_RESULTADO_OPTIONS } from '../config'
 import OrphanAssigner from './OrphanAssigner'
 
 function formatDate(dateStr) {
@@ -79,6 +79,7 @@ export default function EjeSection({ eje, rows, onCellChange, onDeleteRow, colla
                 <thead>
                   <tr>
                     <th className="col-tipo">Hito</th>
+                    <th className="col-eje">Eje</th>
                     <th className="col-tema">Tema</th>
                     <th className="col-canal">Tipología</th>
                     <th className="col-accion">Descripción - Acción</th>
@@ -141,6 +142,7 @@ export default function EjeSection({ eje, rows, onCellChange, onDeleteRow, colla
 function ResultadoRow({ row, onCellChange, onDeleteRow, backlogCount, onAddBacklog, expanded, onToggleExpand, onSyncToggle, isArchived, onReactivate }) {
   const tipoCfg   = TIPOS_CONFIG[row.tipo]   || {}
   const statusCfg = STATUS_CONFIG[row.status] || STATUS_CONFIG['Pendiente']
+  const ejeColor  = EJE_COLOR_MAP[row.eje]   || '#64748b'
   const [localFecha, setLocalFecha] = useState(row.fecha || '')
   const fechaInputRef = useRef(null)
   useEffect(() => {
@@ -174,6 +176,19 @@ function ResultadoRow({ row, onCellChange, onDeleteRow, backlogCount, onAddBackl
           style={{ color: tipoCfg.color, background: tipoCfg.bg, border: 'none', fontWeight: 600, fontSize: '0.75rem', borderRadius: '4px', padding: '2px 6px', cursor: isArchived ? 'default' : 'pointer' }}
         >
           {TIPOS_ORDER.map(t => <option key={t} value={t}>{t}</option>)}
+        </select>
+      </td>
+
+      {/* Eje — editable */}
+      <td className="col-eje">
+        <select
+          value={row.eje || EJES[0].label}
+          onChange={e => handleInlineEdit('eje', e.target.value)}
+          disabled={isArchived}
+          className="eje-select"
+          style={{ color: ejeColor, border: 'none', background: 'transparent', fontWeight: 600, fontSize: '0.74rem', padding: '2px 2px', cursor: isArchived ? 'default' : 'pointer', maxWidth: '100%' }}
+        >
+          {EJES.map(e => <option key={e.id} value={e.label}>{e.label}</option>)}
         </select>
       </td>
 
@@ -310,6 +325,7 @@ function ResultadoRow({ row, onCellChange, onDeleteRow, backlogCount, onAddBackl
 function BacklogRow({ row, onCellChange, onDeleteRow, onSyncToggle, isArchived, onReactivate }) {
   const tipoCfg   = TIPOS_CONFIG[row.tipo]   || {}
   const statusCfg = STATUS_CONFIG[row.status] || STATUS_CONFIG['Pendiente']
+  const ejeColor  = EJE_COLOR_MAP[row.eje]   || '#64748b'
   const [localFecha, setLocalFecha] = useState(row.fecha || '')
   const fechaInputRef = useRef(null)
   useEffect(() => {
@@ -344,6 +360,19 @@ function BacklogRow({ row, onCellChange, onDeleteRow, onSyncToggle, isArchived, 
           style={{ color: tipoCfg.color, background: tipoCfg.bg, border: 'none', fontWeight: 600, fontSize: '0.75rem', borderRadius: '4px', padding: '2px 6px', cursor: isArchived ? 'default' : 'pointer' }}
         >
           {TIPOS_ORDER.map(t => <option key={t} value={t}>{t}</option>)}
+        </select>
+      </td>
+
+      {/* Eje — editable */}
+      <td className="col-eje">
+        <select
+          value={row.eje || EJES[0].label}
+          onChange={e => handleInlineEdit('eje', e.target.value)}
+          disabled={isArchived}
+          className="eje-select"
+          style={{ color: ejeColor, border: 'none', background: 'transparent', fontWeight: 600, fontSize: '0.74rem', padding: '2px 2px', cursor: isArchived ? 'default' : 'pointer', maxWidth: '100%' }}
+        >
+          {EJES.map(e => <option key={e.id} value={e.label}>{e.label}</option>)}
         </select>
       </td>
 

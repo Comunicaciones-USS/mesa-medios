@@ -1,7 +1,7 @@
 export const EJES = [
-  { id: 'discusion',     label: 'Discusión País',             color: '#2A5BA8', responsable: 'Yaritza Ross' },
+  { id: 'discusion',     label: 'Conversación País',          color: '#2A5BA8', responsable: 'Yaritza Ross' },
   { id: 'orgullo',       label: 'Orgullo USS',                color: '#C8102E', responsable: 'Natalie Traverso' },
-  { id: 'salud',         label: 'Salud y Medicina',           color: '#1D7A4F', responsable: 'Esteban López' },
+  { id: 'salud',         label: 'Salud',                      color: '#1D7A4F', responsable: 'Esteban López' },
   { id: 'investigacion', label: 'Investigación y Tecnología', color: '#7A2AB8', responsable: 'Bárbara Ruiz' },
   { id: 'vinculacion',   label: 'Impacto Territorial',        color: '#B06A00', responsable: 'Sebastián Fuentes' },
 ]
