@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { supabase } from '../shared/utils/supabase'
 import { MEDIA_COLS, GROUPS } from './config'
 import { getCellData, setCellData } from './utils'
@@ -17,6 +17,8 @@ import BottomSheet from '../shared/components/BottomSheet'
 
 export default function MesaMediosApp({ session, userName, onLogout, onBackToSelector, onSwitchDashboard, otherDashboardName }) {
   const [temas,         setTemas]         = useState([])
+  const temasRef = useRef([])
+  useEffect(() => { temasRef.current = temas }, [temas])
   const [loading,       setLoading]       = useState(true)
   const [error,         setError]         = useState(null)
   // showModal: null | 'new' | { temaId, temaNombre, existingDates[] }
@@ -48,40 +50,56 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
   // Mobile filters sheet
   const [showMobileFilters, setShowMobileFilters] = useState(false)
 
-  function toggleGroup(groupId) {
+  const toggleGroup = useCallback((groupId) => {
     setCollapsedGroups(prev => {
       const next = new Set(prev)
       if (next.has(groupId)) next.delete(groupId)
       else next.add(groupId)
       return next
     })
-  }
+  }, [])
 
-  function toggleTema(temaId) {
+  const toggleTema = useCallback((temaId) => {
     setExpandedTemas(prev => {
       const next = new Set(prev)
       if (next.has(temaId)) next.delete(temaId)
       else next.add(temaId)
       return next
     })
-  }
+  }, [])
 
   // Set --above-table CSS var so .table-scroll height stays within viewport
   useEffect(() => {
     const el = filterBarRef.current
     if (!el) return
+    let rafId = null
+    let debounceTimer = null
     function measure() {
-      const headerEl = document.querySelector('.header')
-      const headerH = headerEl ? headerEl.getBoundingClientRect().height : 68
-      const total = headerH + el.getBoundingClientRect().height
-      document.documentElement.style.setProperty('--above-table', `${Math.round(total)}px`)
+      // Usar RAF para agrupar lecturas de layout y evitar thrashing
+      if (rafId) cancelAnimationFrame(rafId)
+      rafId = requestAnimationFrame(() => {
+        const headerEl = document.querySelector('.header')
+        const headerH = headerEl ? headerEl.getBoundingClientRect().height : 68
+        const total = headerH + el.getBoundingClientRect().height
+        document.documentElement.style.setProperty('--above-table', `${Math.round(total)}px`)
+        rafId = null
+      })
+    }
+    function debouncedMeasure() {
+      // Debounce de 100ms para evitar invocaciones excesivas durante resize
+      clearTimeout(debounceTimer)
+      debounceTimer = setTimeout(measure, 100)
     }
     measure()
-    const ro = new ResizeObserver(measure)
+    const ro = new ResizeObserver(debouncedMeasure)
     ro.observe(el)
     const headerEl = document.querySelector('.header')
     if (headerEl) ro.observe(headerEl)
-    return () => ro.disconnect()
+    return () => {
+      ro.disconnect()
+      clearTimeout(debounceTimer)
+      if (rafId) cancelAnimationFrame(rafId)
+    }
   }, [])
 
   // Realtime subscriptions
@@ -172,7 +190,7 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
     setLoading(false)
   }
 
-  async function logAction(accion, contenidoId, contenidoNombre, detalle = '') {
+  const logAction = useCallback(async (accion, contenidoId, contenidoNombre, detalle = '') => {
     if (!session) return
     const actionMap = { AGREGAR: 'create', MODIFICAR: 'update', ELIMINAR: 'delete' }
     await logAuditEntry(supabase, {
@@ -183,7 +201,7 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
       record_id:  contenidoId || null,
       details:    { content_name: contenidoNombre || null, description: detalle || null },
     })
-  }
+  }, [session])
 
   const displayTemas = useMemo(() => {
     let result = temas.map(tema => {
@@ -255,10 +273,10 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
   }
 
   // handleCellChange: actualiza una celda de una planificación
-  async function handleCellChange(planifId, colId, value, notas) {
+  const handleCellChange = useCallback(async (planifId, colId, value, notas) => {
     let planif = null
     let tema = null
-    for (const t of temas) {
+    for (const t of temasRef.current) {
       const p = t.planificaciones.find(p => p.id === planifId)
       if (p) { planif = p; tema = t; break }
     }
@@ -274,12 +292,12 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
     if (error) { addToast('Error al guardar. Los datos se recargarán.', 'error'); fetchData(); return }
     const detalle = value ? `"${colId}" → "${value}"${notas ? ' (con notas)' : ''}` : `Limpió "${colId}"`
     await logAction('MODIFICAR', planifId, tema.nombre, detalle)
-  }
+  }, [addToast, logAction])
 
   // handleFieldChange: edita campo de planificación (p.ej. semana)
-  async function handleFieldChange(planifId, field, value) {
+  const handleFieldChange = useCallback(async (planifId, field, value) => {
     let tema = null
-    for (const t of temas) {
+    for (const t of temasRef.current) {
       if (t.planificaciones.some(p => p.id === planifId)) { tema = t; break }
     }
     setTemas(prev => prev.map(t => t.id === tema?.id ? {
@@ -289,11 +307,11 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
     const { error } = await supabase.from('contenidos').update({ [field]: value }).eq('id', planifId)
     if (error) { addToast('Error al guardar el campo. Los datos se recargarán.', 'error'); fetchData(); return }
     await logAction('MODIFICAR', planifId, tema?.nombre, `Cambió "${field}" → "${value}"`)
-  }
+  }, [addToast, logAction])
 
-  function requestDeleteRow(planifId) {
+  const requestDeleteRow = useCallback((planifId) => {
     let nombre = 'planificación'
-    for (const t of temas) {
+    for (const t of temasRef.current) {
       const p = t.planificaciones.find(p => p.id === planifId)
       if (p) {
         const dateStr = p.semana
@@ -304,10 +322,10 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
       }
     }
     setConfirmDelete({ type: 'planif', id: planifId, nombre })
-  }
+  }, [])
 
-  function requestDeleteTema(temaId) {
-    const tema = temas.find(t => t.id === temaId)
+  const requestDeleteTema = useCallback((temaId) => {
+    const tema = temasRef.current.find(t => t.id === temaId)
     if (!tema) return
     setConfirmDelete({
       type: 'tema',
@@ -316,11 +334,11 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
       n: tema.planificaciones.length,
       fromEditorial: tema.origen === 'editorial',
     })
-  }
+  }, [])
 
-  async function handleDeleteRow(planifId) {
+  const handleDeleteRow = useCallback(async (planifId) => {
     let tema = null
-    for (const t of temas) {
+    for (const t of temasRef.current) {
       if (t.planificaciones.some(p => p.id === planifId)) { tema = t; break }
     }
     const { error } = await supabase.from('contenidos').delete().eq('id', planifId)
@@ -331,32 +349,32 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
         : t
     ))
     await logAction('ELIMINAR', planifId, tema?.nombre)
-  }
+  }, [addToast, logAction])
 
-  async function handleDeleteTema(temaId) {
-    const tema = temas.find(t => t.id === temaId)
+  const handleDeleteTema = useCallback(async (temaId) => {
+    const tema = temasRef.current.find(t => t.id === temaId)
     const { error } = await supabase.from('temas').delete().eq('id', temaId)
     if (error) { addToast('Error al eliminar el tema.', 'error'); return }
     setTemas(prev => prev.filter(t => t.id !== temaId))
     await logAction('ELIMINAR', temaId, tema?.nombre, 'Eliminó tema completo')
-  }
+  }, [addToast, logAction])
 
-  async function handleRenameTema(temaId, nombre) {
+  const handleRenameTema = useCallback(async (temaId, nombre) => {
     setTemas(prev => prev.map(t => t.id === temaId ? { ...t, nombre } : t))
     const { error } = await supabase.from('temas').update({ nombre }).eq('id', temaId)
     if (error) { addToast('Error al renombrar el tema.', 'error'); fetchData(); return }
     await logAction('MODIFICAR', temaId, nombre, `Renombró tema → "${nombre}"`)
-  }
+  }, [addToast, logAction])
 
-  function handleOpenAddPlanificacion(temaId) {
-    const tema = temas.find(t => t.id === temaId)
+  const handleOpenAddPlanificacion = useCallback((temaId) => {
+    const tema = temasRef.current.find(t => t.id === temaId)
     if (!tema) return
     setShowModal({
       temaId: tema.id,
       temaNombre: tema.nombre,
       existingDates: tema.planificaciones.map(p => p.semana).filter(Boolean),
     })
-  }
+  }, [])
 
   const hasActiveFilters = filterInput || filterGroup !== 'all' || filterCellStatus !== 'all' || filterDateRange.from || filterDateRange.to
   const totalPlanifs = temas.reduce((acc, t) => acc + t.planificaciones.length, 0)
