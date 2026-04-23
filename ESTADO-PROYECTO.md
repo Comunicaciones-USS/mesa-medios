@@ -1,5 +1,5 @@
 # Estado del Proyecto — Mesa de Medios USS
-**Actualizado:** 2026-04-23 | **Branch:** `main` | **Commit:** `0c9428a`
+**Actualizado:** 2026-04-23 | **Branch:** `main` | **Commit:** `6e24417`
 
 ---
 
@@ -517,10 +517,15 @@ git push && npm run deploy
 
 ## 8. Estado del Git
 
-### Branch actual: `main` (HEAD: `0c9428a`)
+### Branch actual: `main` (HEAD: `6e24417`)
 
 ### Últimos commits:
 ```
+6e24417 feat(a11y): focus trap and return focus in overlays
+85c1b06 feat(a11y): adjust color contrast to meet WCAG AA
+1784611 feat(a11y): add ARIA labels, landmarks and focus styles
+e00438f docs(a11y): WCAG AA audit report
+fc362aa chore(docs): update ESTADO-PROYECTO.md after performance optimizations
 0c9428a fix(medios): fix TemaRow memo comparator to use content-based tema comparison
 44d36e3 docs: update ESTADO-PROYECTO.md after MediaTable performance optimization
 7411bf6 perf(medios): memoize rows and handlers in MediaTable
@@ -571,7 +576,7 @@ Todos en `scripts/`. Ejecutar en **Supabase SQL Editor** (no en producción auto
 
 ## 10. Deuda Técnica
 
-### Sin deuda activa conocida — última revisión 2026-04-23
+### Resoluciones — última revisión 2026-04-23
 
 | Ítem | Resolución |
 |---|---|
@@ -589,6 +594,13 @@ Todos en `scripts/`. Ejecutar en **Supabase SQL Editor** (no en producción auto
 | Falta de índices en queries frecuentes | Resuelto — script add-performance-indexes.sql |
 | Performance MediaTable (re-render completo por edición) | Resuelto — memoización `TemaRow` + patrón `temasRef` + `ResizeObserver` debounced |
 | Virtualización vertical `react-window` (MediaTable) | Evaluado — umbral no alcanzado (18 temas en producción vs. umbral 30). Implementar si temas > 30. Nota: requeriría refactorizar `<table>` → `<div>` grid por incompatibilidad de `react-window` con `position: sticky` horizontal. |
+| Accesibilidad sin auditoría WCAG | Resuelto parcialmente — WCAG AA en ARIA, landmarks, focus visible, contraste y focus traps. Reporte completo en docs/A11Y-AUDIT.md |
+
+### Deuda activa
+
+| Ítem | Ubicación | Impacto |
+|---|---|---|
+| Navegación por teclado en celdas de MediaTable | src/apps/mesa-medios/components/MediaTable.jsx + CellPopover.jsx | Usuarios con teclado puro (sin mouse) no pueden editar celdas. Requiere roving tabindex + arrow key navigation (Fase 5 del plan de accesibilidad). Afecta WCAG 2.1.1 parcialmente. |
 
 > Si surge nueva deuda técnica, documentarla aquí con: **Problema · Ubicación · Impacto**.
 
@@ -659,3 +671,15 @@ Todos en `scripts/`. Ejecutar en **Supabase SQL Editor** (no en producción auto
 | Gestión de PINs via RPC (solo leonardo.munoz@uss.cl) | ✅ |
 | Selector de módulo con "último usado" | ✅ |
 | Rollback de emergencia documentado en Login.jsx y UserProfilePanel.jsx | ✅ |
+
+### Accesibilidad
+
+| Funcionalidad | Estado |
+|---|---|
+| WCAG AA en ARIA labels, landmarks y estructura semántica | ✅ |
+| Focus visible en todos los elementos interactivos | ✅ |
+| Focus traps en modales, bottom sheets y overlays | ✅ |
+| Skip link para saltar al contenido | ✅ |
+| Retorno de focus al trigger al cerrar overlays | ✅ |
+| Contraste de colores WCAG AA | ✅ |
+| Navegación por teclado en celdas de tabla (flechas tipo Excel) | ⏳ Pendiente (deuda activa) |
