@@ -1,5 +1,5 @@
 # Estado del Proyecto — Mesa de Medios USS
-**Actualizado:** 2026-04-23 | **Branch:** `main` | **Commit:** `4650896`
+**Actualizado:** 2026-04-23 | **Branch:** `main` | **Commit:** `7411bf6`
 
 ---
 
@@ -43,6 +43,8 @@ Dashboard colaborativo en tiempo real para el equipo de Comunicaciones USS. Tien
 | Deploy | GitHub Pages via `gh-pages` | ^6.1 |
 | Estilos | CSS puro (index.css, ~4900 líneas) | — |
 | Runtime | Browser (SPA, sin SSR) | — |
+
+> **Nota performance:** MediaTable usa `React.memo` con comparación custom en `TemaRow` y el patrón `temasRef` en los handlers para evitar re-renders masivos al editar celdas. El `ResizeObserver` de `--above-table` está debounced (100ms) con RAF para evitar layout thrashing.
 
 **Variables de entorno (`.env`):**
 ```
@@ -515,10 +517,11 @@ git push && npm run deploy
 
 ## 8. Estado del Git
 
-### Branch actual: `main` (HEAD: `4650896`)
+### Branch actual: `main` (HEAD: `7411bf6`)
 
 ### Últimos commits:
 ```
+7411bf6 perf(medios): memoize rows and handlers in MediaTable
 4650896 feat(editorial): rename ejes + editable eje field per row
 3d4fe60 fix(desktop): KPI gap + Explorar button style on white background
 01c937e fix(mobile): fix action bar overflow + desktop KPI spacing
@@ -582,6 +585,7 @@ Todos en `scripts/`. Ejecutar en **Supabase SQL Editor** (no en producción auto
 | Botón "Explorar" invisible sobre fondo blanco | Resuelto — colores corregidos para fondo claro |
 | pin_hash expuesto a anon directamente | Resuelto — RPC SECURITY DEFINER + policy eliminada |
 | Falta de índices en queries frecuentes | Resuelto — script add-performance-indexes.sql |
+| Performance MediaTable (re-render completo por edición) | Resuelto — memoización `TemaRow` + patrón `temasRef` + `ResizeObserver` debounced |
 
 > Si surge nueva deuda técnica, documentarla aquí con: **Problema · Ubicación · Impacto**.
 
