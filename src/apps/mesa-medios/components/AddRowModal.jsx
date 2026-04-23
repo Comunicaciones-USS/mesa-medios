@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useFocusTrap } from '../../shared/hooks/useFocusTrap'
 
 function useIsMobile() {
   const [mobile, setMobile] = useState(window.innerWidth <= 768)
@@ -16,7 +17,28 @@ export default function AddRowModal({ onConfirm, onClose, temas = [], prefillTem
   const [nombre, setNombre] = useState(prefillTema?.nombre || '')
   const [semana, setSemana] = useState('')
   const inputRef = useRef(null)
+  const modalRef = useRef(null)
   const isMobile = useIsMobile()
+
+  // Capture trigger element synchronously at render time for focus return on close
+  const triggerRef = useRef(typeof document !== 'undefined' ? document.activeElement : null)
+
+  // Focus trap for desktop modal
+  useFocusTrap(modalRef, !isMobile)
+
+  // Restore focus to trigger element when modal unmounts
+  useEffect(() => {
+    return () => { triggerRef.current?.focus() }
+  }, [])
+
+  // Escape closes the modal
+  useEffect(() => {
+    function handleKey(e) {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', handleKey)
+    return () => document.removeEventListener('keydown', handleKey)
+  }, [onClose])
 
   const isAddDate = !!prefillTema   // true = agregar fecha a tema existente
 
@@ -141,7 +163,7 @@ export default function AddRowModal({ onConfirm, onClose, temas = [], prefillTem
   // ── Desktop: centered modal ───────────────────────────────────
   return (
     <div className="modal-backdrop" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal" role="dialog" aria-modal="true" aria-labelledby="add-row-modal-title">
+      <div ref={modalRef} className="modal" role="dialog" aria-modal="true" aria-labelledby="add-row-modal-title">
         <div className="modal-header">
           <h2 id="add-row-modal-title">{titleLabel}</h2>
           <button className="modal-close" onClick={onClose} aria-label="Cerrar modal">

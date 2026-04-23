@@ -1,9 +1,31 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { EJES, TIPOS_ORDER, TIPOS_CONFIG, STATUS_CONFIG } from '../config'
+import { useFocusTrap } from '../../shared/hooks/useFocusTrap'
 
 export default function ExplorerSidebar({ rows, onClose, onFilter, onAddAction }) {
   const [selectedEje, setSelectedEje] = useState(null)
   const [selectedTema, setSelectedTema] = useState(null)
+  const sidebarRef = useRef(null)
+
+  // Capture the trigger element ("Explorar" button) synchronously at render time
+  const triggerRef = useRef(typeof document !== 'undefined' ? document.activeElement : null)
+
+  // Focus trap — cycles Tab/Shift+Tab within the sidebar
+  useFocusTrap(sidebarRef, true)
+
+  // Escape closes the sidebar
+  useEffect(() => {
+    function handleKey(e) {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', handleKey)
+    return () => document.removeEventListener('keydown', handleKey)
+  }, [onClose])
+
+  // Restore focus to the "Explorar" button when sidebar unmounts
+  useEffect(() => {
+    return () => { triggerRef.current?.focus() }
+  }, [])
 
   const temas = useMemo(() => {
     if (!selectedEje) return []
@@ -35,7 +57,7 @@ export default function ExplorerSidebar({ rows, onClose, onFilter, onAddAction }
   return (
     <>
     <div className="explorer-overlay" onClick={onClose} />
-    <aside className="explorer-sidebar" aria-label="Explorador de temas">
+    <aside ref={sidebarRef} className="explorer-sidebar" aria-label="Explorador de temas">
       <div className="explorer-header">
         <div>
           <h3 className="explorer-title">

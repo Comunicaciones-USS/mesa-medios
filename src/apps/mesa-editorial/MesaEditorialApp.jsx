@@ -409,7 +409,7 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
             id="tab-active"
             role="tab"
             aria-selected={activeTab === 'active'}
-            aria-controls="tabpanel-content"
+            aria-controls="main-content"
             className={`tab-btn${activeTab === 'active' ? ' tab-active' : ''}`}
             onClick={() => switchTab('active')}
           >
@@ -421,7 +421,7 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
             id="tab-archived"
             role="tab"
             aria-selected={activeTab === 'archived'}
-            aria-controls="tabpanel-content"
+            aria-controls="main-content"
             className={`tab-btn${activeTab === 'archived' ? ' tab-active' : ''}`}
             onClick={() => switchTab('archived')}
           >

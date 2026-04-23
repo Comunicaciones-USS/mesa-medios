@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { EJES, TIPOS_CONFIG, TIPO_ACCION_OPTIONS, TIPOLOGIA_RESULTADO_OPTIONS } from '../config'
+import { useFocusTrap } from '../../shared/hooks/useFocusTrap'
 
 export default function AddActionModal({ onConfirm, onClose, existingResponsables = [], existingTemas = [], prefilled }) {
   const [eje,         setEje]         = useState(prefilled?.eje || EJES[0].label)
@@ -11,11 +12,23 @@ export default function AddActionModal({ onConfirm, onClose, existingResponsable
   const [fecha,         setFecha]         = useState(prefilled?.tipo === 'Always ON' ? null : '')
   const [responsable,   setResponsable]   = useState('')
   const [syncToMedios,  setSyncToMedios]  = useState(false)
-  const firstRef = useRef(null)
+  const firstRef  = useRef(null)
+  const modalRef  = useRef(null)
+
+  // Capture trigger element synchronously at render time for focus return on close
+  const triggerRef = useRef(typeof document !== 'undefined' ? document.activeElement : null)
+
+  // Focus trap — cycles Tab/Shift+Tab within the modal
+  useFocusTrap(modalRef, true)
 
   const isAlwaysOn = tipo === 'Always ON'
 
   useEffect(() => { firstRef.current?.focus() }, [])
+
+  // Restore focus to trigger element when modal unmounts
+  useEffect(() => {
+    return () => { triggerRef.current?.focus() }
+  }, [])
 
   useEffect(() => {
     function handleKey(e) { if (e.key === 'Escape') onClose() }
@@ -50,7 +63,7 @@ export default function AddActionModal({ onConfirm, onClose, existingResponsable
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" role="dialog" aria-modal="true" aria-labelledby="add-action-modal-title" onClick={e => e.stopPropagation()}>
+      <div ref={modalRef} className="modal-content" role="dialog" aria-modal="true" aria-labelledby="add-action-modal-title" onClick={e => e.stopPropagation()}>
 
         <div className="modal-header" style={{ background: '#0f2b41', color: '#fff' }}>
           <h2 id="add-action-modal-title">Nueva acción editorial</h2>
