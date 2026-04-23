@@ -560,6 +560,7 @@ Todos en `scripts/`. Ejecutar en **Supabase SQL Editor** (no en producción auto
 | `rename-ejes.sql` | ✅ Ejecutado | `'Discusión País'` → `'Conversación País'`; `'Salud y Medicina'` → `'Salud'` |
 | `security-rpc-usuarios.sql` | ✅ Ejecutado | Crea funciones RPC `validate_pin`, `admin_list_users`, `admin_set_pin` (SECURITY DEFINER) |
 | `security-rpc-cleanup.sql` | ✅ Ejecutado | Elimina policy `anon_can_read_active_users` (ya no necesaria con RPC) |
+| `add-performance-indexes.sql` | ✅ Ejecutado | Índices de performance en contenidos, mesa_editorial_acciones, audit_logs, pin_login_attempts |
 
 ---
 
@@ -580,6 +581,7 @@ Todos en `scripts/`. Ejecutar en **Supabase SQL Editor** (no en producción auto
 | KPI items sin separación visual (gap: 0) | Resuelto — `gap: 16px` en `.kpi-full-content` |
 | Botón "Explorar" invisible sobre fondo blanco | Resuelto — colores corregidos para fondo claro |
 | pin_hash expuesto a anon directamente | Resuelto — RPC SECURITY DEFINER + policy eliminada |
+| Falta de índices en queries frecuentes | Resuelto — script add-performance-indexes.sql |
 
 > Si surge nueva deuda técnica, documentarla aquí con: **Problema · Ubicación · Impacto**.
 
