@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { TIPOS_CONFIG, TIPOS_ORDER, STATUS_CONFIG, STATUS_OPTIONS, EJE_COLOR_MAP } from '../config'
+import { EJES, TIPOS_CONFIG, TIPOS_ORDER, STATUS_CONFIG, STATUS_OPTIONS, EJE_COLOR_MAP } from '../config'
 
 function formatDate(dateStr) {
   if (!dateStr) return '—'
@@ -64,7 +64,14 @@ export default function MobileCardViewEditorial({ rows, onCellChange, onDeleteRo
         return (
           <div key={resultado.id} className="mobile-card mobile-card-resultado" style={{ borderLeftColor: '#ceb37c' }}>
             <div className="mobile-card-header">
-              <span className="mobile-eje-label" style={{ color: ejeColor }}>{resultado.eje}</span>
+              <select
+                value={resultado.eje || EJES[0].label}
+                onChange={e => onCellChange(resultado.id, 'eje', e.target.value)}
+                className="mobile-eje-select"
+                style={{ color: ejeColor, border: 'none', background: 'transparent', fontWeight: 700, fontSize: '0.72rem', padding: '0', cursor: 'pointer' }}
+              >
+                {EJES.map(e => <option key={e.id} value={e.label}>{e.label}</option>)}
+              </select>
               <span className="tipo-badge" style={{ color: tipoCfg.color, background: tipoCfg.bg }}>{resultado.tipo}</span>
             </div>
             {resultado.tema && <p className="mobile-tema">{resultado.tema}</p>}
@@ -161,7 +168,14 @@ export default function MobileCardViewEditorial({ rows, onCellChange, onDeleteRo
         return (
           <div key={row.id} className="mobile-card" style={{ borderLeftColor: ejeColor }}>
             <div className="mobile-card-header">
-              <span className="mobile-eje-label" style={{ color: ejeColor }}>{row.eje}</span>
+              <select
+                value={row.eje || EJES[0].label}
+                onChange={e => onCellChange(row.id, 'eje', e.target.value)}
+                className="mobile-eje-select"
+                style={{ color: ejeColor, border: 'none', background: 'transparent', fontWeight: 700, fontSize: '0.72rem', padding: '0', cursor: 'pointer' }}
+              >
+                {EJES.map(e => <option key={e.id} value={e.label}>{e.label}</option>)}
+              </select>
               <span className="tipo-badge" style={{ color: tipoCfg.color, background: tipoCfg.bg }}>{row.tipo}</span>
             </div>
             {row.tema && <p className="mobile-tema">{row.tema}</p>}
