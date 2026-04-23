@@ -404,7 +404,7 @@ success      BOOLEAN     DEFAULT FALSE
 /* Filas tabla */
 --row-odd: #f0f6fc; --row-even: #ffffff; --row-hover: #e3edf8
 --border: #d0dce8; --border-group: #275da5
---text-main: #1a2b3c; --text-muted: #5a7a96
+--text-main: #1a2b3c; --text-muted: #4a6a84 (ajustado de #5a7a96 → ratio WCAG AA ~4.97:1 sobre blanco)
 ```
 
 ### Clases clave por sección
