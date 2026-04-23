@@ -50,11 +50,11 @@ export default function AddActionModal({ onConfirm, onClose, existingResponsable
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={e => e.stopPropagation()}>
+      <div className="modal-content" role="dialog" aria-modal="true" aria-labelledby="add-action-modal-title" onClick={e => e.stopPropagation()}>
 
         <div className="modal-header" style={{ background: '#0f2b41', color: '#fff' }}>
-          <h2>Nueva acción editorial</h2>
-          <button className="modal-close" onClick={onClose} aria-label="Cerrar">
+          <h2 id="add-action-modal-title">Nueva acción editorial</h2>
+          <button className="modal-close" onClick={onClose} aria-label="Cerrar modal">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
               <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
             </svg>

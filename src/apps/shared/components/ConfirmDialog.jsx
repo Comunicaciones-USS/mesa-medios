@@ -20,14 +20,14 @@ export default function ConfirmDialog({ nombre, title, body, confirmLabel, confi
 
   return (
     <div className="confirm-overlay" onClick={onCancel}>
-      <div className="confirm-dialog" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true">
+      <div className="confirm-dialog" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="confirm-dialog-title">
         <div className="confirm-icon">
           <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
             <circle cx="14" cy="14" r="12" stroke="#dc2626" strokeWidth="1.8" fill="#fef2f2" />
             <path d="M14 9v6M14 18v1.5" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" />
           </svg>
         </div>
-        <h3 className="confirm-title">{title || '¿Eliminar contenido?'}</h3>
+        <h3 id="confirm-dialog-title" className="confirm-title">{title || '¿Eliminar contenido?'}</h3>
         <p className="confirm-body" style={{ whiteSpace: 'pre-line' }}>
           {body || (
             <>

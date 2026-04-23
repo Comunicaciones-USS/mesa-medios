@@ -3,7 +3,7 @@ export default function Toaster({ toasts, onRemove }) {
   if (toasts.length === 0) return null
 
   return (
-    <div className="toast-container" role="region" aria-label="Notificaciones">
+    <div className="toast-container" role="region" aria-label="Notificaciones" aria-live="polite">
       {toasts.map(t => (
         <div
           key={t.id}

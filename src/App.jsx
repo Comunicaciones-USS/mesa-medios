@@ -58,38 +58,49 @@ export default function App() {
 
   if (!localSession) return <Login onLogin={handleLogin} />
 
+  // Skip link rendered once per authenticated app session
+
   // Objeto compatible con session.user.email que usan MesaMediosApp y MesaEditorialApp
   const sessionCompat = { user: { email: localSession.email } }
 
   if (!selectedDashboard) return (
-    <DashboardSelector
+    <>
+      <a href="#main-content" className="skip-link">Saltar al contenido principal</a>
+      <DashboardSelector
       userName={localSession.nombre}
       userEmail={localSession.email}
       onSelect={handleSelectDashboard}
       onLogout={handleLogout}
     />
+    </>
   )
 
   if (selectedDashboard === 'medios') return (
-    <MesaMediosApp
-      session={sessionCompat}
-      userName={localSession.nombre}
-      onLogout={handleLogout}
-      onBackToSelector={handleBackToSelector}
-      onSwitchDashboard={() => handleSelectDashboard('editorial')}
-      otherDashboardName="Mesa Editorial"
-    />
+    <>
+      <a href="#main-content" className="skip-link">Saltar al contenido principal</a>
+      <MesaMediosApp
+        session={sessionCompat}
+        userName={localSession.nombre}
+        onLogout={handleLogout}
+        onBackToSelector={handleBackToSelector}
+        onSwitchDashboard={() => handleSelectDashboard('editorial')}
+        otherDashboardName="Mesa Editorial"
+      />
+    </>
   )
 
   if (selectedDashboard === 'editorial') return (
-    <MesaEditorialApp
-      session={sessionCompat}
-      userName={localSession.nombre}
-      onLogout={handleLogout}
-      onBackToSelector={handleBackToSelector}
-      onSwitchDashboard={() => handleSelectDashboard('medios')}
-      otherDashboardName="Mesa de Medios"
-    />
+    <>
+      <a href="#main-content" className="skip-link">Saltar al contenido principal</a>
+      <MesaEditorialApp
+        session={sessionCompat}
+        userName={localSession.nombre}
+        onLogout={handleLogout}
+        onBackToSelector={handleBackToSelector}
+        onSwitchDashboard={() => handleSelectDashboard('medios')}
+        otherDashboardName="Mesa de Medios"
+      />
+    </>
   )
 
   return null

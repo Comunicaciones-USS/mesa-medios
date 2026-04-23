@@ -35,7 +35,7 @@ export default function ExplorerSidebar({ rows, onClose, onFilter, onAddAction }
   return (
     <>
     <div className="explorer-overlay" onClick={onClose} />
-    <div className="explorer-sidebar">
+    <aside className="explorer-sidebar" aria-label="Explorador de temas">
       <div className="explorer-header">
         <div>
           <h3 className="explorer-title">
@@ -48,8 +48,8 @@ export default function ExplorerSidebar({ rows, onClose, onFilter, onAddAction }
             <p className="explorer-subtitle">Selecciona un tema</p>
           )}
         </div>
-        <button className="modal-close" onClick={onClose} style={{ color: '#fff' }}>
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <button className="modal-close" onClick={onClose} style={{ color: '#fff' }} aria-label="Cerrar explorador de temas">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
             <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
           </svg>
         </button>
@@ -158,7 +158,7 @@ export default function ExplorerSidebar({ rows, onClose, onFilter, onAddAction }
           </button>
         </div>
       )}
-    </div>
+    </aside>
     </>
   )
 }

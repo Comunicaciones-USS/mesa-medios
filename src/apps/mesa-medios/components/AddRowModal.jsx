@@ -141,11 +141,11 @@ export default function AddRowModal({ onConfirm, onClose, temas = [], prefillTem
   // ── Desktop: centered modal ───────────────────────────────────
   return (
     <div className="modal-backdrop" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal">
+      <div className="modal" role="dialog" aria-modal="true" aria-labelledby="add-row-modal-title">
         <div className="modal-header">
-          <h2>{titleLabel}</h2>
-          <button className="modal-close" onClick={onClose}>
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+          <h2 id="add-row-modal-title">{titleLabel}</h2>
+          <button className="modal-close" onClick={onClose} aria-label="Cerrar modal">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
               <path d="M4 4l10 10M14 4L4 14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
             </svg>
           </button>

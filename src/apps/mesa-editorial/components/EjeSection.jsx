@@ -48,7 +48,16 @@ export default function EjeSection({ eje, rows, onCellChange, onDeleteRow, colla
   return (
     <div className={`eje-section${isArchived ? ' eje-section-archived' : ''}`}>
       {/* ── Header del eje ── */}
-      <div className="eje-header" onClick={onToggle} style={{ '--eje-color': eje.color }}>
+      <div
+        className="eje-header"
+        onClick={onToggle}
+        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle() } }}
+        role="button"
+        tabIndex={0}
+        aria-expanded={!collapsed}
+        aria-label={`${eje.label} — ${collapsed ? 'expandir' : 'colapsar'} sección`}
+        style={{ '--eje-color': eje.color }}
+      >
         <div className="eje-stripe" style={{ background: eje.color }} />
         <h2 className="eje-title">{eje.label}</h2>
         <span className="eje-count">{rows.length} {rows.length === 1 ? 'acción' : 'acciones'}</span>
@@ -78,17 +87,17 @@ export default function EjeSection({ eje, rows, onCellChange, onDeleteRow, colla
               <table className="editorial-table">
                 <thead>
                   <tr>
-                    <th className="col-tipo">Hito</th>
-                    <th className="col-eje">Eje</th>
-                    <th className="col-tema">Tema</th>
-                    <th className="col-canal">Tipología</th>
-                    <th className="col-accion">Descripción - Acción</th>
-                    <th className="col-fecha">Fecha</th>
-                    <th className="col-resp">Responsable</th>
-                    <th className="col-status">Status</th>
+                    <th scope="col" className="col-tipo">Hito</th>
+                    <th scope="col" className="col-eje">Eje</th>
+                    <th scope="col" className="col-tema">Tema</th>
+                    <th scope="col" className="col-canal">Tipología</th>
+                    <th scope="col" className="col-accion">Descripción - Acción</th>
+                    <th scope="col" className="col-fecha">Fecha</th>
+                    <th scope="col" className="col-resp">Responsable</th>
+                    <th scope="col" className="col-status">Status</th>
                     {isArchived
-                      ? <th className="col-archived-at">Archivado el</th>
-                      : <th className="col-del"></th>
+                      ? <th scope="col" className="col-archived-at">Archivado el</th>
+                      : <th scope="col" className="col-del"><span className="sr-only">Acciones</span></th>
                     }
                   </tr>
                 </thead>
@@ -218,8 +227,14 @@ function ResultadoRow({ row, onCellChange, onDeleteRow, backlogCount, onAddBackl
       <td className="col-accion">
         <div className="resultado-accion-wrap">
           {backlogCount > 0 && (
-            <button className="resultado-toggle" onClick={onToggleExpand} title={expanded ? 'Ocultar backlogs' : 'Mostrar backlogs'}>
-              <svg width="10" height="10" viewBox="0 0 10 10" fill="none"
+            <button
+              className="resultado-toggle"
+              onClick={onToggleExpand}
+              title={expanded ? 'Ocultar backlogs' : 'Mostrar backlogs'}
+              aria-label={expanded ? 'Ocultar backlogs' : 'Mostrar backlogs'}
+              aria-expanded={expanded}
+            >
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true"
                 style={{ transform: expanded ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s' }}>
                 <path d="M3 1.5l4 3.5-4 3.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
@@ -285,8 +300,8 @@ function ResultadoRow({ row, onCellChange, onDeleteRow, backlogCount, onAddBackl
       {isArchived ? (
         <td className="col-archived-at">
           <span className="archived-at-date">{formatArchivedAt(row.archived_at)}</span>
-          <button className="btn-reactivate" onClick={() => onReactivate?.(row.id)} title="Reactivar esta acción">
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+          <button className="btn-reactivate" onClick={() => onReactivate?.(row.id)} title="Reactivar esta acción" aria-label="Reactivar esta acción">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
               <path d="M2 6a4 4 0 014-4 4 4 0 014 4 4 4 0 01-4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
               <path d="M6 2L4 4l2 2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
@@ -299,20 +314,21 @@ function ResultadoRow({ row, onCellChange, onDeleteRow, backlogCount, onAddBackl
             className={`btn-sync-medios${row.sync_to_medios ? ' synced' : ''}`}
             onClick={() => onSyncToggle?.(row.id, !row.sync_to_medios)}
             title={row.sync_to_medios ? 'Desvinc. de Mesa de Medios' : 'Vincular a Mesa de Medios'}
+            aria-label={row.sync_to_medios ? 'Desvincular de Mesa de Medios' : 'Vincular a Mesa de Medios'}
           >
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
               <path d="M2 6a4 4 0 014-4M10 6a4 4 0 01-4 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
               <path d="M9 4l1.5-1.5M9 4l1.5 1.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
               <path d="M3 8L1.5 9.5M3 8L1.5 6.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </button>
-          <button className="btn-add-backlog" onClick={() => onAddBacklog(row.id)} title="Agregar backlog a este resultado">
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+          <button className="btn-add-backlog" onClick={() => onAddBacklog(row.id)} title="Agregar backlog a este resultado" aria-label="Agregar backlog a este resultado">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
               <path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
             </svg>
           </button>
-          <button className="btn-delete-row" onClick={() => onDeleteRow(row.id)} title="Eliminar resultado">
-            <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+          <button className="btn-delete-row" onClick={() => onDeleteRow(row.id)} title="Eliminar resultado" aria-label="Eliminar resultado">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
               <path d="M2 3.5h9M5 3.5V2.5a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v1M5.5 5.5v4M7.5 5.5v4M3.5 3.5l.5 7h5l.5-7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </button>
@@ -451,8 +467,8 @@ function BacklogRow({ row, onCellChange, onDeleteRow, onSyncToggle, isArchived, 
       {isArchived ? (
         <td className="col-archived-at">
           <span className="archived-at-date">{formatArchivedAt(row.archived_at)}</span>
-          <button className="btn-reactivate" onClick={() => onReactivate?.(row.id)} title="Reactivar este backlog">
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+          <button className="btn-reactivate" onClick={() => onReactivate?.(row.id)} title="Reactivar este backlog" aria-label="Reactivar este backlog">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
               <path d="M2 6a4 4 0 014-4 4 4 0 014 4 4 4 0 01-4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
               <path d="M6 2L4 4l2 2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
@@ -465,15 +481,16 @@ function BacklogRow({ row, onCellChange, onDeleteRow, onSyncToggle, isArchived, 
             className={`btn-sync-medios${row.sync_to_medios ? ' synced' : ''}`}
             onClick={() => onSyncToggle?.(row.id, !row.sync_to_medios)}
             title={row.sync_to_medios ? 'Desvinc. de Mesa de Medios' : 'Vincular a Mesa de Medios'}
+            aria-label={row.sync_to_medios ? 'Desvincular de Mesa de Medios' : 'Vincular a Mesa de Medios'}
           >
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
               <path d="M2 6a4 4 0 014-4M10 6a4 4 0 01-4 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
               <path d="M9 4l1.5-1.5M9 4l1.5 1.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
               <path d="M3 8L1.5 9.5M3 8L1.5 6.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </button>
-          <button className="btn-delete-row" onClick={() => onDeleteRow(row.id)} title="Eliminar backlog">
-            <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+          <button className="btn-delete-row" onClick={() => onDeleteRow(row.id)} title="Eliminar backlog" aria-label="Eliminar backlog">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
               <path d="M2 3.5h9M5 3.5V2.5a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v1M5.5 5.5v4M7.5 5.5v4M3.5 3.5l.5 7h5l.5-7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </button>

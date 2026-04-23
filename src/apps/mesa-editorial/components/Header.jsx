@@ -21,7 +21,7 @@ export default function HeaderEditorial({ userName, userEmail, onLogout, onBackT
       <div className="header-row-top">
         <div className="header-left">
           {onBackToSelector && (
-            <button className="btn-back-selector" onClick={onBackToSelector} title="Volver al selector">
+            <button className="btn-back-selector" onClick={onBackToSelector} title="Volver al selector" aria-label="Volver al selector de mesas">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                 <path d="M10 3L5 8l5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
@@ -50,7 +50,7 @@ export default function HeaderEditorial({ userName, userEmail, onLogout, onBackT
               </svg>
             </button>
             <div className="user-menu-divider" />
-            <button className="btn-logout" onClick={onLogout} title="Cerrar sesión">
+            <button className="btn-logout" onClick={onLogout} title="Cerrar sesión" aria-label="Cerrar sesión">
               <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
                 <path d="M5.5 2H3a1 1 0 00-1 1v9a1 1 0 001 1h2.5M10 10l3-2.5L10 5M6 7.5h7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
@@ -103,8 +103,8 @@ export default function HeaderEditorial({ userName, userEmail, onLogout, onBackT
       </div>
       <div className="header-row-actions">
         <div className="realtime-badge"><span className="realtime-dot" /><span>En vivo</span></div>
-        <button className="btn-logs" onClick={onShowLogs} title="Ver registro de actividad">
-          <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><rect x="1.5" y="1.5" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.3" /><path d="M4 5h7M4 7.5h7M4 10h4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" /></svg>
+        <button className="btn-logs" onClick={onShowLogs} title="Ver registro de actividad" aria-label="Ver registro de actividad">
+          <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true"><rect x="1.5" y="1.5" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.3" /><path d="M4 5h7M4 7.5h7M4 10h4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" /></svg>
           <span>Actividad</span>
         </button>
         {onSwitchDashboard && otherDashboardName && (

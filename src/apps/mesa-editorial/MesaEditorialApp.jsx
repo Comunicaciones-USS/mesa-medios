@@ -404,8 +404,12 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
         />
 
         {/* ── Tabs Activas / Archivadas ── */}
-        <div className="editorial-tabs">
+        <div className="editorial-tabs" role="tablist" aria-label="Estado de acciones">
           <button
+            id="tab-active"
+            role="tab"
+            aria-selected={activeTab === 'active'}
+            aria-controls="tabpanel-content"
             className={`tab-btn${activeTab === 'active' ? ' tab-active' : ''}`}
             onClick={() => switchTab('active')}
           >
@@ -414,6 +418,10 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
             <span className="tab-badge">{activeCount}</span>
           </button>
           <button
+            id="tab-archived"
+            role="tab"
+            aria-selected={activeTab === 'archived'}
+            aria-controls="tabpanel-content"
             className={`tab-btn${activeTab === 'archived' ? ' tab-active' : ''}`}
             onClick={() => switchTab('archived')}
           >
@@ -425,14 +433,19 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
         {/* ── KPI Bar — colapsable en mobile ── */}
         <div className={`editorial-kpi-bar${activeTab === 'archived' ? ' kpi-bar-archived' : ''}${kpiExpanded ? ' kpi-expanded' : ''}`}>
           {/* Resumen mobile (solo visible en mobile, siempre) */}
-          <button className="kpi-mobile-summary" onClick={() => setKpiExpanded(v => !v)}>
+          <button
+            className="kpi-mobile-summary"
+            onClick={() => setKpiExpanded(v => !v)}
+            aria-expanded={kpiExpanded}
+            aria-label={kpiExpanded ? 'Colapsar resumen KPI' : 'Expandir resumen KPI'}
+          >
             <span>
               {kpi.mode === 'archived'
                 ? `${kpi.total} archivadas · ${kpi.estesMes} este mes`
                 : `${kpi.total} acciones · ${kpi.pct}% avance`
               }
             </span>
-            <svg className="kpi-chevron" width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <svg className="kpi-chevron" width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
               <path d={kpiExpanded ? 'M3 9l4-4 4 4' : 'M3 5l4 4 4-4'} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </button>
@@ -607,6 +620,7 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
       </div>
       {/* ── fin editorial-sticky-block ── */}
 
+      <main id="main-content" role="tabpanel" aria-labelledby={activeTab === 'active' ? 'tab-active' : 'tab-archived'}>
       {loading && <div className="loading-state"><div className="spinner" /><span>Cargando acciones...</span></div>}
       {error && <div className="error-state"><strong>Error de conexión:</strong> {error}</div>}
 
@@ -648,6 +662,8 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
           )}
         </>
       )}
+
+      </main>
 
       {/* Modales */}
       {showModal && (

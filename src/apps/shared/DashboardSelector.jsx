@@ -44,7 +44,7 @@ export default function DashboardSelector({ userName, userEmail, onSelect, onLog
                 <path d="M4 20L10 14L16 17L24 9" stroke="#0f2b41" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </span>
-            <h2 className="selector-card-title">Mesa de Medios</h2>
+            <span className="selector-card-title">Mesa de Medios</span>
             <p className="selector-card-desc">Gestión de campañas y contenidos</p>
             {lastUsed === 'medios' && (
               <span className="selector-last-badge">Último usado</span>
@@ -63,7 +63,7 @@ export default function DashboardSelector({ userName, userEmail, onSelect, onLog
                 <path d="M19.5 21h3M21 19.5v3" stroke="#0f2b41" strokeWidth="1.3" strokeLinecap="round"/>
               </svg>
             </span>
-            <h2 className="selector-card-title">Mesa Editorial</h2>
+            <span className="selector-card-title">Mesa Editorial</span>
             <p className="selector-card-desc">Plan comunicacional y acciones por eje</p>
             {lastUsed === 'editorial' && (
               <span className="selector-last-badge">Último usado</span>

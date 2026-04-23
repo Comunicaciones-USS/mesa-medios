@@ -504,6 +504,7 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
         )}
       </div>
 
+      <main id="main-content">
       {loading && <div className="loading-state"><div className="spinner" /><span>Cargando datos...</span></div>}
       {error && <div className="error-state"><strong>Error de conexión:</strong> {error}</div>}
 
@@ -549,6 +550,8 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
           </div>
         </>
       )}
+
+      </main>
 
       {/* Modales */}
       {showModal === 'new' && (

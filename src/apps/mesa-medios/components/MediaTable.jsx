@@ -173,9 +173,11 @@ const TemaRow = memo(function TemaRow({
             <button
               className={`tema-expand-btn${isExpanded ? ' expanded' : ''}`}
               onClick={() => onToggleTema(tema.id)}
-              title={isExpanded ? 'Colapsar' : 'Expandir fechas'}
+              title={isExpanded ? 'Colapsar fechas' : 'Expandir fechas'}
+              aria-label={isExpanded ? `Colapsar fechas de ${tema.nombre}` : `Expandir fechas de ${tema.nombre}`}
+              aria-expanded={isExpanded}
             >
-              <svg width="10" height="10" viewBox="0 0 10 10" fill="none"
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true"
                 style={{ transform: isExpanded ? 'rotate(90deg)' : 'none', transition: 'transform .15s' }}>
                 <path d="M3 1.5l4 3.5-4 3.5" stroke="currentColor" strokeWidth="1.4"
                   strokeLinecap="round" strokeLinejoin="round" />
@@ -235,8 +237,9 @@ const TemaRow = memo(function TemaRow({
               className="tema-trash-btn"
               onClick={e => { e.stopPropagation(); onDeleteTema(tema.id) }}
               title="Eliminar tema"
+              aria-label={`Eliminar tema ${tema.nombre}`}
             >
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
                 <path d="M2 3.5h10M5.5 3.5V2h3v1.5M5.833 6v4M8.167 6v4M3 3.5l.5 8a1 1 0 001 .917h5a1 1 0 001-.917l.5-8"
                   stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
@@ -294,8 +297,9 @@ const TemaRow = memo(function TemaRow({
                 className="btn-delete"
                 onClick={() => onDeleteRow(planif.id)}
                 title="Eliminar planificación"
+                aria-label="Eliminar planificación"
               >
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
                   <path d="M2 3.5h10M5.5 3.5V2h3v1.5M5.833 6v4M8.167 6v4M3 3.5l.5 8a1 1 0 001 .917h5a1 1 0 001-.917l.5-8"
                     stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
@@ -447,8 +451,8 @@ export default function MediaTable({
           <thead>
             {/* ROW 1: Grupos */}
             <tr className="group-header-row">
-              <th className="sticky-col col-contenidos group-dark" rowSpan={3}>TEMAS</th>
-              <th className="sticky-col col-semana group-dark" rowSpan={3}>FECHA</th>
+              <th scope="col" className="sticky-col col-contenidos group-dark" rowSpan={3}>TEMAS</th>
+              <th scope="col" className="sticky-col col-semana group-dark" rowSpan={3}>FECHA</th>
               {activeGroups.map(g => {
                 const isCollapsed   = collapsedGroups.has(g.id)
                 const groupColCount = activeCols.filter(c => c.group === g.id).length
@@ -458,18 +462,23 @@ export default function MediaTable({
                 return (
                   <th
                     key={g.id}
+                    scope="colgroup"
                     colSpan={isCollapsed ? 1 : groupColCount}
                     rowSpan={rowSpan}
                     className={`group-header ${g.className}${isCollapsed ? ' group-collapsed' : ''}`}
                     onClick={() => onToggleGroup?.(g.id)}
+                    onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggleGroup?.(g.id) } }}
+                    tabIndex={0}
+                    aria-expanded={!isCollapsed}
+                    aria-label={`${g.label} — ${isCollapsed ? 'expandir grupo' : 'colapsar grupo'}`}
                     style={{ cursor: 'pointer', userSelect: 'none' }}
                   >
-                    <span className="group-toggle-icon">{isCollapsed ? '▸' : '▾'}</span>
+                    <span className="group-toggle-icon" aria-hidden="true">{isCollapsed ? '▸' : '▾'}</span>
                     {isCollapsed ? '' : g.label}
                   </th>
                 )
               })}
-              <th className="col-actions group-dark" rowSpan={3} />
+              <th scope="col" className="col-actions group-dark" rowSpan={3}><span className="sr-only">Acciones</span></th>
             </tr>
 
             {/* ROW 2: Subgrupos */}
@@ -479,10 +488,10 @@ export default function MediaTable({
                 const cols         = activeCols.filter(c => c.group === g.id)
                 const subs         = [...new Set(cols.map(c => c.subgroup).filter(Boolean))]
                 const hasSubgroups = subs.length > 0
-                if (isCollapsed)   return <th key={g.id} className="subgroup-cell subgroup-collapsed" />
+                if (isCollapsed)   return <th key={g.id} scope="col" className="subgroup-cell subgroup-collapsed" />
                 if (!hasSubgroups) return null
                 return subs.map(sg => (
-                  <th key={sg} colSpan={cols.filter(c => c.subgroup === sg).length} className="subgroup-cell">{sg}</th>
+                  <th key={sg} scope="colgroup" colSpan={cols.filter(c => c.subgroup === sg).length} className="subgroup-cell">{sg}</th>
                 ))
               })}
             </tr>
@@ -490,9 +499,9 @@ export default function MediaTable({
             {/* ROW 3: Columnas individuales */}
             <tr className="sub-header-row">
               {activeGroups.map(g => {
-                if (collapsedGroups.has(g.id)) return <th key={g.id} className="sub-header sub-header-placeholder" />
+                if (collapsedGroups.has(g.id)) return <th key={g.id} scope="col" className="sub-header sub-header-placeholder" />
                 return activeCols.filter(c => c.group === g.id).map(col => (
-                  <th key={col.id} className="sub-header">
+                  <th key={col.id} scope="col" className="sub-header">
                     <span className="sub-label">{col.label}</span>
                     {col.sub && <span className="sub-sublabel">{col.sub}</span>}
                   </th>
