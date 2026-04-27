@@ -39,7 +39,7 @@ function bodyStyle(bgRgb, fgRgb) {
 }
 
 export function generateMediosExcel({ temas, selectedIds, userName }) {
-  const NCOLS = 4
+  const NCOLS = 4 // matches colHeaders array: FECHA, CANAL, ACCIÓN/DESCRIPCIÓN, RESPONSABLE
   const wb    = XLSX.utils.book_new()
   const ws    = {}
   const merges = []
@@ -72,7 +72,7 @@ export function generateMediosExcel({ temas, selectedIds, userName }) {
 
   // Row 3: meta
   ws[XLSX.utils.encode_cell({ r: row, c: 0 })] = makeCell(
-    `Generado el ${dateStr} · Por: ${userName} · ${n} tema${n !== 1 ? 's' : ''} incluido${n !== 1 ? 's' : ''}`,
+    `Generado el ${dateStr} · Por: ${userName ?? '—'} · ${n} tema${n !== 1 ? 's' : ''} incluido${n !== 1 ? 's' : ''}`,
     { font: { name: 'Montserrat', sz: 9, color: { rgb: '9CA3AF' } } }
   )
   merges.push({ s: { r: row, c: 0 }, e: { r: row, c: NCOLS - 1 } })
@@ -117,7 +117,7 @@ export function generateMediosExcel({ temas, selectedIds, userName }) {
 
     // Data rows: one row per cell with valor 'si'/'sí' or 'pd'
     let dataCount = 0
-    const sortedPlanifs = [...tema.planificaciones].sort((a, b) =>
+    const sortedPlanifs = [...(tema.planificaciones ?? [])].sort((a, b) =>
       (a.semana || '').localeCompare(b.semana || '')
     )
 
@@ -158,7 +158,7 @@ export function generateMediosExcel({ temas, selectedIds, userName }) {
   ws['!ref']  = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: row - 1, c: NCOLS - 1 } })
   ws['!cols'] = [{ wch: 14 }, { wch: 24 }, { wch: 52 }, { wch: 20 }]
   ws['!merges'] = merges
-  ws['!rows']   = Array(5).fill(null)
+  ws['!rows'] = []
   ws['!rows'][0] = { hpx: 10 }
   ws['!rows'][1] = { hpx: 28 }
   ws['!rows'][4] = { hpx: 10 }
