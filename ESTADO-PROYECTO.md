@@ -1,5 +1,5 @@
 # Estado del Proyecto — Mesa de Medios USS
-**Actualizado:** 2026-04-27 | **Branch:** `main` | **Commit:** `38c7a89`
+**Actualizado:** 2026-04-27 | **Branch:** `main` | **Commit:** `0bdd9c5`
 
 ---
 
@@ -41,7 +41,8 @@ Dashboard colaborativo en tiempo real para el equipo de Comunicaciones USS. Tien
 | Build | Vite + @vitejs/plugin-react | 5.0 / 4.2 |
 | Backend / DB | Supabase (PostgreSQL + Realtime) | ^2.39 |
 | Deploy | GitHub Pages via `gh-pages` | ^6.1 |
-| Estilos | CSS puro (index.css, ~4900 líneas) | — |
+| Estilos | CSS puro (index.css, ~5440 líneas) | — |
+| Generación Excel | xlsx-js-style | ^1.2.0 |
 | Runtime | Browser (SPA, sin SSR) | — |
 
 > **Nota performance:** MediaTable usa `React.memo` con comparación custom en `TemaRow` y el patrón `temasRef` en los handlers para evitar re-renders masivos al editar celdas. El `ResizeObserver` de `--above-table` está debounced (100ms) con RAF para evitar layout thrashing.
@@ -82,14 +83,18 @@ sistema-gestion-main/
 │       │   │   ├── Toaster.jsx         # Notificaciones toast (máx 3, con action button)
 │       │   │   ├── ConfirmDialog.jsx   # Modal confirmación genérico
 │       │   │   ├── USSLoader.jsx       # Spinner animado USS
-│       │   │   └── BottomSheet.jsx     # Bottom sheet para filtros mobile
+│       │   │   ├── BottomSheet.jsx     # Bottom sheet para filtros mobile
+│       │   │   └── ExportModal.jsx     # Modal selección de ítems para exportar a Excel
 │       │   ├── hooks/
 │       │   │   ├── useToast.js         # Toast state: addToast / removeToast
-│       │   │   └── useDebounce.js      # 300ms debounce para filtros
+│       │   │   ├── useDebounce.js      # 300ms debounce para filtros
+│       │   │   └── useFocusTrap.js     # Focus trap para modales (Tab/Shift+Tab dentro del overlay)
 │       │   └── utils/
 │       │       ├── supabase.js         # Cliente Supabase (NO MODIFICAR)
 │       │       ├── crypto.js           # SHA-256 hash de PINs via crypto.subtle
-│       │       └── audit.js            # logAuditEntry() — helper centralizado audit_logs
+│       │       ├── audit.js            # logAuditEntry() — helper centralizado audit_logs
+│       │       ├── excelExportMedios.js    # Generador .xlsx ejecutivo Mesa de Medios
+│       │       └── excelExportEditorial.js # Generador .xlsx ejecutivo Mesa Editorial
 │       │
 │       ├── mesa-medios/
 │       │   ├── MesaMediosApp.jsx       # App principal
@@ -117,8 +122,10 @@ sistema-gestion-main/
 │
 ├── scripts/                            # SQL de migración para Supabase
 │   ├── add-archived-field.sql
+│   ├── add-archived-medios.sql
 │   ├── add-completed-at.sql
 │   ├── add-parent-and-tipologia.sql
+│   ├── add-performance-indexes.sql
 │   ├── add-pin-per-user.sql
 │   ├── migrate-ao-to-always-on.sql
 │   ├── migrate-rrss-split.sql
@@ -520,32 +527,30 @@ git push && npm run deploy
 
 ## 8. Estado del Git
 
-### Branch actual: `main` (HEAD: `6e24417`)
+### Branch actual: `main` (HEAD: `0bdd9c5`)
 
 ### Últimos commits:
 ```
+0bdd9c5 merge(chore/repo-cleanup): limpieza completa del repositorio
+f962646 chore: remove unused exports getGroupCols and EJE_LABELS
+7af18f2 fix(export): remove unhandled throw and fix CSS comment
+937805f docs: add excel export feature to ESTADO-PROYECTO.md
+38c7a89 fix(export): move exportPreselected after displayRows in MesaEditorialApp
+1171b13 feat(export): wire export button and modal in Mesa Editorial
+dd0d2a8 feat(export): wire export button and modal in Mesa de Medios
+bd4f316 fix(export): guard null inputs in excelExportEditorial
+f43b316 feat(export): Excel generator for Mesa Editorial
+141e7f6 fix(export): guard null planificaciones and minor robustness in excelExportMedios
+56ba196 feat(export): Excel generator for Mesa de Medios
+4e9b4f8 feat(export): CSS for ExportModal and export buttons
+6121428 fix(export): focus restore, body scroll lock, generating reset in ExportModal
+77d13a4 feat(export): ExportModal shared component
+e9ed845 feat(export): install xlsx-js-style
+387c362 fix(medios): header cohesion — tabs flush con header y ancho completo
 6e24417 feat(a11y): focus trap and return focus in overlays
 85c1b06 feat(a11y): adjust color contrast to meet WCAG AA
 1784611 feat(a11y): add ARIA labels, landmarks and focus styles
 e00438f docs(a11y): WCAG AA audit report
-fc362aa chore(docs): update ESTADO-PROYECTO.md after performance optimizations
-0c9428a fix(medios): fix TemaRow memo comparator to use content-based tema comparison
-44d36e3 docs: update ESTADO-PROYECTO.md after MediaTable performance optimization
-7411bf6 perf(medios): memoize rows and handlers in MediaTable
-4650896 feat(editorial): rename ejes + editable eje field per row
-3d4fe60 fix(desktop): KPI gap + Explorar button style on white background
-01c937e fix(mobile): fix action bar overflow + desktop KPI spacing
-9b611d0 feat(security): migrate PIN validation to SECURITY DEFINER RPC
-04fdd76 merge(feat/mobile-ux-bottom-sheet): UX mobile bottom sheet + compact header
-d5a5836 feat(mobile): bottom sheet filters + compact header + KPI colapsable
-02f4bc7 merge(fix/deuda-tecnica-seccion-10): resolver deuda técnica sección 10
-15eadb6 refactor(audit): standardize new details entries to JSON via helper
-c49dbd6 fix(editorial): make date inputs controlled to reflect realtime changes
-4ea6e17 feat(editorial): warn before unload if there are unsaved edits
-95c48db merge(fix/sticky-header-editorial): sticky header unificado Mesa Editorial
-baee408 merge(feat/editorial-archive): sistema de archivado Mesa Editorial
-a49a1d9 feat(login): redesign split layout + PIN-per-user auth + Always ON fecha
-a19f700 release(medios): Release 2 — UX refactor Mesa de Medios, temas canónicos, sync Editorial↔Medios
 ```
 
 ### Branches:
@@ -580,7 +585,7 @@ Todos en `scripts/`. Ejecutar en **Supabase SQL Editor** (no en producción auto
 
 ## 10. Deuda Técnica
 
-### Resoluciones — última revisión 2026-04-23
+### Resoluciones — última revisión 2026-04-27
 
 | Ítem | Resolución |
 |---|---|
@@ -599,6 +604,9 @@ Todos en `scripts/`. Ejecutar en **Supabase SQL Editor** (no en producción auto
 | Performance MediaTable (re-render completo por edición) | Resuelto — memoización `TemaRow` + patrón `temasRef` + `ResizeObserver` debounced |
 | Virtualización vertical `react-window` (MediaTable) | Evaluado — umbral no alcanzado (18 temas en producción vs. umbral 30). Implementar si temas > 30. Nota: requeriría refactorizar `<table>` → `<div>` grid por incompatibilidad de `react-window` con `position: sticky` horizontal. |
 | Accesibilidad sin auditoría WCAG | Resuelto parcialmente — WCAG AA en ARIA, landmarks, focus visible, contraste y focus traps. Reporte completo en docs/A11Y-AUDIT.md |
+| Exports sin usar (`getGroupCols`, `EJE_LABELS`) | Resuelto — eliminados en `chore/repo-cleanup` (2026-04-27) |
+
+> **Auditoría Knip 2026-04-27:** 0 archivos sin uso · 0 dependencias sin uso · 0 imports rotos · 0 exports sin usar (post-cleanup) · 3 `console.*` todos legítimos (error handlers + env warning). Repositorio sin deuda técnica de código muerto.
 
 ### Deuda activa
 
@@ -669,6 +677,7 @@ Todos en `scripts/`. Ejecutar en **Supabase SQL Editor** (no en producción auto
 | Realtime | ✅ |
 | Audit log | ✅ |
 | Vista mobile (cards) | ✅ |
+| **Exportación Excel:** Botón "Exportar" en toolbar (solo tab Activas, desktop). Modal con selección de acciones, búsqueda, pre-selección según filtros activos. Genera `.xlsx` con bloques por eje, colores de eje en subheaders, columnas STATUS con colores. Helper: `shared/utils/excelExportEditorial.js`. | ✅ |
 
 ### Autenticación y Admin
 
