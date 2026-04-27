@@ -4957,3 +4957,269 @@ body {
   .header { flex-direction: row; align-items: center; padding: 0 14px; min-height: 52px; }
   .header-row-top { flex: 1; }
 }
+
+/* ════════════════════════════════════════════════════════════════
+   feat/medios-archive — Tabs, hover guides, archivado, badges
+   ════════════════════════════════════════════════════════════════ */
+
+/* ── Tabs Mesa de Medios ─────────────────────────────────────── */
+.medios-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 16px 0;
+  border-bottom: 1px solid var(--border);
+  background: #fff;
+}
+
+/* Mobile: oculto en desktop (el tab de desktop está dentro del filter bar) */
+.medios-tabs-mobile { display: none; }
+@media (max-width: 768px) {
+  .medios-tabs-mobile {
+    display: flex;
+    padding: 8px 14px 0;
+    background: #fff;
+    border-bottom: 1px solid var(--border);
+  }
+  /* El tab desktop dentro del filter-bar se oculta junto con el filter-bar */
+}
+
+/* ── Filter bar: label "Archivado:" ─────────────────────────── */
+.filter-date-label {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  margin-right: 2px;
+}
+.medios-filter-row-archived {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* ── Hover guides: fila ─────────────────────────────────────── */
+/* Fila tema header */
+@media (hover: hover) {
+  .tema-header-row:hover > td:not(.status-si):not(.status-pd):not(.status-no) {
+    background: rgba(15, 43, 65, 0.035);
+  }
+  .tema-header-row:hover > .tema-header-sticky-col {
+    background: rgba(236, 244, 251, 0.8) !important;
+  }
+}
+
+/* ── Hover guides: columna ──────────────────────────────────── */
+@media (hover: hover) {
+  .media-table td.col-hovered:not(.status-si):not(.status-pd):not(.status-no),
+  .media-table th.col-hovered {
+    background: rgba(39, 93, 165, 0.045);
+  }
+  /* Intersección fila + columna */
+  .tema-header-row:hover > td.col-hovered,
+  .planificacion-row:hover > td.col-hovered {
+    background: rgba(15, 43, 65, 0.08) !important;
+  }
+}
+
+/* ── Botones de acción del tema (archive + trash) ───────────── */
+.tema-action-btns {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+/* Botón archivar tema */
+.tema-archive-btn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  background: transparent;
+  color: transparent;
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 0;
+  transition: color .12s, background .12s;
+}
+.tema-header-row:hover .tema-archive-btn { color: #4a6a84; }
+.tema-archive-btn:hover { background: #e0eeff !important; color: #0f2b41 !important; }
+
+/* Mantener trash igual pero dentro del wrapper */
+.tema-action-btns .tema-trash-btn { color: transparent; }
+.tema-header-row:hover .tema-action-btns .tema-trash-btn { color: #dc2626; }
+
+/* Botón reactivar tema (tab archivados) */
+.tema-reactivate-btn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 8px;
+  border: none;
+  background: transparent;
+  color: transparent;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  transition: color .12s, background .12s;
+  white-space: nowrap;
+}
+.tema-header-row:hover .tema-reactivate-btn { color: #1D7A4F; }
+.tema-reactivate-btn:hover { background: #dcfce7 !important; color: #14532d !important; }
+
+/* ── Label "Archivado el" dentro de tema-header-info ─────────── */
+.tema-archived-at-label {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  background: #f1f5f9;
+  border-radius: 4px;
+  padding: 2px 7px;
+  flex-shrink: 0;
+}
+
+/* ── Badge de inactividad ───────────────────────────────────── */
+.tema-inactive-badge {
+  font-size: 0.62rem;
+  font-weight: 500;
+  background: #f3f4f6;
+  color: #6b7280;
+  border-radius: 4px;
+  padding: 2px 6px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  cursor: default;
+}
+
+/* ── Modo archivado en tabla ────────────────────────────────── */
+.table-wrapper-archived {
+  background: #fafafa;
+}
+.table-wrapper-archived .table-scroll {
+  background: #fafafa;
+}
+
+/* Filas de tema archivado */
+.tema-row-archived {
+  opacity: 0.82;
+}
+.tema-row-archived .tema-header-sticky-col {
+  background: #eef2f7 !important;
+}
+.tema-row-archived .tema-header-info-cell {
+  background: #eef2f7 !important;
+}
+
+/* Filas de planificación en modo archivado */
+.planif-row-archived { opacity: 0.78; }
+
+/* Celdas de solo lectura */
+.cell-readonly {
+  cursor: default !important;
+  pointer-events: none;
+}
+
+/* Fecha no editable en archivados */
+.semana-editable { cursor: pointer; }
+.semana-text:not(.semana-editable) { cursor: default; }
+
+/* ── Mobile: archivado ──────────────────────────────────────── */
+.mobile-card-view-archived {
+  background: #fafafa;
+}
+
+/* Card de tema archivado */
+.mobile-tema-archived {
+  opacity: 0.85;
+  background: #f5f7fa;
+}
+.mobile-tema-archived .mobile-tema-header {
+  background: #f0f4f9;
+}
+
+/* Fecha de archivado en cards mobile */
+.mobile-archived-at {
+  font-size: 0.6rem;
+  color: #6b7280;
+  background: #f1f5f9;
+  border-radius: 3px;
+  padding: 1px 5px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* Área de acciones del tema en mobile */
+.mobile-tema-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.mobile-tema-title-area {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+.mobile-tema-actions {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* Botón archivar en mobile */
+.mobile-tema-archive-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  border-radius: 6px;
+  padding: 0;
+  transition: color .12s, background .12s;
+  flex-shrink: 0;
+}
+.mobile-tema-archive-btn:hover,
+.mobile-tema-archive-btn:active { background: #e0eeff; color: #0f2b41; }
+
+/* Botón reactivar en mobile */
+.mobile-tema-reactivate-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  color: #1D7A4F;
+  cursor: pointer;
+  border-radius: 6px;
+  padding: 0;
+  transition: color .12s, background .12s;
+  flex-shrink: 0;
+}
+.mobile-tema-reactivate-btn:hover,
+.mobile-tema-reactivate-btn:active { background: #dcfce7; color: #14532d; }
+
+/* Slot readonly en mobile */
+.slot-readonly {
+  pointer-events: none;
+  opacity: 0.85;
+}
+
+/* ── Tap target ─────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .mobile-tema-archive-btn,
+  .mobile-tema-reactivate-btn { min-width: 44px; min-height: 44px; }
+}

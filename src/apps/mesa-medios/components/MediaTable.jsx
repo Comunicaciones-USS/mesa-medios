@@ -1,4 +1,4 @@
-import { useState, Fragment, memo, useMemo, useCallback } from 'react'
+import { useState, Fragment, memo, useMemo, useCallback, useRef } from 'react'
 import { MEDIA_COLS, GROUPS } from '../config'
 import { getCellData } from '../utils'
 import CellPopover from './CellPopover'
@@ -25,6 +25,13 @@ function getCellMeta(raw) {
 function formatDate(dateStr) {
   if (!dateStr) return null
   return new Date(dateStr + 'T12:00:00').toLocaleDateString('es-CL', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+  })
+}
+
+function formatDateShort(dateStr) {
+  if (!dateStr) return null
+  return new Date(dateStr).toLocaleDateString('es-CL', {
     day: '2-digit', month: '2-digit', year: 'numeric',
   })
 }
@@ -69,31 +76,45 @@ const TemaRow = memo(function TemaRow({
   onDeleteTema,
   onRenameTema,
   onAddPlanificacion,
-  // Props de popover activo: pasadas desde MediaTable para que
-  // la celda activa pueda mostrarse como active sin re-renderizar
-  // toda la tabla (solo este TemaRow se re-renderiza).
-  activePopoverKey,  // `${planifId}:${colId}` | null
+  onArchiveTema,
+  onReactivateTema,
+  isArchived,
+  activePopoverKey,
 }) {
-  // Estado per-row: hover, edición de fecha y nombre de tema
   const [hoverPlanif,     setHoverPlanif]     = useState(null)
-  const [editingField,    setEditingField]    = useState(null) // { rowId, field }
+  const [editingField,    setEditingField]    = useState(null)
   const [editValue,       setEditValue]       = useState('')
   const [editingTemaName, setEditingTemaName] = useState('')
   const [isEditingTema,   setIsEditingTema]   = useState(false)
 
-  // Estadísticas del tema memoizadas
   const { targetDate, isNext, activeChannels } = useMemo(
     () => getTemaStats(tema),
     [tema.planificaciones] // eslint-disable-line react-hooks/exhaustive-deps
   )
 
+  // Badge de inactividad: solo en tab activos, temas con última planif > 30 días
+  const maxSemana = useMemo(() => {
+    if (tema.planificaciones.length === 0) return null
+    const dates = tema.planificaciones.map(p => p.semana).filter(Boolean).sort()
+    return dates[dates.length - 1] || null
+  }, [tema.planificaciones])
+
+  const inactiveDays = useMemo(() => {
+    if (isArchived || !maxSemana) return 0
+    const today = new Date()
+    const last  = new Date(maxSemana + 'T12:00:00')
+    const days  = Math.floor((today - last) / (1000 * 60 * 60 * 24))
+    return days > 30 ? days : 0
+  }, [maxSemana, isArchived])
+
   const n = tema.planificaciones.length
 
   // ── Edición inline de fecha ──────────────────────────────────
   const startEditField = useCallback((planifId, field, currentValue) => {
+    if (isArchived) return
     setEditingField({ rowId: planifId, field })
     setEditValue(currentValue || '')
-  }, [])
+  }, [isArchived])
 
   const commitEditField = useCallback(() => {
     if (editingField) onFieldChange(editingField.rowId, editingField.field, editValue)
@@ -107,9 +128,10 @@ const TemaRow = memo(function TemaRow({
 
   // ── Edición inline de nombre del tema ───────────────────────
   const startEditTema = useCallback((nombre) => {
+    if (isArchived) return
     setIsEditingTema(true)
     setEditingTemaName(nombre || '')
-  }, [])
+  }, [isArchived])
 
   const commitTemaName = useCallback(() => {
     if (editingTemaName.trim()) {
@@ -148,12 +170,12 @@ const TemaRow = memo(function TemaRow({
         return (
           <td
             key={col.id}
-            className={`media-cell status-${meta.status}${isLast ? ' border-group-right' : ''}${isOpen ? ' cell-active' : ''}`}
-            onClick={e => {
+            className={`media-cell status-${meta.status}${isLast ? ' border-group-right' : ''}${isOpen ? ' cell-active' : ''}${isArchived ? ' cell-readonly' : ''}`}
+            onClick={isArchived ? undefined : e => {
               const rect = e.currentTarget.getBoundingClientRect()
               onOpenPopover(planif.id, col.id, planif.medios, { x: rect.left, y: rect.bottom })
             }}
-            title={valor || 'Clic para asignar estado'}
+            title={isArchived ? (valor || '') : (valor || 'Clic para asignar estado')}
           >
             {meta.display && <span className="cell-text">{meta.display}</span>}
             {notas && <span className="cell-notes-icon" title="Tiene detalles" />}
@@ -166,8 +188,8 @@ const TemaRow = memo(function TemaRow({
   return (
     <Fragment>
       {/* ────── HEADER DEL TEMA ────────────────────────── */}
-      <tr className={`tema-header-row${isExpanded ? ' expanded' : ''}`}>
-        {/* Celda sticky: nombre del tema (siempre visible) */}
+      <tr className={`tema-header-row${isExpanded ? ' expanded' : ''}${isArchived ? ' tema-row-archived' : ''}`}>
+        {/* Celda sticky: nombre del tema */}
         <td className="sticky-col col-contenidos tema-header-sticky-col">
           <div className="tema-header-name">
             <button
@@ -196,16 +218,25 @@ const TemaRow = memo(function TemaRow({
             ) : (
               <span
                 className="tema-nombre"
-                onDoubleClick={e => { e.stopPropagation(); startEditTema(tema.nombre) }}
-                title="Doble clic para editar el nombre"
+                onDoubleClick={isArchived ? undefined : e => { e.stopPropagation(); startEditTema(tema.nombre) }}
+                title={isArchived ? tema.nombre : 'Doble clic para editar el nombre'}
               >
                 {tema.nombre || <em className="placeholder">Sin nombre</em>}
+              </span>
+            )}
+            {/* Badge inactividad (solo tab activos) */}
+            {inactiveDays > 0 && (
+              <span
+                className="tema-inactive-badge"
+                title={`Última planificación: ${formatDate(maxSemana)}. Considera archivar este tema.`}
+              >
+                Inactivo · {inactiveDays}d
               </span>
             )}
           </div>
         </td>
 
-        {/* Celda info: badges + datos + trash */}
+        {/* Celda info: badges + datos + acciones */}
         <td colSpan={totalColSpan - 1} className="tema-header-info-cell">
           <div className="tema-header-info">
             <span className="planif-count">
@@ -232,18 +263,57 @@ const TemaRow = memo(function TemaRow({
                 </span>
               </>
             )}
+            {/* Archivado el — solo en tab archivados */}
+            {isArchived && tema.archived_at && (
+              <>
+                <span className="tema-info-sep">·</span>
+                <span className="tema-archived-at-label">
+                  Archivado el {formatDateShort(tema.archived_at)}
+                </span>
+              </>
+            )}
             <div className="tema-header-spacer" />
-            <button
-              className="tema-trash-btn"
-              onClick={e => { e.stopPropagation(); onDeleteTema(tema.id) }}
-              title="Eliminar tema"
-              aria-label={`Eliminar tema ${tema.nombre}`}
-            >
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-                <path d="M2 3.5h10M5.5 3.5V2h3v1.5M5.833 6v4M8.167 6v4M3 3.5l.5 8a1 1 0 001 .917h5a1 1 0 001-.917l.5-8"
-                  stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
+            {/* Botones de acción: distintos según tab */}
+            {!isArchived ? (
+              <div className="tema-action-btns">
+                <button
+                  className="tema-archive-btn"
+                  onClick={e => { e.stopPropagation(); onArchiveTema(tema.id) }}
+                  title="Archivar tema"
+                  aria-label={`Archivar tema ${tema.nombre}`}
+                >
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                    <rect x="1.5" y="5.5" width="11" height="7" rx="1" stroke="currentColor" strokeWidth="1.2"/>
+                    <path d="M1 3.5h12v2H1z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M5.5 8.5h3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                  </svg>
+                </button>
+                <button
+                  className="tema-trash-btn"
+                  onClick={e => { e.stopPropagation(); onDeleteTema(tema.id) }}
+                  title="Eliminar tema"
+                  aria-label={`Eliminar tema ${tema.nombre}`}
+                >
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                    <path d="M2 3.5h10M5.5 3.5V2h3v1.5M5.833 6v4M8.167 6v4M3 3.5l.5 8a1 1 0 001 .917h5a1 1 0 001-.917l.5-8"
+                      stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+              </div>
+            ) : (
+              <button
+                className="tema-reactivate-btn"
+                onClick={e => { e.stopPropagation(); onReactivateTema(tema.id) }}
+                title="Reactivar tema"
+                aria-label={`Reactivar tema ${tema.nombre}`}
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                  <path d="M2.5 7A4.5 4.5 0 1 0 7 2.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                  <path d="M7 2.5L4.5 2.5 4.5 5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                <span>Reactivar</span>
+              </button>
+            )}
           </div>
         </td>
       </tr>
@@ -254,7 +324,7 @@ const TemaRow = memo(function TemaRow({
         return (
           <tr
             key={planif.id}
-            className={`planificacion-row ${idx % 2 === 0 ? 'row-odd' : 'row-even'}${hoverPlanif === planif.id ? ' row-hover' : ''}`}
+            className={`planificacion-row ${idx % 2 === 0 ? 'row-odd' : 'row-even'}${hoverPlanif === planif.id ? ' row-hover' : ''}${isArchived ? ' planif-row-archived' : ''}`}
             onMouseEnter={() => setHoverPlanif(planif.id)}
             onMouseLeave={() => setHoverPlanif(null)}
           >
@@ -265,7 +335,7 @@ const TemaRow = memo(function TemaRow({
 
             {/* FECHA col: edición inline */}
             <td className="sticky-col col-semana td-semana">
-              {isEditingDate ? (
+              {!isArchived && isEditingDate ? (
                 <input
                   className="inline-edit date-edit"
                   type="date"
@@ -277,9 +347,9 @@ const TemaRow = memo(function TemaRow({
                 />
               ) : (
                 <span
-                  className="semana-text"
-                  onClick={() => startEditField(planif.id, 'semana', planif.semana)}
-                  title="Clic para editar fecha"
+                  className={`semana-text${isArchived ? '' : ' semana-editable'}`}
+                  onClick={isArchived ? undefined : () => startEditField(planif.id, 'semana', planif.semana)}
+                  title={isArchived ? undefined : 'Clic para editar fecha'}
                 >
                   {planif.semana
                     ? formatDate(planif.semana)
@@ -291,26 +361,28 @@ const TemaRow = memo(function TemaRow({
             {/* Celdas de medios */}
             {renderMediaCells(planif)}
 
-            {/* Acción: eliminar planificación */}
+            {/* Acción: eliminar planificación (solo tab activos) */}
             <td className="col-actions td-actions">
-              <button
-                className="btn-delete"
-                onClick={() => onDeleteRow(planif.id)}
-                title="Eliminar planificación"
-                aria-label="Eliminar planificación"
-              >
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-                  <path d="M2 3.5h10M5.5 3.5V2h3v1.5M5.833 6v4M8.167 6v4M3 3.5l.5 8a1 1 0 001 .917h5a1 1 0 001-.917l.5-8"
-                    stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </button>
+              {!isArchived && (
+                <button
+                  className="btn-delete"
+                  onClick={() => onDeleteRow(planif.id)}
+                  title="Eliminar planificación"
+                  aria-label="Eliminar planificación"
+                >
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                    <path d="M2 3.5h10M5.5 3.5V2h3v1.5M5.833 6v4M8.167 6v4M3 3.5l.5 8a1 1 0 001 .917h5a1 1 0 001-.917l.5-8"
+                      stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+              )}
             </td>
           </tr>
         )
       })}
 
       {/* ────── SIN PLANIFICACIONES ──────────────────────── */}
-      {isExpanded && n === 0 && (
+      {isExpanded && n === 0 && !isArchived && (
         <tr className="planif-empty-row">
           <td colSpan={totalColSpan} className="planif-empty-cell">
             <button
@@ -323,8 +395,8 @@ const TemaRow = memo(function TemaRow({
         </tr>
       )}
 
-      {/* ────── FOOTER: agregar otra fecha ───────────────── */}
-      {isExpanded && n > 0 && (
+      {/* ────── FOOTER: agregar otra fecha (solo tab activos) ─── */}
+      {isExpanded && n > 0 && !isArchived && (
         <tr className="planif-add-row">
           <td colSpan={totalColSpan} className="planif-add-cell">
             <button
@@ -339,9 +411,6 @@ const TemaRow = memo(function TemaRow({
     </Fragment>
   )
 }, (prevProps, nextProps) => {
-  // Comparación por contenido: displayTemas crea nuevos wrappers { ...tema } en cada render,
-  // por lo que la comparación por referencia (===) siempre falla. Comparamos campos escalares
-  // y verificamos identidad de cada planificacion individualmente.
   const pt = prevProps.tema
   const nt = nextProps.tema
   const samePlanifs =
@@ -351,8 +420,11 @@ const TemaRow = memo(function TemaRow({
     pt.id === nt.id &&
     pt.nombre === nt.nombre &&
     pt.origen === nt.origen &&
+    pt.archived === nt.archived &&
+    pt.archived_at === nt.archived_at &&
     samePlanifs &&
     prevProps.isExpanded === nextProps.isExpanded &&
+    prevProps.isArchived === nextProps.isArchived &&
     prevProps.collapsedGroups === nextProps.collapsedGroups &&
     prevProps.activeCols === nextProps.activeCols &&
     prevProps.activeGroups === nextProps.activeGroups &&
@@ -366,7 +438,9 @@ const TemaRow = memo(function TemaRow({
     prevProps.onDeleteRow === nextProps.onDeleteRow &&
     prevProps.onDeleteTema === nextProps.onDeleteTema &&
     prevProps.onRenameTema === nextProps.onRenameTema &&
-    prevProps.onAddPlanificacion === nextProps.onAddPlanificacion
+    prevProps.onAddPlanificacion === nextProps.onAddPlanificacion &&
+    prevProps.onArchiveTema === nextProps.onArchiveTema &&
+    prevProps.onReactivateTema === nextProps.onReactivateTema
   )
 })
 
@@ -380,6 +454,9 @@ export default function MediaTable({
   onDeleteTema,
   onRenameTema,
   onAddPlanificacion,
+  onArchiveTema,
+  onReactivateTema,
+  isArchived = false,
   totalTemas,
   filterQuery,
   onClearFilter,
@@ -392,6 +469,33 @@ export default function MediaTable({
 }) {
   const [popover, setPopover] = useState(null)
 
+  // ── Column hover (DOM manipulation, no React state) ───────────
+  const tableScrollRef = useRef(null)
+  const colHoverRef    = useRef(-1)
+
+  function clearColHover() {
+    if (tableScrollRef.current) {
+      tableScrollRef.current.querySelectorAll('.col-hovered').forEach(el => el.classList.remove('col-hovered'))
+    }
+    colHoverRef.current = -1
+  }
+
+  function handleTableMouseOver(e) {
+    const cell = e.target.closest('td, th')
+    if (!cell) return
+    const idx = cell.cellIndex
+    if (idx === undefined || idx < 0) return
+    if (idx === colHoverRef.current) return
+    clearColHover()
+    colHoverRef.current = idx
+    if (tableScrollRef.current) {
+      tableScrollRef.current
+        .querySelectorAll(`td:nth-child(${idx + 1}), th:nth-child(${idx + 1})`)
+        .forEach(el => el.classList.add('col-hovered'))
+    }
+  }
+
+  // ── Cols ──────────────────────────────────────────────────────
   const activeCols    = visibleCols || MEDIA_COLS
   const activeGroups  = useMemo(
     () => GROUPS.filter(g => activeCols.some(c => c.group === g.id)),
@@ -399,10 +503,9 @@ export default function MediaTable({
   )
   const expandedCols        = activeCols.filter(c => !collapsedGroups.has(c.group))
   const collapsedGroupCount = activeGroups.filter(g => collapsedGroups.has(g.id)).length
-  // 1 TEMAS col + 1 FECHA col + media cols + 1 per collapsed group + 1 actions
   const totalColSpan = expandedCols.length + collapsedGroupCount + 3
 
-  // Contexto para el badge de edición activa
+  // Badge de edición activa
   let editBadgeTema = null, editBadgePlanif = null, editBadgeCol = null
   if (popover) {
     outer: for (const t of temas) {
@@ -419,9 +522,10 @@ export default function MediaTable({
 
   // ── Popover ────────────────────────────────────────────────────
   const openPopover = useCallback((planifId, colId, medios, position) => {
+    if (isArchived) return
     const { valor, notas } = getCellData(medios, colId)
     setPopover({ rowId: planifId, colId, value: valor, notas, position })
-  }, [])
+  }, [isArchived])
 
   function handlePopoverSave(newValue, newNotas) {
     if (popover) onCellChange(popover.rowId, popover.colId, newValue, newNotas)
@@ -432,10 +536,14 @@ export default function MediaTable({
 
   // ── Render ─────────────────────────────────────────────────────
   return (
-    <div className="table-wrapper">
-      <div className="table-scroll">
+    <div className={`table-wrapper${isArchived ? ' table-wrapper-archived' : ''}`}>
+      <div
+        className="table-scroll"
+        ref={tableScrollRef}
+        onMouseOver={handleTableMouseOver}
+        onMouseLeave={clearColHover}
+      >
         <table className="media-table">
-          {/* colgroup fija anchos de columnas sticky para evitar estiramientos al colapsar grupos */}
           <colgroup>
             <col style={{ width: 200, minWidth: 200, maxWidth: 200 }} />
             <col style={{ width: 100, minWidth: 100, maxWidth: 100 }} />
@@ -516,10 +624,12 @@ export default function MediaTable({
                 <td colSpan={totalColSpan} className="empty-state-cell">
                   {totalTemas === 0 ? (
                     <div className="empty-state">
-                      <span className="empty-state-icon">📋</span>
-                      <p className="empty-state-title">Sin temas aún</p>
-                      <span className="empty-state-sub">Agrega el primero para comenzar la planificación</span>
-                      <button className="empty-state-cta" onClick={onAdd}>+ Agregar tema</button>
+                      <span className="empty-state-icon">{isArchived ? '📦' : '📋'}</span>
+                      <p className="empty-state-title">{isArchived ? 'Sin temas archivados' : 'Sin temas aún'}</p>
+                      <span className="empty-state-sub">
+                        {isArchived ? 'Los temas que archives aparecerán aquí' : 'Agrega el primero para comenzar la planificación'}
+                      </span>
+                      {!isArchived && <button className="empty-state-cta" onClick={onAdd}>+ Agregar tema</button>}
                     </div>
                   ) : (
                     <div className="empty-state">
@@ -534,8 +644,6 @@ export default function MediaTable({
             ) : (
               temas.map(tema => {
                 const isExpanded = expandedTemas.has(tema.id)
-                // Calcular si el popover activo es para una planif de este tema,
-                // para pasar solo la clave escalar y no el objeto entero.
                 const temaActivePopoverKey = popover &&
                   tema.planificaciones.some(p => p.id === popover.rowId)
                   ? activePopoverKey
@@ -559,6 +667,9 @@ export default function MediaTable({
                     onDeleteTema={onDeleteTema}
                     onRenameTema={onRenameTema}
                     onAddPlanificacion={onAddPlanificacion}
+                    onArchiveTema={onArchiveTema}
+                    onReactivateTema={onReactivateTema}
+                    isArchived={isArchived}
                     activePopoverKey={temaActivePopoverKey}
                   />
                 )
@@ -568,7 +679,7 @@ export default function MediaTable({
         </table>
       </div>
 
-      {/* ── BADGE de edición activa (sticky) ─────────────────────────── */}
+      {/* ── BADGE de edición activa ─────────────────────────────── */}
       {popover && editBadgeTema && (
         <div className="cell-edit-badge">
           Editando: <strong>{editBadgeTema.nombre}</strong>
@@ -579,8 +690,8 @@ export default function MediaTable({
         </div>
       )}
 
-      {/* ── POPOVER de celda ─────────────────────────────────────────── */}
-      {popover && (
+      {/* ── POPOVER de celda ─────────────────────────────────────── */}
+      {popover && !isArchived && (
         <CellPopover
           value={popover.value}
           notas={popover.notas}
