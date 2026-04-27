@@ -6,8 +6,6 @@ export const EJES = [
   { id: 'vinculacion',   label: 'Impacto Territorial',        color: '#B06A00', responsable: 'Sebastián Fuentes' },
 ]
 
-export const EJE_LABELS = EJES.map(e => e.label)
-
 export const EJE_COLOR_MAP = Object.fromEntries(EJES.map(e => [e.label, e.color]))
 
 // Orden forzado: Ancla → Soporte → Always ON
