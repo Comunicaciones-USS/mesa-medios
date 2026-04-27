@@ -14,6 +14,8 @@ import ConfirmDialog from '../shared/components/ConfirmDialog'
 import UserProfilePanel from '../shared/components/UserProfilePanel'
 import { logAuditEntry } from '../shared/utils/audit'
 import BottomSheet from '../shared/components/BottomSheet'
+import ExportModal from '../shared/components/ExportModal'
+import { generateMediosExcel } from '../shared/utils/excelExportMedios'
 
 export default function MesaMediosApp({ session, userName, onLogout, onBackToSelector, onSwitchDashboard, otherDashboardName }) {
   const [temas,            setTemas]            = useState([])
@@ -54,6 +56,7 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
 
   // Mobile filters sheet
   const [showMobileFilters, setShowMobileFilters] = useState(false)
+  const [showExportModal, setShowExportModal] = useState(false)
 
   // Tab switch — resetea todos los filtros
   function switchTab(tab) {
@@ -165,6 +168,7 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
       const tag = document.activeElement?.tagName
       const inInput = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || document.activeElement?.isContentEditable
       if (e.key === 'Escape') {
+        if (showExportModal)  { setShowExportModal(false);  return }
         if (showProfile)      { setShowProfile(false);      return }
         if (confirmArchive)   { setConfirmArchive(null);    return }
         if (confirmReactivate){ setConfirmReactivate(null); return }
@@ -183,7 +187,7 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [confirmDelete, confirmArchive, confirmReactivate, showModal, showLogs])
+  }, [confirmDelete, confirmArchive, confirmReactivate, showModal, showLogs, showExportModal])
 
   async function fetchData() {
     setLoading(true)
@@ -288,6 +292,22 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
   // Contadores para badges de tabs
   const activeCount   = useMemo(() => temas.filter(t => !t.archived).length, [temas])
   const archivedCount = useMemo(() => temas.filter(t =>  t.archived).length, [temas])
+
+  const exportItems = useMemo(() =>
+    temas
+      .filter(t => !t.archived)
+      .map(t => ({
+        id:   t.id,
+        name: t.nombre || '(sin nombre)',
+        meta: `${t.planificaciones.length} fecha${t.planificaciones.length !== 1 ? 's' : ''}`,
+      })),
+    [temas]
+  )
+
+  const exportPreselected = useMemo(() =>
+    new Set(displayTemas.map(t => t.id)),
+    [displayTemas]
+  )
 
   // handleAddRow: crea tema (si es nuevo) + planificación
   async function handleAddRow({ nombre, semana, temaId }) {
@@ -445,6 +465,18 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
     await logAction('REACTIVAR', id, nombre, `Reactivó tema "${nombre}"`)
     addToast(`"${nombre}" reactivado y visible en Activos.`, 'success')
   }, [confirmReactivate, addToast, logAction])
+
+  function handleExport(selectedIds) {
+    try {
+      generateMediosExcel({ temas, selectedIds, userName })
+      setShowExportModal(false)
+      addToast('Reporte exportado correctamente.', 'success')
+    } catch (err) {
+      console.error('Error generando Excel:', err)
+      addToast('No se pudo generar el reporte. Intenta nuevamente.', 'error')
+      throw err
+    }
+  }
 
   const hasActiveFilters = filterInput || filterGroup !== 'all' || filterCellStatus !== 'all' || filterDateRange.from || filterDateRange.to
   const totalPlanifs = temas.filter(t => !t.archived).reduce((acc, t) => acc + t.planificaciones.length, 0)
@@ -607,6 +639,17 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
                   <path d="M4 10l3 2.5L10 10" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: sortDir === 'desc' ? 1 : 0.3 }} />
                 </svg>
                 <span>Fecha</span>
+              </button>
+              <button
+                className="btn-export"
+                onClick={() => setShowExportModal(true)}
+                title="Exportar reporte ejecutivo"
+              >
+                <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
+                  <path d="M6.5 1v8M3.5 6.5l3 3 3-3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M1 10v1a1 1 0 001 1h9a1 1 0 001-1v-1" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+                </svg>
+                Exportar
               </button>
             </div>
 
@@ -793,6 +836,16 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
           confirmClass="btn-confirm-action"
           onConfirm={handleDoReactivateTema}
           onCancel={() => setConfirmReactivate(null)}
+        />
+      )}
+
+      {showExportModal && activeTab === 'active' && (
+        <ExportModal
+          title="Exportar reporte ejecutivo"
+          items={exportItems}
+          preselected={exportPreselected}
+          onGenerate={handleExport}
+          onClose={() => setShowExportModal(false)}
         />
       )}
 
