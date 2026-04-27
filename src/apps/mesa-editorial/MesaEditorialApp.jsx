@@ -14,6 +14,8 @@ import ConfirmDialog from '../shared/components/ConfirmDialog'
 import { logAuditEntry } from '../shared/utils/audit'
 import UserProfilePanel from '../shared/components/UserProfilePanel'
 import BottomSheet from '../shared/components/BottomSheet'
+import ExportModal from '../shared/components/ExportModal'
+import { generateEditorialExcel } from '../shared/utils/excelExportEditorial'
 
 const TABLE = 'mesa_editorial_acciones'
 
@@ -43,6 +45,7 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
 
   // Mobile UI states
   const [showMobileFilters, setShowMobileFilters] = useState(false)
+  const [showExportModal,   setShowExportModal]   = useState(false)
   const [kpiExpanded,       setKpiExpanded]       = useState(false)
 
   const { toasts, addToast, removeToast } = useToast()
@@ -83,6 +86,7 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
       const tag = document.activeElement?.tagName
       const inInput = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || document.activeElement?.isContentEditable
       if (e.key === 'Escape') {
+        if (showExportModal)     { setShowExportModal(false);     return }
         if (showProfile)         { setShowProfile(false);         return }
         if (confirmDelete)       { setConfirmDelete(null);        return }
         if (confirmArchive)      { setConfirmArchive(null);       return }
@@ -101,7 +105,7 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [confirmDelete, confirmArchive, confirmReactivate, showModal, showLogs, activeTab])
+  }, [confirmDelete, confirmArchive, confirmReactivate, showModal, showLogs, showExportModal, activeTab])
 
   async function fetchRows() {
     setLoading(true)
@@ -128,6 +132,22 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
   // Tab counts
   const activeCount   = useMemo(() => rows.filter(r => !r.archived).length, [rows])
   const archivedCount = useMemo(() => rows.filter(r =>  r.archived).length, [rows])
+
+  const exportItems = useMemo(() =>
+    rows
+      .filter(r => !r.archived)
+      .map(r => ({
+        id:   r.id,
+        name: r.accion || r.tema || '(sin nombre)',
+        meta: `${r.eje} · ${r.status}`,
+      })),
+    [rows]
+  )
+
+  const exportPreselected = useMemo(() =>
+    new Set(displayRows.map(r => r.id)),
+    [displayRows]
+  )
 
   // Filtered rows for current tab
   const displayRows = useMemo(() => {
@@ -380,6 +400,18 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
     setKpiExpanded(false)
   }
 
+  function handleExport(selectedIds) {
+    try {
+      generateEditorialExcel({ rows, selectedIds, userName })
+      setShowExportModal(false)
+      addToast('Reporte exportado correctamente.', 'success')
+    } catch (err) {
+      console.error('Error generando Excel:', err)
+      addToast('No se pudo generar el reporte. Intenta nuevamente.', 'error')
+      throw err
+    }
+  }
+
   const mobileActiveFilterCount = [
     filterEje !== 'all',
     activeTab === 'active' && filterStatus !== 'all',
@@ -518,6 +550,17 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
                     <path d="M2 4h10M2 7h10M2 10h6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
                   </svg>
                   Explorar
+                </button>
+                <button
+                  className="btn-export"
+                  onClick={() => setShowExportModal(true)}
+                  title="Exportar reporte ejecutivo"
+                >
+                  <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
+                    <path d="M6.5 1v8M3.5 6.5l3 3 3-3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M1 10v1a1 1 0 001 1h9a1 1 0 001-1v-1" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+                  </svg>
+                  Exportar
                 </button>
                 <button className="btn-add btn-add-sm" onClick={() => setShowModal(true)}>
                   <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
@@ -689,6 +732,15 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
       )}
       {showLogs && <AuditLogPanel onClose={() => setShowLogs(false)} mesaType="editorial" />}
       {showProfile && <UserProfilePanel userEmail={session.user.email} userName={userName} onClose={() => setShowProfile(false)} />}
+      {showExportModal && activeTab === 'active' && (
+        <ExportModal
+          title="Exportar reporte ejecutivo"
+          items={exportItems}
+          preselected={exportPreselected}
+          onGenerate={handleExport}
+          onClose={() => setShowExportModal(false)}
+        />
+      )}
 
       {/* Mobile: filtros en bottom sheet */}
       <BottomSheet
