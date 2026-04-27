@@ -44,6 +44,7 @@ function bodyStyle(bgRgb, fgRgb) {
 }
 
 export function generateEditorialExcel({ rows, selectedIds, userName }) {
+  if (!rows || !selectedIds || typeof selectedIds.has !== 'function') return
   const NCOLS = 7 // TIPO, TEMA, RESULTADO, TIPOLOGÍA, FECHA, RESPONSABLE, STATUS
   const wb    = XLSX.utils.book_new()
   const ws    = {}
