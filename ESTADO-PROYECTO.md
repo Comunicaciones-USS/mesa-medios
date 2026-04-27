@@ -1,5 +1,5 @@
 # Estado del Proyecto — Mesa de Medios USS
-**Actualizado:** 2026-04-27 | **Branch:** `main` | **Commit:** `c0e5b78`
+**Actualizado:** 2026-04-27 | **Branch:** `main` | **Commit:** `38c7a89`
 
 ---
 
@@ -638,6 +638,7 @@ Todos en `scripts/`. Ejecutar en **Supabase SQL Editor** (no en producción auto
 | **Tab Archivados: solo lectura, fecha archivado, reactivar** | ✅ |
 | **Badge "Inactivo · Xd" para temas sin planificación > 30 días** | ✅ |
 | **Archivado en mobile (TemaCard con botones archive/reactivate)** | ✅ |
+| **Exportación Excel:** Botón "Exportar" en toolbar de filtros (solo tab Activos). Abre modal con selección de temas/acciones, búsqueda, pre-selección según filtros. Genera `.xlsx` con diseño ejecutivo: header USS, bloques por tema con subheaders de color, celdas coloreadas por estado. Helpers: `shared/utils/excelExportMedios.js` y `excelExportEditorial.js` (xlsx-js-style). | ✅ |
 
 ### Mesa Editorial
 
