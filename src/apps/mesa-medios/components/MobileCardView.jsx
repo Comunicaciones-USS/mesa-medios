@@ -32,8 +32,13 @@ function formatDate(dateStr) {
   return new Date(dateStr + 'T12:00:00').toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit' })
 }
 
-// ── Bottom sheet ────────────────────────────────────────────────
-function BottomSheet({ medio, currentValue, currentNotas, onSave, onClose }) {
+function formatDateFull(dateStr) {
+  if (!dateStr) return ''
+  return new Date(dateStr).toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' })
+}
+
+// ── Bottom sheet de edición de celda (interno) ──────────────────
+function CellBottomSheet({ medio, currentValue, currentNotas, onSave, onClose }) {
   const [step,          setStep]          = useState('options')
   const [pendingStatus, setPendingStatus] = useState('si')
   const [name,          setName]          = useState('')
@@ -140,7 +145,7 @@ function BottomSheet({ medio, currentValue, currentNotas, onSave, onClose }) {
 }
 
 // ── Planificación card (dentro del tema) ────────────────────────
-function PlanifCard({ planif, temaNombre, onCellChange, onDeleteRow }) {
+function PlanifCard({ planif, temaNombre, onCellChange, onDeleteRow, isReadOnly }) {
   const [expanded, setExpanded] = useState(false)
   const [sheet,    setSheet]    = useState(null)
 
@@ -160,11 +165,13 @@ function PlanifCard({ planif, temaNombre, onCellChange, onDeleteRow }) {
     return (
       <div
         key={col.id}
-        className={`mobile-medio-slot ${meta.status === 'empty' ? 'empty-slot' : `val-${meta.status}`}`}
-        onClick={e => { e.stopPropagation(); setSheet({ colId: col.id, medio: col, value: valor, notas }) }}
+        className={`mobile-medio-slot ${meta.status === 'empty' ? 'empty-slot' : `val-${meta.status}`}${isReadOnly ? ' slot-readonly' : ''}`}
+        onClick={isReadOnly ? undefined : e => { e.stopPropagation(); setSheet({ colId: col.id, medio: col, value: valor, notas }) }}
       >
         <div className="mobile-medio-name">{col.label}{col.sub ? ` · ${col.sub}` : ''}</div>
-        <div className="mobile-medio-value">{meta.status === 'empty' ? 'Tocar para asignar' : meta.display}</div>
+        <div className="mobile-medio-value">
+          {meta.status === 'empty' ? (isReadOnly ? '—' : 'Tocar para asignar') : meta.display}
+        </div>
         {notas && (
           <div className="mobile-medio-has-notes">
             <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
@@ -211,21 +218,23 @@ function PlanifCard({ planif, temaNombre, onCellChange, onDeleteRow }) {
             <div className="mobile-medio-grid">
               {MEDIA_COLS.filter(c => c.group === 'ALIANZAS' || c.group === 'PUB_PAGADA').map(renderSlot)}
             </div>
-            <div className="mobile-card-actions">
-              <button className="mobile-btn-delete" onClick={() => onDeleteRow(planif.id)}>
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                  <path d="M2 3.5h10M5.5 3.5V2h3v1.5M5.833 6v4M8.167 6v4M3 3.5l.5 8a1 1 0 001 .917h5a1 1 0 001-.917l.5-8"
-                    stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                Eliminar planificación
-              </button>
-            </div>
+            {!isReadOnly && (
+              <div className="mobile-card-actions">
+                <button className="mobile-btn-delete" onClick={() => onDeleteRow(planif.id)}>
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <path d="M2 3.5h10M5.5 3.5V2h3v1.5M5.833 6v4M8.167 6v4M3 3.5l.5 8a1 1 0 001 .917h5a1 1 0 001-.917l.5-8"
+                      stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  Eliminar planificación
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
 
-      {sheet && (
-        <BottomSheet
+      {sheet && !isReadOnly && (
+        <CellBottomSheet
           medio={sheet.medio}
           currentValue={sheet.value}
           currentNotas={sheet.notas}
@@ -238,22 +247,54 @@ function PlanifCard({ planif, temaNombre, onCellChange, onDeleteRow }) {
 }
 
 // ── Tema card ────────────────────────────────────────────────────
-function TemaCard({ tema, onCellChange, onFieldChange, onDeleteRow, onAddPlanificacion }) {
+function TemaCard({ tema, onCellChange, onFieldChange, onDeleteRow, onAddPlanificacion, onArchiveTema, onReactivateTema, isArchived }) {
   const [expanded, setExpanded] = useState(tema.planificaciones.length <= 1)
   const n = tema.planificaciones.length
 
   return (
-    <div className={`mobile-tema-card ${expanded ? 'expanded' : ''}`}>
+    <div className={`mobile-tema-card ${expanded ? 'expanded' : ''}${isArchived ? ' mobile-tema-archived' : ''}`}>
       {/* Header del tema */}
-      <div className="mobile-tema-header" onClick={() => setExpanded(!expanded)}>
-        <div className="mobile-tema-title-area">
+      <div className="mobile-tema-header">
+        <div className="mobile-tema-title-area" onClick={() => setExpanded(!expanded)}>
           <span className="mobile-tema-title">{tema.nombre || 'Sin nombre'}</span>
           <span className="planif-count">{n} {n === 1 ? 'fecha' : 'fechas'}</span>
           {tema.origen === 'editorial' && (
             <span className="sync-badge" style={{ fontSize: '0.6rem' }}>Editorial</span>
           )}
+          {isArchived && tema.archived_at && (
+            <span className="mobile-archived-at">{formatDateFull(tema.archived_at)}</span>
+          )}
         </div>
-        <svg className={`mobile-card-arrow ${expanded ? 'rotated' : ''}`} width="18" height="18" viewBox="0 0 16 16" fill="none">
+        {/* Botones de acción */}
+        <div className="mobile-tema-actions">
+          {!isArchived ? (
+            <button
+              className="mobile-tema-archive-btn"
+              onClick={e => { e.stopPropagation(); onArchiveTema(tema.id) }}
+              title="Archivar tema"
+              aria-label={`Archivar tema ${tema.nombre}`}
+            >
+              <svg width="15" height="15" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                <rect x="1.5" y="5.5" width="11" height="7" rx="1" stroke="currentColor" strokeWidth="1.2"/>
+                <path d="M1 3.5h12v2H1z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M5.5 8.5h3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+              </svg>
+            </button>
+          ) : (
+            <button
+              className="mobile-tema-reactivate-btn"
+              onClick={e => { e.stopPropagation(); onReactivateTema(tema.id) }}
+              title="Reactivar tema"
+              aria-label={`Reactivar tema ${tema.nombre}`}
+            >
+              <svg width="15" height="15" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                <path d="M2.5 7A4.5 4.5 0 1 0 7 2.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                <path d="M7 2.5L4.5 2.5 4.5 5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+          )}
+        </div>
+        <svg className={`mobile-card-arrow ${expanded ? 'rotated' : ''}`} width="18" height="18" viewBox="0 0 16 16" fill="none" onClick={() => setExpanded(!expanded)}>
           <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </div>
@@ -262,11 +303,13 @@ function TemaCard({ tema, onCellChange, onFieldChange, onDeleteRow, onAddPlanifi
       {expanded && (
         <div className="mobile-tema-planifs">
           {n === 0 ? (
-            <div className="mobile-planif-empty">
-              <button className="btn-add-primera-fecha" onClick={() => onAddPlanificacion(tema.id)}>
-                + Agregar primera fecha
-              </button>
-            </div>
+            !isArchived && (
+              <div className="mobile-planif-empty">
+                <button className="btn-add-primera-fecha" onClick={() => onAddPlanificacion(tema.id)}>
+                  + Agregar primera fecha
+                </button>
+              </div>
+            )
           ) : (
             <>
               {tema.planificaciones.map(planif => (
@@ -276,13 +319,16 @@ function TemaCard({ tema, onCellChange, onFieldChange, onDeleteRow, onAddPlanifi
                   temaNombre={tema.nombre}
                   onCellChange={onCellChange}
                   onDeleteRow={onDeleteRow}
+                  isReadOnly={isArchived}
                 />
               ))}
-              <div className="mobile-planif-add">
-                <button className="btn-add-otra-fecha" onClick={() => onAddPlanificacion(tema.id)}>
-                  + Agregar otra fecha
-                </button>
-              </div>
+              {!isArchived && (
+                <div className="mobile-planif-add">
+                  <button className="btn-add-otra-fecha" onClick={() => onAddPlanificacion(tema.id)}>
+                    + Agregar otra fecha
+                  </button>
+                </div>
+              )}
             </>
           )}
         </div>
@@ -298,21 +344,26 @@ export default function MobileCardView({
   onFieldChange,
   onDeleteRow,
   onAddPlanificacion,
+  onArchiveTema,
+  onReactivateTema,
+  isArchived = false,
   totalTemas,
   filterQuery,
   onClearFilter,
   onAdd,
 }) {
   return (
-    <div className="mobile-card-view">
+    <div className={`mobile-card-view${isArchived ? ' mobile-card-view-archived' : ''}`}>
       {temas.length === 0 ? (
         <div className="mobile-empty">
           {totalTemas === 0 ? (
             <>
-              <span className="empty-state-icon">📋</span>
-              <p className="empty-state-title">Sin temas aún</p>
-              <span className="empty-state-sub">Agrega el primero para comenzar</span>
-              <button className="empty-state-cta" onClick={onAdd}>+ Agregar tema</button>
+              <span className="empty-state-icon">{isArchived ? '📦' : '📋'}</span>
+              <p className="empty-state-title">{isArchived ? 'Sin temas archivados' : 'Sin temas aún'}</p>
+              <span className="empty-state-sub">
+                {isArchived ? 'Los temas archivados aparecerán aquí' : 'Agrega el primero para comenzar'}
+              </span>
+              {!isArchived && <button className="empty-state-cta" onClick={onAdd}>+ Agregar tema</button>}
             </>
           ) : (
             <>
@@ -332,6 +383,9 @@ export default function MobileCardView({
             onFieldChange={onFieldChange}
             onDeleteRow={onDeleteRow}
             onAddPlanificacion={onAddPlanificacion}
+            onArchiveTema={onArchiveTema}
+            onReactivateTema={onReactivateTema}
+            isArchived={isArchived}
           />
         ))
       )}
