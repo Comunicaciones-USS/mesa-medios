@@ -91,7 +91,7 @@ export default function EjeSection({ eje, rows, onCellChange, onDeleteRow, colla
                     <th scope="col" className="col-eje">Eje</th>
                     <th scope="col" className="col-tema">Tema</th>
                     <th scope="col" className="col-canal">Tipología</th>
-                    <th scope="col" className="col-accion">Descripción - Acción</th>
+                    <th scope="col" className="col-accion">Resultado</th>
                     <th scope="col" className="col-fecha">Fecha</th>
                     <th scope="col" className="col-resp">Responsable</th>
                     <th scope="col" className="col-status">Status</th>
