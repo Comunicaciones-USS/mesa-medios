@@ -44,4 +44,3 @@ export const GROUPS = [
   { id: 'PUB_PAGADA', label: 'Publicidad Pagada',  className: 'group-pub-pagada' },
 ]
 
-export const getGroupCols = (groupId) => MEDIA_COLS.filter(c => c.group === groupId)
