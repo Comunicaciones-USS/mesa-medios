@@ -144,11 +144,6 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
     [rows]
   )
 
-  const exportPreselected = useMemo(() =>
-    new Set(displayRows.map(r => r.id)),
-    [displayRows]
-  )
-
   // Filtered rows for current tab
   const displayRows = useMemo(() => {
     let result = activeTab === 'archived'
@@ -190,6 +185,11 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
 
     return result
   }, [rows, activeTab, filterEje, filterStatus, filterTipoAccion, filterDateRange, filterText, sortDir, explorerFilter])
+
+  const exportPreselected = useMemo(() =>
+    new Set(displayRows.map(r => r.id)),
+    [displayRows]
+  )
 
   // KPI values — different per tab
   const kpi = useMemo(() => {
