@@ -4981,6 +4981,14 @@ body {
   /* El tab desktop dentro del filter-bar se oculta junto con el filter-bar */
 }
 
+/* ── Header cohesion (desktop): tabs flush con el header y el toolbar ── */
+/* Cancela el padding: 10px 16px del filter-bar para que los tabs queden
+   pegados al borde superior y extendidos al ancho completo del viewport.
+   El gap: 8px del filter-bar ya separa los tabs de las filas de filtros. */
+.medios-filter-bar > .medios-tabs {
+  margin: -10px -16px 0;
+}
+
 /* ── Filter bar: label "Archivado:" ─────────────────────────── */
 .filter-date-label {
   font-size: 0.78rem;
