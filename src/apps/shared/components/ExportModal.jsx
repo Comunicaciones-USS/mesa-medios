@@ -5,13 +5,22 @@ export default function ExportModal({ title, items, preselected, onGenerate, onC
   const [search,     setSearch]     = useState('')
   const [selected,   setSelected]   = useState(() => new Set(preselected))
   const [generating, setGenerating] = useState(false)
-  const overlayRef  = useRef(null)
   const dialogRef   = useRef(null)
   const searchRef   = useRef(null)
+  const triggerRef  = useRef(typeof document !== 'undefined' ? document.activeElement : null)
 
   useFocusTrap(dialogRef, true)
 
   useEffect(() => { searchRef.current?.focus() }, [])
+
+  useEffect(() => {
+    return () => { triggerRef.current?.focus() }
+  }, [])
+
+  useEffect(() => {
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = '' }
+  }, [])
 
   useEffect(() => {
     function onKey(e) { if (e.key === 'Escape') onClose() }
@@ -48,7 +57,7 @@ export default function ExportModal({ title, items, preselected, onGenerate, onC
     await new Promise(r => setTimeout(r, 50))
     try {
       await onGenerate(selected)
-    } catch {
+    } finally {
       setGenerating(false)
     }
   }
@@ -56,8 +65,7 @@ export default function ExportModal({ title, items, preselected, onGenerate, onC
   return (
     <div
       className="export-overlay"
-      ref={overlayRef}
-      onClick={e => { if (e.target === overlayRef.current) onClose() }}
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}
     >
       <div className="export-modal" ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="export-modal-title">
         <div className="export-modal-header">
@@ -74,7 +82,7 @@ export default function ExportModal({ title, items, preselected, onGenerate, onC
 
           <div className="export-modal-controls">
             <div className="export-search">
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
                 <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.3"/>
                 <path d="M9.5 9.5L13 13" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
               </svg>
@@ -87,7 +95,7 @@ export default function ExportModal({ title, items, preselected, onGenerate, onC
                 className="export-search-input"
               />
               {search && (
-                <button className="filter-clear" onClick={() => setSearch('')}>
+                <button className="filter-clear" onClick={() => setSearch('')} aria-label="Limpiar búsqueda">
                   <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
                     <path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
                   </svg>
