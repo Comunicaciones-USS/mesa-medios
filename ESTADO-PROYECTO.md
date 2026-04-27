@@ -1,5 +1,5 @@
 # Estado del Proyecto — Mesa de Medios USS
-**Actualizado:** 2026-04-23 | **Branch:** `main` | **Commit:** `6e24417`
+**Actualizado:** 2026-04-27 | **Branch:** `main` | **Commit:** `c0e5b78`
 
 ---
 
@@ -293,10 +293,13 @@ id          UUID        PRIMARY KEY DEFAULT gen_random_uuid()
 nombre      TEXT        NOT NULL
 origen      TEXT        NOT NULL DEFAULT 'medios'   -- 'medios' | 'editorial'
 eje         TEXT
+archived    BOOLEAN     DEFAULT FALSE
+archived_at TIMESTAMPTZ
 created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()     -- Auto-actualizado por trigger
 ```
 > Trigger `temas_updated_at_trigger` actualiza `updated_at` en cada UPDATE.
+> Índice: `idx_temas_archived ON temas(archived)` (script `add-archived-medios.sql`).
 
 ---
 
@@ -571,6 +574,7 @@ Todos en `scripts/`. Ejecutar en **Supabase SQL Editor** (no en producción auto
 | `security-rpc-usuarios.sql` | ✅ Ejecutado | Crea funciones RPC `validate_pin`, `admin_list_users`, `admin_set_pin` (SECURITY DEFINER) |
 | `security-rpc-cleanup.sql` | ✅ Ejecutado | Elimina policy `anon_can_read_active_users` (ya no necesaria con RPC) |
 | `add-performance-indexes.sql` | ✅ Ejecutado | Índices de performance en contenidos, mesa_editorial_acciones, audit_logs, pin_login_attempts |
+| `add-archived-medios.sql` | ⏳ **PENDIENTE** | `archived BOOLEAN` + `archived_at TIMESTAMPTZ` + índice en tabla `temas` — **ejecutar antes de usar la feature** |
 
 ---
 
@@ -627,6 +631,13 @@ Todos en `scripts/`. Ejecutar en **Supabase SQL Editor** (no en producción auto
 | Vista mobile (cards por tema) | ✅ |
 | Bottom sheet de filtros mobile | ✅ |
 | Sync de temas desde Editorial | ✅ |
+| **Hover guides: fila (CSS) + columna (DOM, sin React state)** | ✅ |
+| **Archivar tema (botón caja, navy, confirmación no-destructiva)** | ✅ |
+| **Eliminar tema: diferenciado visualmente del archivar (rojo)** | ✅ |
+| **Tabs Activos / Archivados con conteo realtime** | ✅ |
+| **Tab Archivados: solo lectura, fecha archivado, reactivar** | ✅ |
+| **Badge "Inactivo · Xd" para temas sin planificación > 30 días** | ✅ |
+| **Archivado en mobile (TemaCard con botones archive/reactivate)** | ✅ |
 
 ### Mesa Editorial
 
