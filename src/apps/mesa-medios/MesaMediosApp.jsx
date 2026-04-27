@@ -474,7 +474,6 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
     } catch (err) {
       console.error('Error generando Excel:', err)
       addToast('No se pudo generar el reporte. Intenta nuevamente.', 'error')
-      throw err
     }
   }
 

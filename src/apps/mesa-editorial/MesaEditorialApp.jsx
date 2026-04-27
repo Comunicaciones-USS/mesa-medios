@@ -408,7 +408,6 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
     } catch (err) {
       console.error('Error generando Excel:', err)
       addToast('No se pudo generar el reporte. Intenta nuevamente.', 'error')
-      throw err
     }
   }
 
