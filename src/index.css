@@ -4963,24 +4963,21 @@ body {
    ════════════════════════════════════════════════════════════════ */
 
 /* ── Tabs Mesa de Medios ─────────────────────────────────────── */
+/* Misma estética que .editorial-tabs: fondo navy, texto blanco */
 .medios-tabs {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 10px 16px 0;
-  border-bottom: 1px solid var(--border);
-  background: #fff;
+  gap: 2px;
+  padding: 0 1rem;
+  height: 42px;
+  background: #0f2b41;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
 }
 
 /* Mobile: oculto en desktop (el tab de desktop está dentro del filter bar) */
 .medios-tabs-mobile { display: none; }
 @media (max-width: 768px) {
-  .medios-tabs-mobile {
-    display: flex;
-    padding: 8px 14px 0;
-    background: #fff;
-    border-bottom: 1px solid var(--border);
-  }
+  .medios-tabs-mobile { display: flex; }
   /* El tab desktop dentro del filter-bar se oculta junto con el filter-bar */
 }
 
@@ -5004,19 +5001,6 @@ body {
   }
   .tema-header-row:hover > .tema-header-sticky-col {
     background: rgba(236, 244, 251, 0.8) !important;
-  }
-}
-
-/* ── Hover guides: columna ──────────────────────────────────── */
-@media (hover: hover) {
-  .media-table td.col-hovered:not(.status-si):not(.status-pd):not(.status-no),
-  .media-table th.col-hovered {
-    background: rgba(39, 93, 165, 0.045);
-  }
-  /* Intersección fila + columna */
-  .tema-header-row:hover > td.col-hovered,
-  .planificacion-row:hover > td.col-hovered {
-    background: rgba(15, 43, 65, 0.08) !important;
   }
 }
 

@@ -1,4 +1,4 @@
-import { useState, Fragment, memo, useMemo, useCallback, useRef } from 'react'
+import { useState, Fragment, memo, useMemo, useCallback } from 'react'
 import { MEDIA_COLS, GROUPS } from '../config'
 import { getCellData } from '../utils'
 import CellPopover from './CellPopover'
@@ -469,32 +469,6 @@ export default function MediaTable({
 }) {
   const [popover, setPopover] = useState(null)
 
-  // ── Column hover (DOM manipulation, no React state) ───────────
-  const tableScrollRef = useRef(null)
-  const colHoverRef    = useRef(-1)
-
-  function clearColHover() {
-    if (tableScrollRef.current) {
-      tableScrollRef.current.querySelectorAll('.col-hovered').forEach(el => el.classList.remove('col-hovered'))
-    }
-    colHoverRef.current = -1
-  }
-
-  function handleTableMouseOver(e) {
-    const cell = e.target.closest('td, th')
-    if (!cell) return
-    const idx = cell.cellIndex
-    if (idx === undefined || idx < 0) return
-    if (idx === colHoverRef.current) return
-    clearColHover()
-    colHoverRef.current = idx
-    if (tableScrollRef.current) {
-      tableScrollRef.current
-        .querySelectorAll(`td:nth-child(${idx + 1}), th:nth-child(${idx + 1})`)
-        .forEach(el => el.classList.add('col-hovered'))
-    }
-  }
-
   // ── Cols ──────────────────────────────────────────────────────
   const activeCols    = visibleCols || MEDIA_COLS
   const activeGroups  = useMemo(
@@ -537,12 +511,7 @@ export default function MediaTable({
   // ── Render ─────────────────────────────────────────────────────
   return (
     <div className={`table-wrapper${isArchived ? ' table-wrapper-archived' : ''}`}>
-      <div
-        className="table-scroll"
-        ref={tableScrollRef}
-        onMouseOver={handleTableMouseOver}
-        onMouseLeave={clearColHover}
-      >
+      <div className="table-scroll">
         <table className="media-table">
           <colgroup>
             <col style={{ width: 200, minWidth: 200, maxWidth: 200 }} />
