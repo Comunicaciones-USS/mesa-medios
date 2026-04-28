@@ -1,19 +1,17 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
-import { EJES, TIPOS_ORDER, TIPOS_CONFIG, STATUS_CONFIG } from '../config'
+import { EJES, TIPOS_ORDER, TIPOS_CONFIG } from '../config'
 import { useFocusTrap } from '../../shared/hooks/useFocusTrap'
 
-export default function ExplorerSidebar({ rows, onClose, onFilter, onAddAction }) {
-  const [selectedEje, setSelectedEje] = useState(null)
-  const [selectedTema, setSelectedTema] = useState(null)
+export default function ExplorerSidebar({ rows, onClose, onFilter }) {
+  const [selectedEje,  setSelectedEje]  = useState(null)
+  const [selectedHito, setSelectedHito] = useState(null)
+  const [searchQuery,  setSearchQuery]  = useState('')
   const sidebarRef = useRef(null)
 
-  // Capture the trigger element ("Explorar" button) synchronously at render time
   const triggerRef = useRef(typeof document !== 'undefined' ? document.activeElement : null)
 
-  // Focus trap — cycles Tab/Shift+Tab within the sidebar
   useFocusTrap(sidebarRef, true)
 
-  // Escape closes the sidebar
   useEffect(() => {
     function handleKey(e) {
       if (e.key === 'Escape') onClose()
@@ -22,165 +20,217 @@ export default function ExplorerSidebar({ rows, onClose, onFilter, onAddAction }
     return () => document.removeEventListener('keydown', handleKey)
   }, [onClose])
 
-  // Restore focus to the "Explorar" button when sidebar unmounts
   useEffect(() => {
     return () => { triggerRef.current?.focus() }
   }, [])
 
+  const activeRows = useMemo(() => rows.filter(r => !r.archived), [rows])
+
+  const hitoCounts = useMemo(() => {
+    if (!selectedEje) return {}
+    return TIPOS_ORDER.reduce((acc, tipo) => {
+      acc[tipo] = activeRows.filter(r => r.eje === selectedEje && r.tipo === tipo).length
+      return acc
+    }, {})
+  }, [activeRows, selectedEje])
+
   const temas = useMemo(() => {
-    if (!selectedEje) return []
-    const ejeRows = rows.filter(r => r.eje === selectedEje)
-    return [...new Set(ejeRows.map(r => r.tema).filter(Boolean))].sort()
-  }, [rows, selectedEje])
+    if (!selectedEje || !selectedHito) return []
+    const temaMap = new Map()
+    for (const row of activeRows) {
+      if (row.eje === selectedEje && row.tipo === selectedHito && row.tema) {
+        temaMap.set(row.tema, (temaMap.get(row.tema) || 0) + 1)
+      }
+    }
+    return [...temaMap.entries()]
+      .filter(([tema]) => !searchQuery || tema.toLowerCase().includes(searchQuery.toLowerCase()))
+      .sort((a, b) => a[0].localeCompare(b[0]))
+  }, [activeRows, selectedEje, selectedHito, searchQuery])
 
-  const temaRows = useMemo(() => {
-    if (!selectedTema) return []
-    return rows
-      .filter(r => r.eje === selectedEje && r.tema === selectedTema)
-      .sort((a, b) => {
-        if (a.tipo_accion === 'Resultado' && b.tipo_accion !== 'Resultado') return -1
-        if (a.tipo_accion !== 'Resultado' && b.tipo_accion === 'Resultado') return 1
-        const orderA = TIPOS_ORDER.indexOf(a.tipo)
-        const orderB = TIPOS_ORDER.indexOf(b.tipo)
-        return (orderA === -1 ? 99 : orderA) - (orderB === -1 ? 99 : orderB)
-      })
-  }, [rows, selectedEje, selectedTema])
+  const level = !selectedEje ? 1 : !selectedHito ? 2 : 3
 
-  function handleVisualize() {
-    onFilter({ eje: selectedEje, tema: selectedTema })
-  }
-
-  function handleAdd() {
-    onAddAction({ eje: selectedEje, tema: selectedTema })
+  function handleBack() {
+    if (level === 3) { setSelectedHito(null); setSearchQuery('') }
+    else if (level === 2) setSelectedEje(null)
   }
 
   return (
     <>
-    <div className="explorer-overlay" onClick={onClose} />
-    <aside ref={sidebarRef} className="explorer-sidebar" aria-label="Explorador de temas">
-      <div className="explorer-header">
-        <div>
-          <h3 className="explorer-title">
-            {selectedTema || selectedEje || 'Explorador'}
-          </h3>
-          {!selectedEje && (
-            <p className="explorer-subtitle">Selecciona un eje para navegar</p>
-          )}
-          {selectedEje && !selectedTema && (
-            <p className="explorer-subtitle">Selecciona un tema</p>
-          )}
-        </div>
-        <button className="modal-close" onClick={onClose} style={{ color: '#fff' }} aria-label="Cerrar explorador de temas">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-            <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-          </svg>
-        </button>
-      </div>
+      <div className="explorer-overlay" onClick={onClose} />
+      <aside ref={sidebarRef} className="explorer-sidebar" aria-label="Explorador de temas">
 
-      {/* Breadcrumb */}
-      {(selectedEje || selectedTema) && (
-        <div className="explorer-breadcrumb">
-          <button onClick={() => { setSelectedEje(null); setSelectedTema(null) }}>Ejes</button>
-          {selectedEje && (
-            <>
-              <span className="explorer-bc-sep">›</span>
-              <button onClick={() => setSelectedTema(null)}>{selectedEje}</button>
-            </>
-          )}
-          {selectedTema && (
-            <>
-              <span className="explorer-bc-sep">›</span>
-              <span>{selectedTema}</span>
-            </>
-          )}
+        <div className="explorer-header">
+          <div>
+            <h3 className="explorer-title">Explorador</h3>
+            <p className="explorer-subtitle">
+              {level === 1 && 'Selecciona un eje'}
+              {level === 2 && `${selectedEje}`}
+              {level === 3 && `${selectedEje} › ${selectedHito}`}
+            </p>
+          </div>
+          <button
+            className="modal-close"
+            onClick={onClose}
+            style={{ color: '#fff' }}
+            aria-label="Cerrar explorador de temas"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+          </button>
         </div>
-      )}
 
-      <div className="explorer-body">
-        {/* Nivel 1: Ejes */}
-        {!selectedEje && (
-          <div className="explorer-list">
-            {EJES.map(eje => {
-              const count = rows.filter(r => r.eje === eje.label).length
-              return (
-                <button key={eje.id} className="explorer-item" onClick={() => setSelectedEje(eje.label)}>
-                  <div className="explorer-item-stripe" style={{ background: eje.color }} />
-                  <span className="explorer-item-label">{eje.label}</span>
-                  <span className="explorer-item-count">{count}</span>
-                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                    <path d="M3 1.5l4 3.5-4 3.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-                  </svg>
+        {/* Breadcrumb */}
+        {level > 1 && (
+          <div className="explorer-breadcrumb">
+            <button onClick={() => { setSelectedEje(null); setSelectedHito(null); setSearchQuery('') }}>
+              Ejes
+            </button>
+            <span className="explorer-bc-sep">›</span>
+            {level === 2 && <span>{selectedEje}</span>}
+            {level === 3 && (
+              <>
+                <button onClick={() => { setSelectedHito(null); setSearchQuery('') }}>
+                  {selectedEje}
                 </button>
-              )
-            })}
+                <span className="explorer-bc-sep">›</span>
+                <span>{selectedHito}</span>
+              </>
+            )}
           </div>
         )}
 
-        {/* Nivel 2: Temas del eje */}
-        {selectedEje && !selectedTema && (
-          <div className="explorer-list">
-            {temas.length === 0 ? (
-              <p className="explorer-empty">Sin temas en este eje.</p>
-            ) : (
-              temas.map(tema => {
-                const count = rows.filter(r => r.eje === selectedEje && r.tema === tema).length
+        <div className="explorer-body">
+
+          {/* Nivel 1 — Ejes */}
+          {level === 1 && (
+            <div className="explorer-list">
+              {EJES.map(eje => {
+                const count = activeRows.filter(r => r.eje === eje.label).length
                 return (
-                  <button key={tema} className="explorer-item" onClick={() => setSelectedTema(tema)}>
-                    <span className="explorer-item-label">{tema}</span>
+                  <button
+                    key={eje.id}
+                    className="explorer-item"
+                    onClick={() => setSelectedEje(eje.label)}
+                  >
+                    <div className="explorer-item-stripe" style={{ background: eje.color }} />
+                    <span className="explorer-item-label">{eje.label}</span>
                     <span className="explorer-item-count">{count}</span>
-                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
                       <path d="M3 1.5l4 3.5-4 3.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
                     </svg>
                   </button>
                 )
-              })
-            )}
-          </div>
-        )}
+              })}
+            </div>
+          )}
 
-        {/* Nivel 3: Acciones del tema — preview */}
-        {selectedTema && (
-          <div className="explorer-preview">
-            {temaRows.length === 0 ? (
-              <p className="explorer-empty">Sin acciones en este tema.</p>
-            ) : (
-              temaRows.map(row => {
-                const tipoCfg = TIPOS_CONFIG[row.tipo] || {}
-                const statusCfg = STATUS_CONFIG[row.status] || STATUS_CONFIG['Pendiente']
+          {/* Nivel 2 — Hitos del eje */}
+          {level === 2 && (
+            <div className="explorer-list">
+              {TIPOS_ORDER.map(tipo => {
+                const cfg = TIPOS_CONFIG[tipo]
+                const count = hitoCounts[tipo] || 0
+                const disabled = count === 0
                 return (
-                  <div key={row.id} className={`explorer-preview-item ${row.tipo_accion === 'Resultado' ? 'explorer-resultado' : 'explorer-backlog'}`}>
-                    <span className="tipo-badge" style={{ color: tipoCfg.color, background: tipoCfg.bg, fontSize: '0.65rem', padding: '1px 5px' }}>
-                      {row.tipo}
+                  <button
+                    key={tipo}
+                    className="explorer-item"
+                    disabled={disabled}
+                    style={disabled ? { opacity: 0.4, cursor: 'not-allowed' } : {}}
+                    onClick={() => setSelectedHito(tipo)}
+                  >
+                    <div className="explorer-item-stripe" style={{ background: cfg.color }} />
+                    <span className="explorer-item-label" style={{ fontWeight: 500 }}>{tipo}</span>
+                    <span
+                      className="explorer-item-count"
+                      style={!disabled ? { background: cfg.bg, color: cfg.color } : {}}
+                    >
+                      {count}
                     </span>
-                    <span className="explorer-preview-accion">{row.accion || '—'}</span>
-                    <span className="explorer-preview-status" style={{ color: statusCfg.text }}>{row.status}</span>
-                  </div>
+                    {!disabled && (
+                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                        <path d="M3 1.5l4 3.5-4 3.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                      </svg>
+                    )}
+                  </button>
                 )
-              })
-            )}
+              })}
+            </div>
+          )}
+
+          {/* Nivel 3 — Temas del eje + hito */}
+          {level === 3 && (
+            <>
+              <div style={{ padding: '10px 16px 4px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f8fafc', borderRadius: 6, padding: '6px 10px', border: '1px solid #e5e7eb' }}>
+                  <svg width="13" height="13" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0, color: '#94a3b8' }}>
+                    <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.3"/>
+                    <path d="M9.5 9.5L13 13" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                  </svg>
+                  <input
+                    type="text"
+                    placeholder="Buscar tema..."
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    style={{ background: 'none', border: 'none', outline: 'none', fontSize: '0.82rem', flex: 1, color: '#374151' }}
+                    autoFocus
+                  />
+                  {searchQuery && (
+                    <button
+                      className="filter-clear"
+                      onClick={() => setSearchQuery('')}
+                      style={{ flexShrink: 0 }}
+                    >
+                      <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+                        <path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                      </svg>
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div className="explorer-list">
+                {temas.length === 0 ? (
+                  <p className="explorer-empty">
+                    {searchQuery ? 'Sin resultados para la búsqueda.' : 'Sin temas en este hito.'}
+                  </p>
+                ) : (
+                  temas.map(([tema, count]) => (
+                    <button
+                      key={tema}
+                      className="explorer-item"
+                      onClick={() => onFilter({ eje: selectedEje, tema })}
+                    >
+                      <span className="explorer-item-label">{tema}</span>
+                      <span className="explorer-item-count">{count}</span>
+                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                        <path d="M3 1.5l4 3.5-4 3.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                      </svg>
+                    </button>
+                  ))
+                )}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Botón Atrás — visible en niveles 2 y 3 */}
+        {level > 1 && (
+          <div className="explorer-footer">
+            <button
+              className="btn-secondary"
+              onClick={handleBack}
+              style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: '0.8rem' }}
+            >
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
+                <path d="M8 2L3 6.5L8 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              Atrás
+            </button>
           </div>
         )}
-      </div>
 
-      {/* Footer con botones */}
-      {selectedTema && (
-        <div className="explorer-footer">
-          <button className="btn-secondary" onClick={handleVisualize}>
-            <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-              <circle cx="5.5" cy="5.5" r="4" stroke="currentColor" strokeWidth="1.2"/>
-              <path d="M8.5 8.5l3 3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-            </svg>
-            Visualizar
-          </button>
-          <button className="btn-primary" onClick={handleAdd}>
-            <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-              <path d="M6.5 1v11M1 6.5h11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-            </svg>
-            Acción
-          </button>
-        </div>
-      )}
-    </aside>
+      </aside>
     </>
   )
 }
