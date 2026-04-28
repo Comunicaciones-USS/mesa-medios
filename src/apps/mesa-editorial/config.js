@@ -34,4 +34,5 @@ export const TIPOLOGIA_RESULTADO_OPTIONS = [
   'Alianzas',
   'Publicidad Pagada',
   'Eventos Institucionales',
+  'Relacionamiento',
 ]
