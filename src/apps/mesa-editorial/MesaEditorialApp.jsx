@@ -31,7 +31,6 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
   const [confirmReactivate,setConfirmReactivate]= useState(null)   // { id, nombre, tipo }
   const [showExplorer,     setShowExplorer]     = useState(false)
   const [explorerFilter,   setExplorerFilter]   = useState(null)
-  const [prefilledAction,  setPrefilledAction]  = useState(null)
   const [activeTab,        setActiveTab]        = useState('active') // 'active' | 'archived'
 
   // Filters
@@ -176,6 +175,19 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
       result = [...result].sort((a, b) => {
         const cmp = (a.fecha || '').localeCompare(b.fecha || '')
         return sortDir === 'asc' ? cmp : -cmp
+      })
+    } else if (activeTab === 'active') {
+      const now = new Date()
+      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+      result = [...result].sort((a, b) => {
+        if (!a.fecha && !b.fecha) return 0
+        if (!a.fecha) return 1
+        if (!b.fecha) return -1
+        const aFuture = a.fecha >= todayStr
+        const bFuture = b.fecha >= todayStr
+        if (aFuture && !bFuture) return -1
+        if (!aFuture && bFuture) return 1
+        return a.fecha.localeCompare(b.fecha)
       })
     } else if (activeTab === 'archived') {
       result = [...result].sort((a, b) =>
@@ -711,10 +723,9 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
       {showModal && (
         <AddActionModal
           onConfirm={handleAddRow}
-          onClose={() => { setShowModal(false); setPrefilledAction(null) }}
+          onClose={() => setShowModal(false)}
           existingResponsables={[...new Set(rows.map(r => r.responsable).filter(Boolean))]}
           existingTemas={[...new Set(rows.map(r => r.tema).filter(Boolean))]}
-          prefilled={prefilledAction}
         />
       )}
       {showExplorer && (
@@ -722,11 +733,6 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
           rows={rows}
           onClose={() => { setShowExplorer(false); setExplorerFilter(null) }}
           onFilter={(filter) => { setExplorerFilter(filter); setShowExplorer(false) }}
-          onAddAction={({ eje, tema }) => {
-            setShowExplorer(false)
-            setPrefilledAction({ eje, tema })
-            setShowModal(true)
-          }}
         />
       )}
       {showLogs && <AuditLogPanel onClose={() => setShowLogs(false)} mesaType="editorial" />}

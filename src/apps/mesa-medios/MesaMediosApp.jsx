@@ -220,6 +220,9 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
   }, [session])
 
   const displayTemas = useMemo(() => {
+    const now = new Date()
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+
     let result = temas
       .filter(t => activeTab === 'active' ? !t.archived : t.archived)
       .map(tema => {
@@ -252,8 +255,17 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
           }
         }
 
-        // Ordenar planificaciones por fecha
-        planifs.sort((a, b) => (a.semana || '').localeCompare(b.semana || ''))
+        // Ordenar planificaciones: futuras primero (ascendente), luego pasadas (ascendente)
+        planifs.sort((a, b) => {
+          if (!a.semana && !b.semana) return 0
+          if (!a.semana) return 1
+          if (!b.semana) return -1
+          const aFuture = a.semana >= todayStr
+          const bFuture = b.semana >= todayStr
+          if (aFuture && !bFuture) return -1
+          if (!aFuture && bFuture) return 1
+          return a.semana.localeCompare(b.semana)
+        })
         return { ...tema, planificaciones: planifs }
       })
       .filter(Boolean)
@@ -269,14 +281,30 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
       result = result.filter(t => t.planificaciones.length > 0)
     }
 
-    // Ordenar
+    // Ordenar temas
     if (activeTab === 'archived') {
       result = [...result].sort((a, b) => (b.archived_at || '').localeCompare(a.archived_at || ''))
     } else {
+      // Clave de ordenamiento: fecha futura más próxima; si todas son pasadas, la más reciente pasada; null al final
+      const getKey = (tema) => {
+        if (tema.planificaciones.length === 0) return null
+        const nearestFuture = tema.planificaciones.find(p => p.semana && p.semana >= todayStr)
+        if (nearestFuture) return nearestFuture.semana
+        const withDate = tema.planificaciones.filter(p => p.semana)
+        return withDate.length > 0 ? withDate[withDate.length - 1].semana : null
+      }
       result = [...result].sort((a, b) => {
-        const dateA = a.planificaciones[0]?.semana || '9999-99-99'
-        const dateB = b.planificaciones[0]?.semana || '9999-99-99'
-        const cmp = dateA.localeCompare(dateB)
+        const kA = getKey(a), kB = getKey(b)
+        if (kA === null && kB === null) return 0
+        if (kA === null) return 1
+        if (kB === null) return -1
+        const aFuture = kA >= todayStr
+        const bFuture = kB >= todayStr
+        if (aFuture !== bFuture) {
+          const res = aFuture ? -1 : 1
+          return sortDir === 'desc' ? -res : res
+        }
+        const cmp = kA.localeCompare(kB)
         return sortDir === 'desc' ? -cmp : cmp
       })
     }
