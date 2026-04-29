@@ -1,5 +1,5 @@
 # Estado del Proyecto — Mesa de Medios USS
-**Actualizado:** 2026-04-29 | **Branch:** `main` | **Commit:** `182fa42`
+**Actualizado:** 2026-04-29 | **Branch:** `main` | **Commit:** `03d355c`
 
 ---
 
@@ -531,21 +531,21 @@ git push && npm run deploy
 
 ## 8. Estado del Git
 
-### Branch actual: `main` (HEAD: `5d0f7e5`)
+### Branch actual: `main` (HEAD: `03d355c`)
 
 ### Últimos commits:
 ```
-5d0f7e5 docs(estado): update after fix/post-release-2 — document 8 fixes implemented
-78f5a0c merge(fix/post-release-2): 8 post-release-2 fixes — popover UX, cell text display, column filters, group headers, status Nuevo, hitos sync, tipologia
-b718a9c fix(cell-popover): wider popover, detail section, correct text display on Enter
-205ebfc docs(estado): mark SQL scripts as executed
-7e5048d docs(estado): update after release-mejoras-2
-cfc42df merge(feat/release-mejoras-2): status + alertas + popover rediseñado + filtros multi-columna
+03d355c merge(fix/ui-adjustments): UI fixes for sheet viewers and status dropdown
+04b60c3 fix(ui): reposition sheet viewers and hide status dropdown for 'Nuevo'
+e92d7f1 chore(sheets): set production URL for sheet-1 (Grilla RR.SS)
+49e8555 docs(estado): update after feat/sheet-viewers — document Excel Online viewers feature
+182fa42 merge(feat/sheet-viewers): add Excel Online viewers to headers
 ```
 
 ### Branches:
 ```
 main                              ← producción ✅ (pusheado y deployado 2026-04-29)
+fix/ui-adjustments                ← mergeada a main ✅
 feat/sheet-viewers                ← mergeada a main ✅
 fix/post-release-2                ← mergeada a main ✅
 feat/release-mejoras-2            ← mergeada a main ✅
@@ -618,7 +618,7 @@ Todos en `scripts/`. Ejecutar en **Supabase SQL Editor** (no en producción auto
 
 | Funcionalidad | Estado |
 |---|---|
-| **Visores Excel Online (SharePoint):** Botones en el header de ambas mesas (Mesa Medios y Editorial). Componentes: `SheetButtons` (botones + state), `SheetViewer` (modal con iframe). Config centralizada en `shared/utils/sheetsConfig.js` — Leo debe reemplazar los 4 placeholders (`PLACEHOLDER_LABEL_1`, `PLACEHOLDER_URL_1`, `PLACEHOLDER_LABEL_2`, `PLACEHOLDER_URL_2`) con datos reales y hacer `chore(sheets): set production URLs` + `npm run deploy`. Sin atributo sandbox en iframe (requisito SSO Microsoft 365). Mobile: botones compactos solo-ícono. | ✅ |
+| **Visores Excel Online (SharePoint):** Botones en la barra de tabs de ambas mesas (Editorial: `.editorial-tabs`; Medios: `.medios-tabs-desktop`). Componentes: `SheetButtons` (botones + state), `SheetViewer` (modal con iframe). Config centralizada en `shared/utils/sheetsConfig.js`. Alineados al extremo derecho vía `margin-left: auto` en `.sheet-buttons`. En mobile, el desktop tab bar está oculto (`display: none`) por lo que SheetButtons no aparece en mobile (comportamiento aceptado). Sin atributo sandbox en iframe (requisito SSO Microsoft 365). | ✅ |
 | Tabla con 39 canales (3 grupos, múltiples sub-grupos) | ✅ |
 | Edición inline de celdas (si/pd + notas) via popover directo | ✅ |
 | Filtros: texto, rango de fechas, grupo, estado de celda | ✅ |
@@ -648,7 +648,7 @@ Todos en `scripts/`. Ejecutar en **Supabase SQL Editor** (no en producción auto
 | **CellPopover UX mejorado (fix/post-release-2):** min-width 340px, padding cómodo, sección "Detalle actual" cuando hay texto guardado. Enter guarda texto escrito o "sí" si vacío. getCellMeta recibe `notas` → celdas muestran texto real (no "Sí" genérico). Fix aplicado en MediaTable y MobileCardView. | ✅ |
 | **Filtros multi-columna:** Icono funnel/X en cada header de columna. Selección múltiple. `visibleCols` prioriza columnas activas sobre grupo. `displayTemas` filtra planifs por datos en columnas filtradas. Auto-expand de temas con datos. Badge "X columnas filtradas" en toolbar + botón "Limpiar columnas". Sección con checkboxes por grupo en BottomSheet mobile. Filtros se resetean al cambiar tab. | ✅ |
 | **Filtros multi-columna desktop mejorados (fix/post-release-2):** Chips por columna activa con X individual. Select "+ Añadir columna" con optgroups para sumar columnas sin limpiar el filtro. | ✅ |
-| **Status "Nuevo" no seleccionable manualmente:** Badge informativo solo. "Nuevo" no aparece en dropdown al usuario. Auto-transición a "En desarrollo" después de 7 días via `checkAndTransitionStaleNew()` en fetchData. | ✅ |
+| **Status "Nuevo" no seleccionable manualmente:** Badge informativo solo. Cuando status es "Nuevo", MediaTable muestra solo el badge (sin dropdown). Para "En desarrollo" y "Completado" aparece el select (sin opción "Nuevo"). Auto-transición a "En desarrollo" después de 7 días via `checkAndTransitionStaleNew()` en fetchData. | ✅ |
 | **Hitos sincronizados desde Editorial:** fetchData trae `tipo` de acciones editoriales con `sync_to_medios=true` usando `tema_id` FK. Badge read-only en TemaRow: Ancla (amarillo), Soporte (azul), Always ON (verde). | ✅ |
 
 ### Mesa Editorial
