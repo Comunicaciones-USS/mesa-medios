@@ -1,5 +1,5 @@
 # Estado del Proyecto — Mesa de Medios USS
-**Actualizado:** 2026-04-29 | **Branch:** `main` | **Commit:** `03d355c`
+**Actualizado:** 2026-04-29 | **Branch:** `main` | **Commit:** `merge(fix/sheet-buttons-styling)`
 
 ---
 
@@ -531,20 +531,21 @@ git push && npm run deploy
 
 ## 8. Estado del Git
 
-### Branch actual: `main` (HEAD: `03d355c`)
+### Branch actual: `main` (HEAD: `merge(fix/sheet-buttons-styling)`)
 
 ### Últimos commits:
 ```
+merge(fix/sheet-buttons-styling)  ← dark ghost styling + breathing room en tabs row
 03d355c merge(fix/ui-adjustments): UI fixes for sheet viewers and status dropdown
 04b60c3 fix(ui): reposition sheet viewers and hide status dropdown for 'Nuevo'
 e92d7f1 chore(sheets): set production URL for sheet-1 (Grilla RR.SS)
 49e8555 docs(estado): update after feat/sheet-viewers — document Excel Online viewers feature
-182fa42 merge(feat/sheet-viewers): add Excel Online viewers to headers
 ```
 
 ### Branches:
 ```
-main                              ← producción ✅ (pusheado y deployado 2026-04-29)
+main                              ← mergeado, pendiente push + deploy manual
+fix/sheet-buttons-styling         ← mergeada a main ✅
 fix/ui-adjustments                ← mergeada a main ✅
 feat/sheet-viewers                ← mergeada a main ✅
 fix/post-release-2                ← mergeada a main ✅
