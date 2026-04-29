@@ -5548,33 +5548,35 @@ body {
   background: rgba(15, 43, 65, 0.1);
 }
 
-/* === Sheet Viewer Buttons (header de ambas mesas) === */
+/* === Sheet Viewer Buttons (en barra de tabs) === */
 .sheet-buttons {
   display: flex;
   gap: 8px;
   align-items: center;
+  margin-left: auto;
 }
 
 .btn-sheet-viewer {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 36px;
+  height: 34px;
   padding: 0 14px;
-  background: transparent;
-  border: 1px solid #d1d5db;
+  background: #fff;
+  border: 1px solid var(--border);
   border-radius: 6px;
-  color: #374151;
+  color: var(--primary);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
   white-space: nowrap;
 }
 
 .btn-sheet-viewer:hover {
-  background: #f3f4f6;
-  border-color: #9ca3af;
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
 }
 
 .btn-sheet-viewer:focus-visible {
@@ -5664,7 +5666,7 @@ body {
   display: block;
 }
 
-/* Mobile: full-screen */
+/* Mobile: full-screen sheet viewer modal */
 @media (max-width: 768px) {
   .sheet-viewer-overlay {
     padding: 0;
@@ -5677,12 +5679,15 @@ body {
   }
   .btn-sheet-viewer {
     padding: 0 10px;
-    height: 34px;
+    height: 32px;
     font-size: 0;
     gap: 0;
   }
   .btn-sheet-viewer svg {
     width: 16px;
     height: 16px;
+  }
+  .sheet-buttons {
+    gap: 6px;
   }
 }

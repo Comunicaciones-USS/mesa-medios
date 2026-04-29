@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
 import logoUSS from '../../../assets/escudo-uss-horizontal-blanco.svg'
-import SheetButtons from '../../shared/components/SheetButtons'
 
 export default function HeaderEditorial({ userName, userEmail, onLogout, onBackToSelector, onShowLogs, onShowProfile, onSwitchDashboard, otherDashboardName }) {
   const initials = userName
@@ -38,7 +37,6 @@ export default function HeaderEditorial({ userName, userEmail, onLogout, onBackT
           </div>
         </div>
         <div className="header-user">
-          <SheetButtons />
           {/* Desktop: profile trigger + logout */}
           <div className="user-menu header-desktop-user">
             <button className="user-profile-trigger" onClick={onShowProfile} title={`Ver perfil de ${userName}`}>

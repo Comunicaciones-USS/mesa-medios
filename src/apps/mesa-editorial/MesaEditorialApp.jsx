@@ -16,6 +16,7 @@ import UserProfilePanel from '../shared/components/UserProfilePanel'
 import BottomSheet from '../shared/components/BottomSheet'
 import ExportModal from '../shared/components/ExportModal'
 import { generateEditorialExcel } from '../shared/utils/excelExportEditorial'
+import SheetButtons from '../shared/components/SheetButtons'
 
 const TABLE = 'mesa_editorial_acciones'
 
@@ -471,6 +472,7 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
             Archivadas
             <span className="tab-badge">{archivedCount}</span>
           </button>
+          <SheetButtons />
         </div>
 
         {/* ── KPI Bar — colapsable en mobile ── */}
