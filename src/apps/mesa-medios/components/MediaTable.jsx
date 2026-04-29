@@ -8,18 +8,22 @@ const EMPTY_SET = new Set()
 
 // ── Helpers ───────────────────────────────────────────────────────
 
-function getCellMeta(raw) {
+// Fix 2: getCellMeta ahora recibe también el campo notas (formato JSONB nuevo)
+// El display muestra: notas > nombre embebido en legacy > 'Sí'/'PD'
+function getCellMeta(raw, notas) {
   if (!raw) return { status: 'empty', display: '' }
   const lower = raw.toLowerCase().trim()
   if (lower.startsWith('pd')) {
     const parts = raw.split('/')
-    const name  = parts[1]?.trim() || ''
-    return { status: 'pd', display: name || 'PD' }
+    const legacyName = parts[1]?.trim() || ''
+    const display = notas?.trim() || legacyName || 'PD'
+    return { status: 'pd', display }
   }
   if (lower.startsWith('si')) {
     const parts = raw.split('/')
-    const name  = parts[1]?.trim() || ''
-    return { status: 'si', display: name || 'Sí' }
+    const legacyName = parts[1]?.trim() || ''
+    const display = notas?.trim() || legacyName || 'Sí'
+    return { status: 'si', display }
   }
   return { status: 'empty', display: '' }
 }
@@ -179,7 +183,7 @@ const TemaRow = memo(function TemaRow({
       const groupCols = activeCols.filter(c => c.group === g.id)
       return groupCols.map((col, i) => {
         const { valor, notas } = getCellData(planif.medios, col.id)
-        const meta   = getCellMeta(valor)
+        const meta   = getCellMeta(valor, notas)
         const cellKey = `${planif.id}:${col.id}`
         const isOpen = activePopoverKey === cellKey
         const isLast = i === groupCols.length - 1
@@ -263,6 +267,15 @@ const TemaRow = memo(function TemaRow({
                 Desde Editorial
               </span>
             )}
+            {/* Fix 7: hito sincronizado desde Mesa Editorial */}
+            {tema.hito && (
+              <span
+                className={`tema-hito-badge tema-hito-${tema.hito === 'Ancla' ? 'ancla' : tema.hito === 'Soporte' ? 'soporte' : 'always-on'}`}
+                title="Hito sincronizado desde Mesa Editorial"
+              >
+                {tema.hito}
+              </span>
+            )}
             {targetDate && (
               <>
                 <span className="tema-info-sep">·</span>
@@ -300,16 +313,20 @@ const TemaRow = memo(function TemaRow({
             )}
 
             {/* Select para cambiar status manualmente (solo tab activos) */}
+            {/* Fix 6: "Nuevo" no es una opción seleccionable manualmente — solo aparece como badge informativo */}
             {!isArchived && tema.status && (
               <select
                 className="tema-status-select"
-                value={tema.status || 'Nuevo'}
+                value={tema.status === 'Nuevo' ? 'Nuevo' : tema.status}
                 onChange={e => onStatusChange?.(tema.id, e.target.value)}
                 onClick={e => e.stopPropagation()}
                 aria-label="Cambiar status del tema"
                 title="Cambiar status"
+                disabled={tema.status === 'Nuevo'}
               >
-                <option value="Nuevo">Nuevo</option>
+                {tema.status === 'Nuevo' && (
+                  <option value="Nuevo">Nuevo</option>
+                )}
                 <option value="En desarrollo">En desarrollo</option>
                 <option value="Completado">Completado</option>
               </select>
@@ -474,6 +491,7 @@ const TemaRow = memo(function TemaRow({
     pt.id === nt.id &&
     pt.nombre === nt.nombre &&
     pt.origen === nt.origen &&
+    pt.hito === nt.hito &&
     pt.archived === nt.archived &&
     pt.archived_at === nt.archived_at &&
     pt.status === nt.status &&

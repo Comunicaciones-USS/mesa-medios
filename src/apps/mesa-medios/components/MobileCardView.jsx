@@ -3,18 +3,21 @@ import { MEDIA_COLS } from '../config'
 import { getCellData } from '../utils'
 
 // ── Helpers ─────────────────────────────────────────────────────
-function getCellMeta(raw) {
+// Fix 2: getCellMeta recibe también notas para mostrar el texto guardado
+function getCellMeta(raw, notas) {
   if (!raw) return { status: 'empty', display: '' }
   const lower = raw.toLowerCase().trim()
   if (lower.startsWith('pd')) {
     const parts = raw.split('/')
-    const name  = parts[1]?.trim() || ''
-    return { status: 'pd', display: name || 'PD' }
+    const legacyName = parts[1]?.trim() || ''
+    const display = notas?.trim() || legacyName || 'PD'
+    return { status: 'pd', display }
   }
   if (lower.startsWith('si')) {
     const parts = raw.split('/')
-    const name  = parts[1]?.trim() || ''
-    return { status: 'si', display: name || 'Sí' }
+    const legacyName = parts[1]?.trim() || ''
+    const display = notas?.trim() || legacyName || 'Sí'
+    return { status: 'si', display }
   }
   return { status: 'empty', display: '' }
 }
@@ -156,7 +159,7 @@ function PlanifCard({ planif, temaNombre, onCellChange, onDeleteRow, isReadOnly 
 
   function renderSlot(col) {
     const { valor, notas } = getCellData(planif.medios, col.id)
-    const meta = getCellMeta(valor)
+    const meta = getCellMeta(valor, notas)
     return (
       <div
         key={col.id}
@@ -187,8 +190,8 @@ function PlanifCard({ planif, temaNombre, onCellChange, onDeleteRow, isReadOnly 
           {!expanded && assigned.length > 0 && (
             <div className="mobile-card-chips">
               {assigned.slice(0, 4).map(col => {
-                const { valor } = getCellData(planif.medios, col.id)
-                const meta = getCellMeta(valor)
+                const { valor, notas } = getCellData(planif.medios, col.id)
+                const meta = getCellMeta(valor, notas)
                 return (
                   <span key={col.id} className={`mobile-chip chip-${meta.status}`}>
                     {col.label}{meta.display && meta.display !== col.label ? ` · ${meta.display}` : ''}
