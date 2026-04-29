@@ -435,7 +435,6 @@ body {
 
 .status-si      { background: var(--green-bg)  !important; }
 .status-pd      { background: var(--yellow-bg) !important; }
-.status-no      { background: var(--red-bg)    !important; }
 
 .cell-text {
   font-size: .72rem;
@@ -448,7 +447,6 @@ body {
 }
 .status-si   .cell-text { color: var(--green-text); }
 .status-pd   .cell-text { color: var(--yellow-text); }
-.status-no   .cell-text { color: var(--red-text); }
 .status-empty .cell-text { color: var(--text-muted); }
 
 /* ── Action column ─────────────────────────────────────────────── */
@@ -4804,7 +4802,7 @@ body {
 /* ── Hover guides: fila ─────────────────────────────────────── */
 /* Fila tema header */
 @media (hover: hover) {
-  .tema-header-row:hover > td:not(.status-si):not(.status-pd):not(.status-no) {
+  .tema-header-row:hover > td:not(.status-si):not(.status-pd) {
     background: rgba(15, 43, 65, 0.035);
   }
   .tema-header-row:hover > .tema-header-sticky-col {

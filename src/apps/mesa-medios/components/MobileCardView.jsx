@@ -4,26 +4,24 @@ import { getCellData } from '../utils'
 
 // ── Helpers ─────────────────────────────────────────────────────
 function getCellMeta(raw) {
-  if (!raw) return { status: 'empty', display: '', name: '' }
+  if (!raw) return { status: 'empty', display: '' }
   const lower = raw.toLowerCase().trim()
-  if (lower === 'no') return { status: 'no', display: 'No', name: '' }
   if (lower.startsWith('pd')) {
     const parts = raw.split('/')
-    const name = parts[1]?.trim() || ''
-    return { status: 'pd', display: name || 'PD', name }
+    const name  = parts[1]?.trim() || ''
+    return { status: 'pd', display: name || 'PD' }
   }
   if (lower.startsWith('si')) {
     const parts = raw.split('/')
-    const name = parts[1]?.trim() || ''
-    return { status: 'si', display: name || 'Sí', name }
+    const name  = parts[1]?.trim() || ''
+    return { status: 'si', display: name || 'Sí' }
   }
-  return { status: 'empty', display: raw, name: '' }
+  return { status: 'empty', display: '' }
 }
 
 function buildValue(status, name) {
   if (status === 'si') return name ? `si / ${name}` : 'si'
   if (status === 'pd') return name ? `pd / ${name}` : 'pd'
-  if (status === 'no') return 'no'
   return ''
 }
 
@@ -58,7 +56,8 @@ function CellBottomSheet({ medio, currentValue, currentNotas, onSave, onClose })
   function handleSelect(status) {
     if (status === 'si' || status === 'pd') {
       setPendingStatus(status)
-      setName(meta.name || '')
+      const defaultLabels = ['PD', 'Sí']
+      setName(defaultLabels.includes(meta.display) ? '' : (meta.display || ''))
       setStep('name')
     } else if (status === 'clear') {
       onSave('', '')
@@ -91,10 +90,6 @@ function CellBottomSheet({ medio, currentValue, currentNotas, onSave, onClose })
               <button className="sheet-opt" onClick={() => handleSelect('pd')}>
                 <span className="sheet-dot dot-pd" />
                 <div><div className="sheet-opt-label">Por definir</div><div className="sheet-opt-hint">Responsable opcional</div></div>
-              </button>
-              <button className="sheet-opt" onClick={() => handleSelect('no')}>
-                <span className="sheet-dot dot-no" />
-                <div><div className="sheet-opt-label">No aplica</div><div className="sheet-opt-hint">No se usará este medio</div></div>
               </button>
               {meta.status !== 'empty' && (
                 <button className="sheet-opt" onClick={() => handleSelect('clear')}>
@@ -196,7 +191,7 @@ function PlanifCard({ planif, temaNombre, onCellChange, onDeleteRow, isReadOnly 
                 const meta = getCellMeta(valor)
                 return (
                   <span key={col.id} className={`mobile-chip chip-${meta.status}`}>
-                    {col.label}{meta.name ? ` · ${meta.name}` : ''}
+                    {col.label}{meta.display && meta.display !== col.label ? ` · ${meta.display}` : ''}
                   </span>
                 )
               })}
