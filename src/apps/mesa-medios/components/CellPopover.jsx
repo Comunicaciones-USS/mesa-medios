@@ -40,11 +40,18 @@ export default function CellPopover({ value, notas: initialNotas, position, onSa
     return () => document.removeEventListener('mousedown', handler)
   }, [onClose])
 
-  function handleKeyDown(e) {
+  function handleInputKeyDown(e) {
     if (e.key === 'Enter') {
       e.preventDefault()
       onSave('si', inputText.trim())
     }
+    if (e.key === 'Escape') {
+      e.stopPropagation()
+      onClose()
+    }
+  }
+
+  function handleContainerKeyDown(e) {
     if (e.key === 'Escape') {
       e.stopPropagation()
       onClose()
@@ -64,7 +71,7 @@ export default function CellPopover({ value, notas: initialNotas, position, onSa
       ref={ref}
       className="cell-popover cell-popover-v2"
       style={{ left, top, width: popW }}
-      onKeyDown={handleKeyDown}
+      onKeyDown={handleContainerKeyDown}
     >
       <div className="cpv2-input-wrap">
         <input
@@ -74,6 +81,7 @@ export default function CellPopover({ value, notas: initialNotas, position, onSa
           placeholder="Escribe una nota o presiona Enter..."
           value={inputText}
           onChange={e => setInputText(e.target.value)}
+          onKeyDown={handleInputKeyDown}
         />
       </div>
       <div className="cpv2-actions">
