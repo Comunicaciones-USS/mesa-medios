@@ -45,6 +45,7 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
   // Filtros horizontales
   const [filterGroup,      setFilterGroup]      = useState('all')
   const [filterCellStatus, setFilterCellStatus] = useState('all')
+  const [activeColumnFilters, setActiveColumnFilters] = useState(new Set())
 
   // Collapsed column groups
   const [collapsedGroups, setCollapsedGroups] = useState(new Set())
@@ -67,6 +68,7 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
     setFilterCellStatus('all')
     setFilterDateRange({ from: '', to: '' })
     setExpandedTemas(new Set())
+    setActiveColumnFilters(new Set())
   }
 
   const toggleGroup = useCallback((groupId) => {
@@ -86,6 +88,21 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
       return next
     })
   }, [])
+
+  const toggleColumnFilter = useCallback((colId) => {
+    setActiveColumnFilters(prev => {
+      const next = new Set(prev)
+      if (next.has(colId)) {
+        next.delete(colId)
+      } else {
+        next.add(colId)
+        setFilterGroup('all')  // deactivate group filter when column filter activated
+      }
+      return next
+    })
+  }, [])
+
+  const clearColumnFilters = useCallback(() => setActiveColumnFilters(new Set()), [])
 
   // Set --above-table CSS var so .table-scroll height stays within viewport
   useEffect(() => {
@@ -162,6 +179,27 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
       supabase.removeChannel(chContenidos)
     }
   }, [])
+
+  // Auto-expand temas when column filters are active
+  useEffect(() => {
+    if (activeColumnFilters.size > 0) {
+      const activeColIds = [...activeColumnFilters]
+      const toExpand = new Set(
+        temas
+          .filter(t => !t.archived)
+          .filter(t =>
+            t.planificaciones.some(p =>
+              activeColIds.some(colId => {
+                const { valor } = getCellData(p.medios, colId)
+                return valor && valor !== ''
+              })
+            )
+          )
+          .map(t => t.id)
+      )
+      setExpandedTemas(toExpand)
+    }
+  }, [activeColumnFilters]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -282,6 +320,22 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
       result = result.filter(t => t.planificaciones.length > 0)
     }
 
+    // Filter by active column filters: only temas with at least one planif with a value in a filtered column
+    if (activeColumnFilters.size > 0 && activeTab === 'active') {
+      const activeColIds = [...activeColumnFilters]
+      result = result
+        .map(tema => ({
+          ...tema,
+          planificaciones: tema.planificaciones.filter(p =>
+            activeColIds.some(colId => {
+              const { valor } = getCellData(p.medios, colId)
+              return valor && valor !== ''
+            })
+          )
+        }))
+        .filter(tema => tema.planificaciones.length > 0)
+    }
+
     // Ordenar temas
     if (activeTab === 'archived') {
       result = [...result].sort((a, b) => (b.archived_at || '').localeCompare(a.archived_at || ''))
@@ -311,12 +365,15 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
     }
 
     return result
-  }, [temas, activeTab, filterText, sortDir, filterDateRange, filterGroup, filterCellStatus])
+  }, [temas, activeTab, filterText, sortDir, filterDateRange, filterGroup, filterCellStatus, activeColumnFilters])
 
   const visibleCols = useMemo(() => {
+    if (activeColumnFilters.size > 0) {
+      return MEDIA_COLS.filter(c => activeColumnFilters.has(c.id))
+    }
     if (filterGroup === 'all') return MEDIA_COLS
     return MEDIA_COLS.filter(c => c.group === filterGroup)
-  }, [filterGroup])
+  }, [activeColumnFilters, filterGroup])
 
   // Contadores para badges de tabs
   const activeCount   = useMemo(() => temas.filter(t => !t.archived).length, [temas])
@@ -567,6 +624,7 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
     filterGroup !== 'all',
     filterCellStatus !== 'all',
     filterDateRange.from || filterDateRange.to,
+    activeColumnFilters.size > 0,
   ].filter(Boolean).length
 
   // ── Tabs UI (compartido entre desktop y mobile) ────────────────
@@ -825,6 +883,9 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
               onToggleGroup={toggleGroup}
               expandedTemas={expandedTemas}
               onToggleTema={toggleTema}
+              activeColumnFilters={activeColumnFilters}
+              onToggleColumnFilter={toggleColumnFilter}
+              onClearColumnFilters={clearColumnFilters}
             />
           </div>
           <div className="mobile-only">
