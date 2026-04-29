@@ -9,8 +9,8 @@
 export const VISOR_SHEETS = [
   {
     id: 'sheet-1',
-    label: 'PLACEHOLDER_LABEL_1',
-    url: 'PLACEHOLDER_URL_1',
+    label: 'Grilla RR.SS',
+    url: 'https://correouss-my.sharepoint.com/personal/felipe_morales_uss_cl/_layouts/15/Doc.aspx?sourcedoc={f8c812a1-2bff-4987-baa9-2693e19cc14f}&action=embedview&wdHideGridlines=True&wdHideHeaders=True&wdInConfigurator=True&wdInConfigurator=True&edaebf=rslc0',
   },
   {
     id: 'sheet-2',
