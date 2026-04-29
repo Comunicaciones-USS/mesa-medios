@@ -26,6 +26,9 @@ export default function CellPopover({ value, notas: initialNotas, position, onSa
   const inputRef = useRef(null)
   const ref = useRef(null)
 
+  // La celda ya tiene texto guardado si initNote es no-vacío
+  const hasExistingDetail = initNote.trim() !== ''
+
   // Auto-focus on mount
   useEffect(() => {
     inputRef.current?.focus()
@@ -40,10 +43,14 @@ export default function CellPopover({ value, notas: initialNotas, position, onSa
     return () => document.removeEventListener('mousedown', handler)
   }, [onClose])
 
+  // Fix 2: Enter guarda el texto escrito si hay algo, o "sí" vacío si está vacío
   function handleInputKeyDown(e) {
     if (e.key === 'Enter') {
       e.preventDefault()
-      onSave('si', inputText.trim())
+      const trimmed = inputText.trim()
+      // Si hay texto → guardar como nota con status 'si'
+      // Si vacío → guardar como 'si' sin nota
+      onSave('si', trimmed)
     }
     if (e.key === 'Escape') {
       e.stopPropagation()
@@ -58,9 +65,9 @@ export default function CellPopover({ value, notas: initialNotas, position, onSa
     }
   }
 
-  // Keep popover within viewport
-  const popW = 260
-  const popH = 120
+  // Keep popover within viewport — width ajustado a 340 (Fix 1)
+  const popW = 340
+  const popH = hasExistingDetail ? 210 : 130
   let left = position.x
   let top  = position.y + 4
   if (left + popW > window.innerWidth  - 8) left = window.innerWidth  - popW - 8
@@ -73,6 +80,13 @@ export default function CellPopover({ value, notas: initialNotas, position, onSa
       style={{ left, top, width: popW }}
       onKeyDown={handleContainerKeyDown}
     >
+      {/* Fix 3: sección "Detalle actual" — solo si ya hay texto guardado */}
+      {hasExistingDetail && (
+        <div className="cpv2-detail-section">
+          <p className="cpv2-detail-label">Detalle actual</p>
+          <p className="cpv2-detail-text">{initNote}</p>
+        </div>
+      )}
       <div className="cpv2-input-wrap">
         <input
           ref={inputRef}

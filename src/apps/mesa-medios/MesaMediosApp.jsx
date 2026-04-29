@@ -229,21 +229,64 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [confirmDelete, confirmArchive, confirmReactivate, confirmStatusComplete, showModal, showLogs, showExportModal])
 
+  // Fix 6: evalúa si temas con status 'Nuevo' siguen siendo válidos (< 7 días)
+  // Si no lo son, los transiciona a 'En desarrollo' en BD de forma silenciosa
+  async function checkAndTransitionStaleNew(temasList) {
+    const now = new Date()
+    const staleNewIds = temasList
+      .filter(t => t.status === 'Nuevo' && t.created_at)
+      .filter(t => {
+        const created = new Date(t.created_at)
+        const days = Math.floor((now - created) / (1000 * 60 * 60 * 24))
+        return days >= 7
+      })
+      .map(t => t.id)
+
+    if (staleNewIds.length === 0) return
+
+    // Batch update silencioso — no bloquea el render
+    for (const id of staleNewIds) {
+      supabase.from('temas').update({ status: 'En desarrollo' }).eq('id', id).then(() => {})
+    }
+    // Actualizar estado local inmediatamente
+    setTemas(prev => prev.map(t =>
+      staleNewIds.includes(t.id) ? { ...t, status: 'En desarrollo' } : t
+    ))
+  }
+
   async function fetchData() {
     setLoading(true)
-    const [{ data: temasData, error: tErr }, { data: planifs, error: pErr }] = await Promise.all([
+    const [{ data: temasData, error: tErr }, { data: planifs, error: pErr }, { data: accionesData }] = await Promise.all([
       supabase.from('temas').select('*').order('nombre'),
       supabase.from('contenidos').select('*').order('semana').order('nombre'),
+      // Fix 7: traer hitos de acciones editoriales vinculadas (sync_to_medios=true)
+      supabase.from('mesa_editorial_acciones')
+        .select('tema_id, tipo, archived')
+        .eq('sync_to_medios', true)
+        .eq('archived', false),
     ])
     if (tErr || pErr) { setError((tErr || pErr).message); setLoading(false); return }
 
+    // Fix 7: construir mapa tema_id → tipo (hito) usando la acción más reciente activa
+    const hitoMap = {}
+    for (const acc of (accionesData || [])) {
+      if (acc.tema_id && acc.tipo) {
+        // Solo asignar si no existe ya (la primera es la más relevante por query order)
+        if (!hitoMap[acc.tema_id]) hitoMap[acc.tema_id] = acc.tipo
+      }
+    }
+
     const tree = (temasData || []).map(tema => ({
       ...tema,
+      hito: hitoMap[tema.id] || null,
       planificaciones: (planifs || []).filter(p => p.tema_id === tema.id),
     }))
     setTemas(tree)
     setExpandedTemas(new Set())
     setLoading(false)
+
+    // Fix 6: transición silenciosa Nuevo → En desarrollo si pasaron 7+ días
+    checkAndTransitionStaleNew(temasData || [])
   }
 
   const logAction = useCallback(async (accion, contenidoId, contenidoNombre, detalle = '') => {
@@ -824,8 +867,49 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
             {activeColumnFilters.size > 0 && (
               <div className="medios-filter-active medios-filter-cols-active">
                 <span className="column-filter-badge">
-                  ⚙ {activeColumnFilters.size} columna{activeColumnFilters.size !== 1 ? 's' : ''} filtrada{activeColumnFilters.size !== 1 ? 's' : ''}
+                  {activeColumnFilters.size} columna{activeColumnFilters.size !== 1 ? 's' : ''} filtrada{activeColumnFilters.size !== 1 ? 's' : ''}
                 </span>
+                {/* Fix 4: chips por columna activa con X para quitar una a la vez */}
+                <div className="col-filter-chips">
+                  {[...activeColumnFilters].map(colId => {
+                    const col = MEDIA_COLS.find(c => c.id === colId)
+                    if (!col) return null
+                    return (
+                      <span key={colId} className="col-filter-chip">
+                        {col.label}{col.sub ? ` · ${col.sub}` : ''}
+                        <button
+                          className="col-filter-chip-remove"
+                          onClick={() => toggleColumnFilter(colId)}
+                          title={`Quitar filtro de ${col.label}`}
+                          aria-label={`Quitar filtro de ${col.label}`}
+                        >
+                          <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                            <path d="M1 1l6 6M7 1l-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                          </svg>
+                        </button>
+                      </span>
+                    )
+                  })}
+                  {/* Selector para añadir más columnas al filtro activo */}
+                  <select
+                    className="col-filter-add-select"
+                    value=""
+                    onChange={e => { if (e.target.value) toggleColumnFilter(e.target.value) }}
+                    title="Añadir otra columna al filtro"
+                    aria-label="Añadir otra columna al filtro"
+                  >
+                    <option value="">+ Añadir columna</option>
+                    {GROUPS.map(g => (
+                      <optgroup key={g.id} label={g.label}>
+                        {MEDIA_COLS.filter(c => c.group === g.id && !activeColumnFilters.has(c.id)).map(col => (
+                          <option key={col.id} value={col.id}>
+                            {col.label}{col.sub ? ` · ${col.sub}` : ''}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  </select>
+                </div>
                 <span className="filter-count">
                   {displayTemas.length} de {activeCount} tema{activeCount !== 1 ? 's' : ''}
                 </span>
