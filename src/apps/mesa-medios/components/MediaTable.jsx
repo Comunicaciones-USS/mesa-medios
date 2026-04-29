@@ -108,6 +108,19 @@ const TemaRow = memo(function TemaRow({
     return days > 30 ? days : 0
   }, [maxSemana, isArchived])
 
+  // Badge de alerta: tema 'En desarrollo' con todas las planificaciones vencidas > STALE_THRESHOLD_DAYS
+  const isStale = useMemo(() => {
+    if (isArchived || tema.status !== 'En desarrollo') return false
+    if (tema.planificaciones.length === 0) return false
+    const today = new Date()
+    return tema.planificaciones.every(p => {
+      if (!p.semana) return true  // sin fecha = considerar vencida
+      const planDate = new Date(p.semana + 'T12:00:00')
+      const diffDays = Math.floor((today - planDate) / (1000 * 60 * 60 * 24))
+      return diffDays > STALE_THRESHOLD_DAYS
+    })
+  }, [tema.planificaciones, tema.status, isArchived])
+
   const n = tema.planificaciones.length
 
   // ── Edición inline de fecha ──────────────────────────────────
@@ -298,6 +311,18 @@ const TemaRow = memo(function TemaRow({
                 <option value="En desarrollo">En desarrollo</option>
                 <option value="Completado">Completado</option>
               </select>
+            )}
+
+            {/* Badge alerta: tema con fechas desfasadas */}
+            {isStale && (
+              <button
+                className="tema-stale-badge"
+                onClick={e => { e.stopPropagation(); onStatusChange?.(tema.id, 'Completado') }}
+                title={`Este tema tiene planificaciones con fecha pasada hace más de ${STALE_THRESHOLD_DAYS} días. Considera marcarlo como completado.`}
+                aria-label="Cerrar tema — tiene fechas desfasadas"
+              >
+                ⚠ Cerrar tema
+              </button>
             )}
             <div className="tema-header-spacer" />
             {/* Botones de acción: distintos según tab */}
