@@ -16,6 +16,7 @@ import { logAuditEntry } from '../shared/utils/audit'
 import BottomSheet from '../shared/components/BottomSheet'
 import ExportModal from '../shared/components/ExportModal'
 import { generateMediosExcel } from '../shared/utils/excelExportMedios'
+import SheetButtons from '../shared/components/SheetButtons'
 
 export default function MesaMediosApp({ session, userName, onLogout, onBackToSelector, onSwitchDashboard, otherDashboardName }) {
   const [temas,            setTemas]            = useState([])
@@ -786,6 +787,7 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
             Archivados
             <span className="tab-badge">{archivedCount}</span>
           </button>
+          <SheetButtons />
         </div>
 
         {activeTab === 'active' ? (

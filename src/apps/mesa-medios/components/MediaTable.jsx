@@ -312,21 +312,16 @@ const TemaRow = memo(function TemaRow({
               </span>
             )}
 
-            {/* Select para cambiar status manualmente (solo tab activos) */}
-            {/* Fix 6: "Nuevo" no es una opción seleccionable manualmente — solo aparece como badge informativo */}
-            {!isArchived && tema.status && (
+            {/* Select para cambiar status manualmente — solo si NO es "Nuevo" */}
+            {!isArchived && tema.status && tema.status !== 'Nuevo' && (
               <select
                 className="tema-status-select"
-                value={tema.status === 'Nuevo' ? 'Nuevo' : tema.status}
+                value={tema.status}
                 onChange={e => onStatusChange?.(tema.id, e.target.value)}
                 onClick={e => e.stopPropagation()}
                 aria-label="Cambiar status del tema"
                 title="Cambiar status"
-                disabled={tema.status === 'Nuevo'}
               >
-                {tema.status === 'Nuevo' && (
-                  <option value="Nuevo">Nuevo</option>
-                )}
                 <option value="En desarrollo">En desarrollo</option>
                 <option value="Completado">Completado</option>
               </select>
