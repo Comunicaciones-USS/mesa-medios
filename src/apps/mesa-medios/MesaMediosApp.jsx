@@ -820,6 +820,20 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
                 <button className="filter-reset" onClick={() => { setFilterInput(''); setFilterGroup('all'); setFilterCellStatus('all'); setFilterDateRange({ from: '', to: '' }) }}>Limpiar filtros</button>
               </div>
             )}
+            {/* Column filter indicator — independent of hasActiveFilters */}
+            {activeColumnFilters.size > 0 && (
+              <div className="medios-filter-active medios-filter-cols-active">
+                <span className="column-filter-badge">
+                  ⚙ {activeColumnFilters.size} columna{activeColumnFilters.size !== 1 ? 's' : ''} filtrada{activeColumnFilters.size !== 1 ? 's' : ''}
+                </span>
+                <span className="filter-count">
+                  {displayTemas.length} de {activeCount} tema{activeCount !== 1 ? 's' : ''}
+                </span>
+                <button className="filter-reset" onClick={clearColumnFilters}>
+                  Limpiar columnas
+                </button>
+              </div>
+            )}
           </>
         ) : (
           /* Tab Archivados: solo búsqueda + rango de fecha de archivado */
@@ -1056,6 +1070,31 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
               <span className="sheet-date-sep">→</span>
               <input type="date" value={filterDateRange.to} onChange={e => setFilterDateRange(p => ({ ...p, to: e.target.value }))} className="sheet-date-input" />
             </div>
+          </div>
+          <div className="sheet-filter-group">
+            <p className="sheet-filter-label">FILTRAR POR COLUMNA</p>
+            {GROUPS.map(g => (
+              <div key={g.id} className="sheet-col-group">
+                <p className="sheet-col-group-label">{g.label}</p>
+                <div className="sheet-col-checkboxes">
+                  {MEDIA_COLS.filter(c => c.group === g.id).map(col => (
+                    <label key={col.id} className="sheet-col-check-label">
+                      <input
+                        type="checkbox"
+                        checked={activeColumnFilters.has(col.id)}
+                        onChange={() => toggleColumnFilter(col.id)}
+                      />
+                      <span>{col.label}{col.sub ? ` · ${col.sub}` : ''}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            ))}
+            {activeColumnFilters.size > 0 && (
+              <button className="sheet-clear-btn" onClick={clearColumnFilters} style={{ marginTop: 8 }}>
+                Limpiar filtros de columna ({activeColumnFilters.size})
+              </button>
+            )}
           </div>
         </BottomSheet>
       )}
