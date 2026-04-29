@@ -6,20 +6,19 @@ import CellPopover from './CellPopover'
 // ── Helpers ───────────────────────────────────────────────────────
 
 function getCellMeta(raw) {
-  if (!raw) return { status: 'empty', display: '', name: '' }
+  if (!raw) return { status: 'empty', display: '' }
   const lower = raw.toLowerCase().trim()
-  if (lower === 'no') return { status: 'no', display: 'No', name: '' }
   if (lower.startsWith('pd')) {
     const parts = raw.split('/')
     const name  = parts[1]?.trim() || ''
-    return { status: 'pd', display: name || 'PD', name }
+    return { status: 'pd', display: name || 'PD' }
   }
   if (lower.startsWith('si')) {
     const parts = raw.split('/')
-    const name  = parts[1]?.trim() || 'Sí'
-    return { status: 'si', display: name, name }
+    const name  = parts[1]?.trim() || ''
+    return { status: 'si', display: name || 'Sí' }
   }
-  return { status: 'empty', display: raw, name: '' }
+  return { status: 'empty', display: '' }
 }
 
 function formatDate(dateStr) {

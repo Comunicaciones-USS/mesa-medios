@@ -242,7 +242,6 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
               const { valor } = getCellData(p.medios, col.id)
               if (filterCellStatus === 'si')    return valor?.toLowerCase().startsWith('si')
               if (filterCellStatus === 'pd')    return valor?.toLowerCase().startsWith('pd')
-              if (filterCellStatus === 'no')    return valor?.toLowerCase() === 'no'
               if (filterCellStatus === 'empty') return !valor
               return true
             }))
@@ -749,7 +748,7 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
               </div>
               <div className="filter-pills-divider" />
               <div className="filter-pills">
-                {[{ value: 'all', label: 'Todas las celdas' }, { value: 'si', label: '✓ Confirmado' }, { value: 'pd', label: '◉ Por definir' }, { value: 'no', label: '✕ No aplica' }, { value: 'empty', label: '○ Vacías' }].map(f => (
+                {[{ value: 'all', label: 'Todas las celdas' }, { value: 'si', label: '✓ Confirmado' }, { value: 'pd', label: '◉ Por definir' }, { value: 'empty', label: '○ Vacías' }].map(f => (
                   <button key={f.value} className={`pill ${filterCellStatus === f.value ? 'pill-active' : ''}`} onClick={() => setFilterCellStatus(f.value)}>{f.label}</button>
                 ))}
               </div>
@@ -979,7 +978,6 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
                 { value: 'all',   label: 'Todas' },
                 { value: 'si',    label: 'Confirmado' },
                 { value: 'pd',    label: 'Por definir' },
-                { value: 'no',    label: 'No aplica' },
                 { value: 'empty', label: 'Vacías' },
               ].map(f => (
                 <button
