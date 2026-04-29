@@ -1,5 +1,5 @@
 # Estado del Proyecto — Mesa de Medios USS
-**Actualizado:** 2026-04-29 | **Branch:** `main` | **Commit:** `5d0f7e5`
+**Actualizado:** 2026-04-29 | **Branch:** `main` | **Commit:** `182fa42`
 
 ---
 
@@ -546,6 +546,7 @@ cfc42df merge(feat/release-mejoras-2): status + alertas + popover rediseñado + 
 ### Branches:
 ```
 main                              ← producción ✅ (pusheado y deployado 2026-04-29)
+feat/sheet-viewers                ← mergeada a main ✅
 fix/post-release-2                ← mergeada a main ✅
 feat/release-mejoras-2            ← mergeada a main ✅
 ```
@@ -617,6 +618,7 @@ Todos en `scripts/`. Ejecutar en **Supabase SQL Editor** (no en producción auto
 
 | Funcionalidad | Estado |
 |---|---|
+| **Visores Excel Online (SharePoint):** Botones en el header de ambas mesas (Mesa Medios y Editorial). Componentes: `SheetButtons` (botones + state), `SheetViewer` (modal con iframe). Config centralizada en `shared/utils/sheetsConfig.js` — Leo debe reemplazar los 4 placeholders (`PLACEHOLDER_LABEL_1`, `PLACEHOLDER_URL_1`, `PLACEHOLDER_LABEL_2`, `PLACEHOLDER_URL_2`) con datos reales y hacer `chore(sheets): set production URLs` + `npm run deploy`. Sin atributo sandbox en iframe (requisito SSO Microsoft 365). Mobile: botones compactos solo-ícono. | ✅ |
 | Tabla con 39 canales (3 grupos, múltiples sub-grupos) | ✅ |
 | Edición inline de celdas (si/pd + notas) via popover directo | ✅ |
 | Filtros: texto, rango de fechas, grupo, estado de celda | ✅ |
