@@ -1,5 +1,5 @@
 # Estado del Proyecto — Mesa de Medios USS
-**Actualizado:** 2026-04-27 | **Branch:** `main` | **Commit:** `0bdd9c5`
+**Actualizado:** 2026-04-28 | **Branch:** `main` | **Commit:** `cfc42df`
 
 ---
 
@@ -106,7 +106,7 @@ sistema-gestion-main/
 │       │       ├── MobileCardView.jsx  # Vista mobile (cards por tema)
 │       │       ├── AddRowModal.jsx     # Modal nuevo tema / nueva fecha
 │       │       ├── AuditLogPanel.jsx   # Panel historial de actividad
-│       │       └── CellPopover.jsx     # Popover edición de celdas (si/pd/no + notas)
+│       │       └── CellPopover.jsx     # Popover edición de celdas (si/pd + notas, input directo)
 │       │
 │       └── mesa-editorial/
 │           ├── MesaEditorialApp.jsx    # App principal
@@ -177,9 +177,11 @@ El registro de LOGIN lo hace únicamente `Login.jsx` via `logAuditEntry()`. `App
 | `filterInput` | String | Búsqueda por texto (debounced 300ms) |
 | `filterDateRange` | Object | Rango de fechas |
 | `filterGroup` | String | Filtro por grupo de medios |
-| `filterCellStatus` | String | Filtro `si`/`pd`/`no` |
+| `filterCellStatus` | String | Filtro `si`/`pd`/`empty` |
+| `activeColumnFilters` | Set\<string\> | IDs de columnas con filtro activo (sesión, no persistido) |
 | `collapsedGroups` | Set | IDs de grupos colapsados |
 | `expandedTemas` | Set | IDs de temas con filas expandidas |
+| `confirmStatusComplete` | Object\|null | `{ id, nombre }` — pendiente de confirmar cambio a Completado |
 | `showMobileFilters` | Boolean | Bottom sheet de filtros mobile visible |
 
 **Funciones clave:**
@@ -302,11 +304,13 @@ origen      TEXT        NOT NULL DEFAULT 'medios'   -- 'medios' | 'editorial'
 eje         TEXT
 archived    BOOLEAN     DEFAULT FALSE
 archived_at TIMESTAMPTZ
+status      TEXT        DEFAULT 'Nuevo'             -- 'Nuevo' | 'En desarrollo' | 'Completado'
 created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()     -- Auto-actualizado por trigger
 ```
 > Trigger `temas_updated_at_trigger` actualiza `updated_at` en cada UPDATE.
-> Índice: `idx_temas_archived ON temas(archived)` (script `add-archived-medios.sql`).
+> Índices: `idx_temas_archived ON temas(archived)` (script `add-archived-medios.sql`); `idx_temas_status ON temas(status)` (script `add-medios-status.sql`).
+> Columna `status` agregada con `scripts/add-medios-status.sql` — ejecutar antes de hacer deploy de release-mejoras-2.
 
 ---
 
@@ -527,30 +531,26 @@ git push && npm run deploy
 
 ## 8. Estado del Git
 
-### Branch actual: `main` (HEAD: `0bdd9c5`)
+### Branch actual: `main` (HEAD: `cfc42df`)
 
 ### Últimos commits:
 ```
-0bdd9c5 merge(chore/repo-cleanup): limpieza completa del repositorio
-f962646 chore: remove unused exports getGroupCols and EJE_LABELS
-7af18f2 fix(export): remove unhandled throw and fix CSS comment
-937805f docs: add excel export feature to ESTADO-PROYECTO.md
-38c7a89 fix(export): move exportPreselected after displayRows in MesaEditorialApp
-1171b13 feat(export): wire export button and modal in Mesa Editorial
-dd0d2a8 feat(export): wire export button and modal in Mesa de Medios
-bd4f316 fix(export): guard null inputs in excelExportEditorial
-f43b316 feat(export): Excel generator for Mesa Editorial
-141e7f6 fix(export): guard null planificaciones and minor robustness in excelExportMedios
-56ba196 feat(export): Excel generator for Mesa de Medios
-4e9b4f8 feat(export): CSS for ExportModal and export buttons
-6121428 fix(export): focus restore, body scroll lock, generating reset in ExportModal
-77d13a4 feat(export): ExportModal shared component
-e9ed845 feat(export): install xlsx-js-style
-387c362 fix(medios): header cohesion — tabs flush con header y ancho completo
-6e24417 feat(a11y): focus trap and return focus in overlays
-85c1b06 feat(a11y): adjust color contrast to meet WCAG AA
-1784611 feat(a11y): add ARIA labels, landmarks and focus styles
-e00438f docs(a11y): WCAG AA audit report
+cfc42df merge(feat/release-mejoras-2): status + alertas + popover rediseñado + filtros multi-columna
+21296e5 feat(column-filters): toolbar badge, clear button, mobile column filter section
+d38f16a fix(column-filters): use stable EMPTY_SET constant as default prop
+ae8d247 feat(column-filters): filter icons in column headers, empty state for filtered view
+efbeeaa fix(column-filters): add temas to auto-expand effect deps, document filter-sort order
+075623b feat(column-filters): state, logic, auto-expand and displayTemas filtering in App
+813e3b7 fix(cell-cleanup): remove No state from MobileCardView + dead CSS
+f38cfb9 feat(cell-cleanup): remove No state from getCellMeta, filters and pills
+818fc9e fix(cell-popover): enter key only on input, remove dead v1 CSS
+43153df feat(cell-popover): redesign with direct-input flow, remove No state
+53e6143 feat(stale-alert): badge warning for stale En desarrollo topics
+2009b32 fix(medios-status): remove dead stopPropagation, guard select with status check
+e62670c feat(medios-status): status badge + dropdown in TemaRow, CSS badges
+b40bf99 fix(medios-status): rollback on status error, guard auto-transition writes
+6e3896f feat(medios-status): status handlers, auto-transitions, confirmDialog in App
+0e0a954 fix(sql): remove no-cells cleanly via key exclusion, not JSONB null
 ```
 
 ### Branches:
@@ -580,6 +580,8 @@ Todos en `scripts/`. Ejecutar en **Supabase SQL Editor** (no en producción auto
 | `security-rpc-cleanup.sql` | ✅ Ejecutado | Elimina policy `anon_can_read_active_users` (ya no necesaria con RPC) |
 | `add-performance-indexes.sql` | ✅ Ejecutado | Índices de performance en contenidos, mesa_editorial_acciones, audit_logs, pin_login_attempts |
 | `add-archived-medios.sql` | ⏳ **PENDIENTE** | `archived BOOLEAN` + `archived_at TIMESTAMPTZ` + índice en tabla `temas` — **ejecutar antes de usar la feature** |
+| `add-medios-status.sql` | ⏳ **PENDIENTE** | `status TEXT DEFAULT 'Nuevo'` + CHECK + backfill + índice en tabla `temas` — ejecutar **antes** de release-mejoras-2 |
+| `migrate-cell-no-to-empty.sql` | ⏳ **PENDIENTE** | Limpia celdas con valor `'no'` en JSONB de `contenidos.medios` — ejecutar **después** de `add-medios-status.sql` |
 
 ---
 
@@ -625,7 +627,7 @@ Todos en `scripts/`. Ejecutar en **Supabase SQL Editor** (no en producción auto
 | Funcionalidad | Estado |
 |---|---|
 | Tabla con 39 canales (3 grupos, múltiples sub-grupos) | ✅ |
-| Edición inline de celdas (si/pd/no + notas) via popover | ✅ |
+| Edición inline de celdas (si/pd + notas) via popover directo | ✅ |
 | Filtros: texto, rango de fechas, grupo, estado de celda | ✅ |
 | Grupos colapsables | ✅ |
 | Temas colapsables (expandir planificaciones por fecha) | ✅ |
@@ -647,6 +649,10 @@ Todos en `scripts/`. Ejecutar en **Supabase SQL Editor** (no en producción auto
 | **Badge "Inactivo · Xd" para temas sin planificación > 30 días** | ✅ |
 | **Archivado en mobile (TemaCard con botones archive/reactivate)** | ✅ |
 | **Exportación Excel:** Botón "Exportar" en toolbar de filtros (solo tab Activos). Abre modal con selección de temas/acciones, búsqueda, pre-selección según filtros. Genera `.xlsx` con diseño ejecutivo: header USS, bloques por tema con subheaders de color, celdas coloreadas por estado. Helpers: `shared/utils/excelExportMedios.js` y `excelExportEditorial.js` (xlsx-js-style). | ✅ |
+| **Status de temas (Nuevo / En desarrollo / Completado):** Badge de color + select en cada tema. Auto-transición Nuevo→En desarrollo al editar primera celda o agregar planificación. Completado→archivado automático con ConfirmDialog. Require SQL: `add-medios-status.sql`. | ✅ |
+| **Alerta fecha desfasada:** Badge naranja "⚠ Cerrar tema" en temas "En desarrollo" con todas las planificaciones con fecha > 14 días pasados. Click → ConfirmDialog → archivado. Umbral: `STALE_THRESHOLD_DAYS = 14` en `config.js`. | ✅ |
+| **CellPopover rediseñado:** Input directo enfocado al abrir. Enter = Confirmar (si). Botones: Por definir (pd), Vaciar, Confirmar. Sin modos view/edit, sin estado "No". Compatible con formato legacy `"si/Juan"`. | ✅ |
+| **Filtros multi-columna:** Icono funnel/X en cada header de columna. Selección múltiple. `visibleCols` prioriza columnas activas sobre grupo. `displayTemas` filtra planifs por datos en columnas filtradas. Auto-expand de temas con datos. Badge "X columnas filtradas" en toolbar + botón "Limpiar columnas". Sección con checkboxes por grupo en BottomSheet mobile. Filtros se resetean al cambiar tab. | ✅ |
 
 ### Mesa Editorial
 
