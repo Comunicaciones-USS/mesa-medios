@@ -199,7 +199,7 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
       )
       setExpandedTemas(toExpand)
     }
-  }, [activeColumnFilters]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [activeColumnFilters, temas])
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -320,7 +320,7 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
       result = result.filter(t => t.planificaciones.length > 0)
     }
 
-    // Filter by active column filters: only temas with at least one planif with a value in a filtered column
+    // Column filter runs after planif sort — tema order reflects the nearest planif that has data in filtered columns
     if (activeColumnFilters.size > 0 && activeTab === 'active') {
       const activeColIds = [...activeColumnFilters]
       result = result
