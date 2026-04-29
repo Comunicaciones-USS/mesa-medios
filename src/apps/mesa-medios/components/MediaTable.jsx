@@ -520,6 +520,9 @@ export default function MediaTable({
   onToggleGroup,
   expandedTemas   = new Set(),
   onToggleTema,
+  activeColumnFilters = new Set(),
+  onToggleColumnFilter,
+  onClearColumnFilters,
 }) {
   const [popover, setPopover] = useState(null)
 
@@ -631,12 +634,33 @@ export default function MediaTable({
             <tr className="sub-header-row">
               {activeGroups.map(g => {
                 if (collapsedGroups.has(g.id)) return <th key={g.id} scope="col" className="sub-header sub-header-placeholder" />
-                return activeCols.filter(c => c.group === g.id).map(col => (
-                  <th key={col.id} scope="col" className="sub-header">
-                    <span className="sub-label">{col.label}</span>
-                    {col.sub && <span className="sub-sublabel">{col.sub}</span>}
-                  </th>
-                ))
+                return activeCols.filter(c => c.group === g.id).map(col => {
+                  const isFiltered = activeColumnFilters.has(col.id)
+                  return (
+                    <th key={col.id} scope="col" className={`sub-header${isFiltered ? ' sub-header-filtered' : ''}`}>
+                      <span className="sub-label">{col.label}</span>
+                      {col.sub && <span className="sub-sublabel">{col.sub}</span>}
+                      <button
+                        className={`col-filter-btn${isFiltered ? ' active' : ''}`}
+                        onClick={e => { e.stopPropagation(); onToggleColumnFilter?.(col.id) }}
+                        title={isFiltered ? `Quitar filtro de ${col.label}` : `Filtrar por ${col.label}`}
+                        aria-label={isFiltered ? `Quitar filtro de ${col.label}` : `Filtrar por ${col.label}`}
+                      >
+                        {isFiltered ? (
+                          /* X icon to remove filter */
+                          <svg width="9" height="9" viewBox="0 0 9 9" fill="none" aria-hidden="true">
+                            <path d="M1.5 1.5l6 6M7.5 1.5l-6 6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+                          </svg>
+                        ) : (
+                          /* Funnel icon */
+                          <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                            <path d="M1 2h8L6 5.5V8.5L4 7.5V5.5L1 2z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
+                          </svg>
+                        )}
+                      </button>
+                    </th>
+                  )
+                })
               })}
             </tr>
           </thead>
@@ -653,6 +677,17 @@ export default function MediaTable({
                         {isArchived ? 'Los temas que archives aparecerán aquí' : 'Agrega el primero para comenzar la planificación'}
                       </span>
                       {!isArchived && <button className="empty-state-cta" onClick={onAdd}>+ Agregar tema</button>}
+                    </div>
+                  ) : activeColumnFilters.size > 0 ? (
+                    <div className="empty-state">
+                      <span className="empty-state-icon">⚙</span>
+                      <p className="empty-state-title">Sin temas con datos en las columnas filtradas</p>
+                      <span className="empty-state-sub">
+                        Ningún tema tiene contenido en {activeColumnFilters.size === 1 ? 'la columna seleccionada' : 'las columnas seleccionadas'}
+                      </span>
+                      <button className="empty-state-ghost" onClick={onClearColumnFilters}>
+                        ✕ Limpiar filtros de columna
+                      </button>
                     </div>
                   ) : (
                     <div className="empty-state">
