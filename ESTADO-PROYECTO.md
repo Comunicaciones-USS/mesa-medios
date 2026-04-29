@@ -580,8 +580,8 @@ Todos en `scripts/`. Ejecutar en **Supabase SQL Editor** (no en producción auto
 | `security-rpc-cleanup.sql` | ✅ Ejecutado | Elimina policy `anon_can_read_active_users` (ya no necesaria con RPC) |
 | `add-performance-indexes.sql` | ✅ Ejecutado | Índices de performance en contenidos, mesa_editorial_acciones, audit_logs, pin_login_attempts |
 | `add-archived-medios.sql` | ⏳ **PENDIENTE** | `archived BOOLEAN` + `archived_at TIMESTAMPTZ` + índice en tabla `temas` — **ejecutar antes de usar la feature** |
-| `add-medios-status.sql` | ⏳ **PENDIENTE** | `status TEXT DEFAULT 'Nuevo'` + CHECK + backfill + índice en tabla `temas` — ejecutar **antes** de release-mejoras-2 |
-| `migrate-cell-no-to-empty.sql` | ⏳ **PENDIENTE** | Limpia celdas con valor `'no'` en JSONB de `contenidos.medios` — ejecutar **después** de `add-medios-status.sql` |
+| `add-medios-status.sql` | ✅ Ejecutado | `status TEXT DEFAULT 'Nuevo'` + CHECK + backfill + índice en tabla `temas` |
+| `migrate-cell-no-to-empty.sql` | ✅ Ejecutado | Limpia celdas con valor `'no'` en JSONB de `contenidos.medios` |
 
 ---
 
