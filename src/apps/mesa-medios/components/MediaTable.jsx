@@ -1,5 +1,5 @@
 import { useState, Fragment, memo, useMemo, useCallback } from 'react'
-import { MEDIA_COLS, GROUPS } from '../config'
+import { MEDIA_COLS, GROUPS, STALE_THRESHOLD_DAYS } from '../config'
 import { getCellData } from '../utils'
 import CellPopover from './CellPopover'
 
@@ -78,6 +78,7 @@ const TemaRow = memo(function TemaRow({
   onAddPlanificacion,
   onArchiveTema,
   onReactivateTema,
+  onStatusChange,
   isArchived,
   activePopoverKey,
 }) {
@@ -272,6 +273,32 @@ const TemaRow = memo(function TemaRow({
                 </span>
               </>
             )}
+            {/* Badge de status del tema */}
+            {!isArchived && tema.status && (
+              <span
+                className={`tema-status-badge tema-status-${tema.status === 'En desarrollo' ? 'en-desarrollo' : tema.status.toLowerCase()}`}
+                title={`Status: ${tema.status}`}
+              >
+                {tema.status === 'Nuevo' && '✦ '}
+                {tema.status}
+              </span>
+            )}
+
+            {/* Select para cambiar status manualmente (solo tab activos) */}
+            {!isArchived && (
+              <select
+                className="tema-status-select"
+                value={tema.status || 'Nuevo'}
+                onChange={e => { e.stopPropagation(); onStatusChange?.(tema.id, e.target.value) }}
+                onClick={e => e.stopPropagation()}
+                aria-label="Cambiar status del tema"
+                title="Cambiar status"
+              >
+                <option value="Nuevo">Nuevo</option>
+                <option value="En desarrollo">En desarrollo</option>
+                <option value="Completado">Completado</option>
+              </select>
+            )}
             <div className="tema-header-spacer" />
             {/* Botones de acción: distintos según tab */}
             {!isArchived ? (
@@ -422,6 +449,7 @@ const TemaRow = memo(function TemaRow({
     pt.origen === nt.origen &&
     pt.archived === nt.archived &&
     pt.archived_at === nt.archived_at &&
+    pt.status === nt.status &&
     samePlanifs &&
     prevProps.isExpanded === nextProps.isExpanded &&
     prevProps.isArchived === nextProps.isArchived &&
@@ -440,7 +468,8 @@ const TemaRow = memo(function TemaRow({
     prevProps.onRenameTema === nextProps.onRenameTema &&
     prevProps.onAddPlanificacion === nextProps.onAddPlanificacion &&
     prevProps.onArchiveTema === nextProps.onArchiveTema &&
-    prevProps.onReactivateTema === nextProps.onReactivateTema
+    prevProps.onReactivateTema === nextProps.onReactivateTema &&
+    prevProps.onStatusChange === nextProps.onStatusChange
   )
 })
 
@@ -456,6 +485,7 @@ export default function MediaTable({
   onAddPlanificacion,
   onArchiveTema,
   onReactivateTema,
+  onStatusChange,
   isArchived = false,
   totalTemas,
   filterQuery,
@@ -638,6 +668,7 @@ export default function MediaTable({
                     onAddPlanificacion={onAddPlanificacion}
                     onArchiveTema={onArchiveTema}
                     onReactivateTema={onReactivateTema}
+                    onStatusChange={onStatusChange}
                     isArchived={isArchived}
                     activePopoverKey={temaActivePopoverKey}
                   />

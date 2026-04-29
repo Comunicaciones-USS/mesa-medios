@@ -5439,3 +5439,40 @@ body {
 @media (max-width: 768px) {
   .btn-export { display: none; }
 }
+
+/* ── Status badges (Mesa de Medios) ─────────────────────────── */
+.tema-status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+.tema-status-nuevo {
+  background: #dbeafe;
+  color: #1e40af;
+}
+.tema-status-en-desarrollo {
+  background: #fef3c7;
+  color: #92400e;
+}
+.tema-status-completado {
+  background: #d1fae5;
+  color: #065f46;
+}
+.tema-status-select {
+  font-size: 11px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 2px 4px;
+  background: white;
+  color: var(--text-main);
+  cursor: pointer;
+  font-family: inherit;
+  outline: none;
+  max-width: 130px;
+}
+.tema-status-select:focus { border-color: var(--secondary); }
