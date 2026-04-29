@@ -6,3 +6,9 @@ dist
 .vscode/
 .idea/
 *.log
+# Claude Code — local
+.claude/settings.local.json
+.claude/agent-memory/
+
+# Build output
+dist/
