@@ -351,8 +351,10 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
       // Auto-transición: Nuevo → En desarrollo al agregar primera planificación
       const existingTema = temasRef.current.find(t => t.id === temaId)
       if (existingTema?.status === 'Nuevo') {
-        await supabase.from('temas').update({ status: 'En desarrollo' }).eq('id', temaId)
-        setTemas(prev => prev.map(t => t.id === temaId ? { ...t, status: 'En desarrollo' } : t))
+        const { error: statusErr } = await supabase.from('temas').update({ status: 'En desarrollo' }).eq('id', temaId)
+        if (!statusErr) {
+          setTemas(prev => prev.map(t => t.id === temaId ? { ...t, status: 'En desarrollo' } : t))
+        }
       }
     }
     const { data, error } = await supabase
@@ -383,8 +385,10 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
     const detalle = value ? `"${colId}" → "${value}"${notas ? ' (con notas)' : ''}` : `Limpió "${colId}"`
     // Auto-transición: Nuevo → En desarrollo al editar una celda con valor
     if (tema.status === 'Nuevo' && value) {
-      await supabase.from('temas').update({ status: 'En desarrollo' }).eq('id', tema.id)
-      setTemas(prev => prev.map(t => t.id === tema.id ? { ...t, status: 'En desarrollo' } : t))
+      const { error: statusErr } = await supabase.from('temas').update({ status: 'En desarrollo' }).eq('id', tema.id)
+      if (!statusErr) {
+        setTemas(prev => prev.map(t => t.id === tema.id ? { ...t, status: 'En desarrollo' } : t))
+      }
     }
     await logAction('MODIFICAR', planifId, tema.nombre, detalle)
   }, [addToast, logAction])
@@ -515,10 +519,17 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
       setConfirmStatusComplete({ id: temaId, nombre: tema.nombre || 'Sin nombre' })
       return
     }
+    const tema = temasRef.current.find(t => t.id === temaId)
+    if (!tema) return
+    const oldStatus = tema.status
     setTemas(prev => prev.map(t => t.id === temaId ? { ...t, status: newStatus } : t))
     const { error } = await supabase.from('temas').update({ status: newStatus }).eq('id', temaId)
-    if (error) { addToast('Error al actualizar el status.', 'error'); return }
-    await logAction('MODIFICAR', temaId, null, `Status → "${newStatus}"`)
+    if (error) {
+      addToast('Error al actualizar el status.', 'error')
+      setTemas(prev => prev.map(t => t.id === temaId ? { ...t, status: oldStatus } : t))
+      return
+    }
+    await logAction('MODIFICAR', temaId, tema.nombre, `Status → "${newStatus}"`)
   }, [addToast, logAction])
 
   const handleDoStatusComplete = useCallback(async () => {
