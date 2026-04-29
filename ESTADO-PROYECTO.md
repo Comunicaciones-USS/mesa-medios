@@ -1,5 +1,5 @@
 # Estado del Proyecto — Mesa de Medios USS
-**Actualizado:** 2026-04-28 | **Branch:** `main` | **Commit:** `cfc42df`
+**Actualizado:** 2026-04-29 | **Branch:** `main` | **Commit:** `5d0f7e5`
 
 ---
 
@@ -531,23 +531,24 @@ git push && npm run deploy
 
 ## 8. Estado del Git
 
-### Branch actual: `main` (HEAD: post fix/post-release-2 merge)
+### Branch actual: `main` (HEAD: `5d0f7e5`)
 
 ### Últimos commits:
 ```
-merge(fix/post-release-2): 8 post-release-2 fixes
-fix(cell-popover): wider popover, detail section, correct text display on Enter
+5d0f7e5 docs(estado): update after fix/post-release-2 — document 8 fixes implemented
+78f5a0c merge(fix/post-release-2): 8 post-release-2 fixes — popover UX, cell text display, column filters, group headers, status Nuevo, hitos sync, tipologia
+b718a9c fix(cell-popover): wider popover, detail section, correct text display on Enter
+205ebfc docs(estado): mark SQL scripts as executed
+7e5048d docs(estado): update after release-mejoras-2
 cfc42df merge(feat/release-mejoras-2): status + alertas + popover rediseñado + filtros multi-columna
-...
 ```
 
 ### Branches:
 ```
-main                              ← producción ✅
+main                              ← producción ✅ (pusheado y deployado 2026-04-29)
 fix/post-release-2                ← mergeada a main ✅
+feat/release-mejoras-2            ← mergeada a main ✅
 ```
-> Pendiente: push manual al remoto y deploy (autenticación GitHub no disponible en sesión actual).
-> Ejecutar: `git push && npm run deploy`
 
 ---
 
