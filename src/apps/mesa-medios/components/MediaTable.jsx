@@ -1,25 +1,27 @@
 import { useState, Fragment, memo, useMemo, useCallback } from 'react'
-import { MEDIA_COLS, GROUPS } from '../config'
+import { MEDIA_COLS, GROUPS, STALE_THRESHOLD_DAYS } from '../config'
 import { getCellData } from '../utils'
 import CellPopover from './CellPopover'
+
+// ── Constants ──────────────────────────────────────────────────────
+const EMPTY_SET = new Set()
 
 // ── Helpers ───────────────────────────────────────────────────────
 
 function getCellMeta(raw) {
-  if (!raw) return { status: 'empty', display: '', name: '' }
+  if (!raw) return { status: 'empty', display: '' }
   const lower = raw.toLowerCase().trim()
-  if (lower === 'no') return { status: 'no', display: 'No', name: '' }
   if (lower.startsWith('pd')) {
     const parts = raw.split('/')
     const name  = parts[1]?.trim() || ''
-    return { status: 'pd', display: name || 'PD', name }
+    return { status: 'pd', display: name || 'PD' }
   }
   if (lower.startsWith('si')) {
     const parts = raw.split('/')
-    const name  = parts[1]?.trim() || 'Sí'
-    return { status: 'si', display: name, name }
+    const name  = parts[1]?.trim() || ''
+    return { status: 'si', display: name || 'Sí' }
   }
-  return { status: 'empty', display: raw, name: '' }
+  return { status: 'empty', display: '' }
 }
 
 function formatDate(dateStr) {
@@ -78,6 +80,7 @@ const TemaRow = memo(function TemaRow({
   onAddPlanificacion,
   onArchiveTema,
   onReactivateTema,
+  onStatusChange,
   isArchived,
   activePopoverKey,
 }) {
@@ -106,6 +109,19 @@ const TemaRow = memo(function TemaRow({
     const days  = Math.floor((today - last) / (1000 * 60 * 60 * 24))
     return days > 30 ? days : 0
   }, [maxSemana, isArchived])
+
+  // Badge de alerta: tema 'En desarrollo' con todas las planificaciones vencidas > STALE_THRESHOLD_DAYS
+  const isStale = useMemo(() => {
+    if (isArchived || tema.status !== 'En desarrollo') return false
+    if (tema.planificaciones.length === 0) return false
+    const today = new Date()
+    return tema.planificaciones.every(p => {
+      if (!p.semana) return true  // sin fecha = considerar vencida
+      const planDate = new Date(p.semana + 'T12:00:00')
+      const diffDays = Math.floor((today - planDate) / (1000 * 60 * 60 * 24))
+      return diffDays > STALE_THRESHOLD_DAYS
+    })
+  }, [tema.planificaciones, tema.status, isArchived])
 
   const n = tema.planificaciones.length
 
@@ -272,6 +288,44 @@ const TemaRow = memo(function TemaRow({
                 </span>
               </>
             )}
+            {/* Badge de status del tema */}
+            {!isArchived && tema.status && (
+              <span
+                className={`tema-status-badge tema-status-${tema.status === 'En desarrollo' ? 'en-desarrollo' : tema.status.toLowerCase()}`}
+                title={`Status: ${tema.status}`}
+              >
+                {tema.status === 'Nuevo' && '✦ '}
+                {tema.status}
+              </span>
+            )}
+
+            {/* Select para cambiar status manualmente (solo tab activos) */}
+            {!isArchived && tema.status && (
+              <select
+                className="tema-status-select"
+                value={tema.status || 'Nuevo'}
+                onChange={e => onStatusChange?.(tema.id, e.target.value)}
+                onClick={e => e.stopPropagation()}
+                aria-label="Cambiar status del tema"
+                title="Cambiar status"
+              >
+                <option value="Nuevo">Nuevo</option>
+                <option value="En desarrollo">En desarrollo</option>
+                <option value="Completado">Completado</option>
+              </select>
+            )}
+
+            {/* Badge alerta: tema con fechas desfasadas */}
+            {isStale && (
+              <button
+                className="tema-stale-badge"
+                onClick={e => { e.stopPropagation(); onStatusChange?.(tema.id, 'Completado') }}
+                title={`Este tema tiene planificaciones con fecha pasada hace más de ${STALE_THRESHOLD_DAYS} días. Considera marcarlo como completado.`}
+                aria-label="Cerrar tema — tiene fechas desfasadas"
+              >
+                ⚠ Cerrar tema
+              </button>
+            )}
             <div className="tema-header-spacer" />
             {/* Botones de acción: distintos según tab */}
             {!isArchived ? (
@@ -422,6 +476,7 @@ const TemaRow = memo(function TemaRow({
     pt.origen === nt.origen &&
     pt.archived === nt.archived &&
     pt.archived_at === nt.archived_at &&
+    pt.status === nt.status &&
     samePlanifs &&
     prevProps.isExpanded === nextProps.isExpanded &&
     prevProps.isArchived === nextProps.isArchived &&
@@ -440,7 +495,8 @@ const TemaRow = memo(function TemaRow({
     prevProps.onRenameTema === nextProps.onRenameTema &&
     prevProps.onAddPlanificacion === nextProps.onAddPlanificacion &&
     prevProps.onArchiveTema === nextProps.onArchiveTema &&
-    prevProps.onReactivateTema === nextProps.onReactivateTema
+    prevProps.onReactivateTema === nextProps.onReactivateTema &&
+    prevProps.onStatusChange === nextProps.onStatusChange
   )
 })
 
@@ -456,6 +512,7 @@ export default function MediaTable({
   onAddPlanificacion,
   onArchiveTema,
   onReactivateTema,
+  onStatusChange,
   isArchived = false,
   totalTemas,
   filterQuery,
@@ -466,6 +523,9 @@ export default function MediaTable({
   onToggleGroup,
   expandedTemas   = new Set(),
   onToggleTema,
+  activeColumnFilters = EMPTY_SET,
+  onToggleColumnFilter,
+  onClearColumnFilters,
 }) {
   const [popover, setPopover] = useState(null)
 
@@ -577,12 +637,33 @@ export default function MediaTable({
             <tr className="sub-header-row">
               {activeGroups.map(g => {
                 if (collapsedGroups.has(g.id)) return <th key={g.id} scope="col" className="sub-header sub-header-placeholder" />
-                return activeCols.filter(c => c.group === g.id).map(col => (
-                  <th key={col.id} scope="col" className="sub-header">
-                    <span className="sub-label">{col.label}</span>
-                    {col.sub && <span className="sub-sublabel">{col.sub}</span>}
-                  </th>
-                ))
+                return activeCols.filter(c => c.group === g.id).map(col => {
+                  const isFiltered = activeColumnFilters.has(col.id)
+                  return (
+                    <th key={col.id} scope="col" className={`sub-header${isFiltered ? ' sub-header-filtered' : ''}`}>
+                      <span className="sub-label">{col.label}</span>
+                      {col.sub && <span className="sub-sublabel">{col.sub}</span>}
+                      <button
+                        className={`col-filter-btn${isFiltered ? ' active' : ''}`}
+                        onClick={e => { e.stopPropagation(); onToggleColumnFilter?.(col.id) }}
+                        title={isFiltered ? `Quitar filtro de ${col.label}` : `Filtrar por ${col.label}`}
+                        aria-label={isFiltered ? `Quitar filtro de ${col.label}` : `Filtrar por ${col.label}`}
+                      >
+                        {isFiltered ? (
+                          /* X icon to remove filter */
+                          <svg width="9" height="9" viewBox="0 0 9 9" fill="none" aria-hidden="true">
+                            <path d="M1.5 1.5l6 6M7.5 1.5l-6 6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+                          </svg>
+                        ) : (
+                          /* Funnel icon */
+                          <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                            <path d="M1 2h8L6 5.5V8.5L4 7.5V5.5L1 2z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
+                          </svg>
+                        )}
+                      </button>
+                    </th>
+                  )
+                })
               })}
             </tr>
           </thead>
@@ -599,6 +680,17 @@ export default function MediaTable({
                         {isArchived ? 'Los temas que archives aparecerán aquí' : 'Agrega el primero para comenzar la planificación'}
                       </span>
                       {!isArchived && <button className="empty-state-cta" onClick={onAdd}>+ Agregar tema</button>}
+                    </div>
+                  ) : activeColumnFilters.size > 0 ? (
+                    <div className="empty-state">
+                      <span className="empty-state-icon">⚙</span>
+                      <p className="empty-state-title">Sin temas con datos en las columnas filtradas</p>
+                      <span className="empty-state-sub">
+                        Ningún tema tiene contenido en {activeColumnFilters.size === 1 ? 'la columna seleccionada' : 'las columnas seleccionadas'}
+                      </span>
+                      <button className="empty-state-ghost" onClick={onClearColumnFilters}>
+                        ✕ Limpiar filtros de columna
+                      </button>
                     </div>
                   ) : (
                     <div className="empty-state">
@@ -638,6 +730,7 @@ export default function MediaTable({
                     onAddPlanificacion={onAddPlanificacion}
                     onArchiveTema={onArchiveTema}
                     onReactivateTema={onReactivateTema}
+                    onStatusChange={onStatusChange}
                     isArchived={isArchived}
                     activePopoverKey={temaActivePopoverKey}
                   />

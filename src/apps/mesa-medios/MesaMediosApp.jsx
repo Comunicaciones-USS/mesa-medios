@@ -30,6 +30,7 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
   const [confirmDelete,    setConfirmDelete]    = useState(null)
   const [confirmArchive,   setConfirmArchive]   = useState(null) // { id, nombre, n }
   const [confirmReactivate,setConfirmReactivate]= useState(null) // { id, nombre }
+  const [confirmStatusComplete, setConfirmStatusComplete] = useState(null) // { id, nombre }
   const [filterInput,      setFilterInput]      = useState('')
   const filterText = useDebounce(filterInput, 300)
   const [sortDir,          setSortDir]          = useState('asc')
@@ -44,6 +45,7 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
   // Filtros horizontales
   const [filterGroup,      setFilterGroup]      = useState('all')
   const [filterCellStatus, setFilterCellStatus] = useState('all')
+  const [activeColumnFilters, setActiveColumnFilters] = useState(new Set())
 
   // Collapsed column groups
   const [collapsedGroups, setCollapsedGroups] = useState(new Set())
@@ -66,6 +68,7 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
     setFilterCellStatus('all')
     setFilterDateRange({ from: '', to: '' })
     setExpandedTemas(new Set())
+    setActiveColumnFilters(new Set())
   }
 
   const toggleGroup = useCallback((groupId) => {
@@ -85,6 +88,21 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
       return next
     })
   }, [])
+
+  const toggleColumnFilter = useCallback((colId) => {
+    setActiveColumnFilters(prev => {
+      const next = new Set(prev)
+      if (next.has(colId)) {
+        next.delete(colId)
+      } else {
+        next.add(colId)
+        setFilterGroup('all')  // deactivate group filter when column filter activated
+      }
+      return next
+    })
+  }, [])
+
+  const clearColumnFilters = useCallback(() => setActiveColumnFilters(new Set()), [])
 
   // Set --above-table CSS var so .table-scroll height stays within viewport
   useEffect(() => {
@@ -162,12 +180,34 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
     }
   }, [])
 
+  // Auto-expand temas when column filters are active
+  useEffect(() => {
+    if (activeColumnFilters.size > 0) {
+      const activeColIds = [...activeColumnFilters]
+      const toExpand = new Set(
+        temas
+          .filter(t => !t.archived)
+          .filter(t =>
+            t.planificaciones.some(p =>
+              activeColIds.some(colId => {
+                const { valor } = getCellData(p.medios, colId)
+                return valor && valor !== ''
+              })
+            )
+          )
+          .map(t => t.id)
+      )
+      setExpandedTemas(toExpand)
+    }
+  }, [activeColumnFilters, temas])
+
   // Keyboard shortcuts
   useEffect(() => {
     function handleKeyDown(e) {
       const tag = document.activeElement?.tagName
       const inInput = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || document.activeElement?.isContentEditable
       if (e.key === 'Escape') {
+        if (confirmStatusComplete){ setConfirmStatusComplete(null); return }
         if (showExportModal)  { setShowExportModal(false);  return }
         if (showProfile)      { setShowProfile(false);      return }
         if (confirmArchive)   { setConfirmArchive(null);    return }
@@ -181,13 +221,13 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
         document.querySelector('.filter-input')?.focus()
         return
       }
-      if (e.key.toLowerCase() === 'n' && !inInput && !showModal && !showLogs && !confirmDelete && !confirmArchive && !confirmReactivate) {
+      if (e.key.toLowerCase() === 'n' && !inInput && !showModal && !showLogs && !confirmDelete && !confirmArchive && !confirmReactivate && !confirmStatusComplete) {
         setShowModal('new')
       }
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [confirmDelete, confirmArchive, confirmReactivate, showModal, showLogs, showExportModal])
+  }, [confirmDelete, confirmArchive, confirmReactivate, confirmStatusComplete, showModal, showLogs, showExportModal])
 
   async function fetchData() {
     setLoading(true)
@@ -240,7 +280,6 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
               const { valor } = getCellData(p.medios, col.id)
               if (filterCellStatus === 'si')    return valor?.toLowerCase().startsWith('si')
               if (filterCellStatus === 'pd')    return valor?.toLowerCase().startsWith('pd')
-              if (filterCellStatus === 'no')    return valor?.toLowerCase() === 'no'
               if (filterCellStatus === 'empty') return !valor
               return true
             }))
@@ -281,6 +320,22 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
       result = result.filter(t => t.planificaciones.length > 0)
     }
 
+    // Column filter runs after planif sort — tema order reflects the nearest planif that has data in filtered columns
+    if (activeColumnFilters.size > 0 && activeTab === 'active') {
+      const activeColIds = [...activeColumnFilters]
+      result = result
+        .map(tema => ({
+          ...tema,
+          planificaciones: tema.planificaciones.filter(p =>
+            activeColIds.some(colId => {
+              const { valor } = getCellData(p.medios, colId)
+              return valor && valor !== ''
+            })
+          )
+        }))
+        .filter(tema => tema.planificaciones.length > 0)
+    }
+
     // Ordenar temas
     if (activeTab === 'archived') {
       result = [...result].sort((a, b) => (b.archived_at || '').localeCompare(a.archived_at || ''))
@@ -310,12 +365,15 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
     }
 
     return result
-  }, [temas, activeTab, filterText, sortDir, filterDateRange, filterGroup, filterCellStatus])
+  }, [temas, activeTab, filterText, sortDir, filterDateRange, filterGroup, filterCellStatus, activeColumnFilters])
 
   const visibleCols = useMemo(() => {
+    if (activeColumnFilters.size > 0) {
+      return MEDIA_COLS.filter(c => activeColumnFilters.has(c.id))
+    }
     if (filterGroup === 'all') return MEDIA_COLS
     return MEDIA_COLS.filter(c => c.group === filterGroup)
-  }, [filterGroup])
+  }, [activeColumnFilters, filterGroup])
 
   // Contadores para badges de tabs
   const activeCount   = useMemo(() => temas.filter(t => !t.archived).length, [temas])
@@ -345,6 +403,15 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
         .from('temas').insert([{ nombre, origen: 'medios' }]).select().single()
       if (error) { addToast('Error al crear el tema. Intenta nuevamente.', 'error'); return }
       targetTemaId = newTema.id
+    } else {
+      // Auto-transición: Nuevo → En desarrollo al agregar primera planificación
+      const existingTema = temasRef.current.find(t => t.id === temaId)
+      if (existingTema?.status === 'Nuevo') {
+        const { error: statusErr } = await supabase.from('temas').update({ status: 'En desarrollo' }).eq('id', temaId)
+        if (!statusErr) {
+          setTemas(prev => prev.map(t => t.id === temaId ? { ...t, status: 'En desarrollo' } : t))
+        }
+      }
     }
     const { data, error } = await supabase
       .from('contenidos').insert([{ nombre, semana, medios: {}, tema_id: targetTemaId }]).select().single()
@@ -372,6 +439,13 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
     const { error } = await supabase.from('contenidos').update({ medios: newMedios }).eq('id', planifId)
     if (error) { addToast('Error al guardar. Los datos se recargarán.', 'error'); fetchData(); return }
     const detalle = value ? `"${colId}" → "${value}"${notas ? ' (con notas)' : ''}` : `Limpió "${colId}"`
+    // Auto-transición: Nuevo → En desarrollo al editar una celda con valor
+    if (tema.status === 'Nuevo' && value) {
+      const { error: statusErr } = await supabase.from('temas').update({ status: 'En desarrollo' }).eq('id', tema.id)
+      if (!statusErr) {
+        setTemas(prev => prev.map(t => t.id === tema.id ? { ...t, status: 'En desarrollo' } : t))
+      }
+    }
     await logAction('MODIFICAR', planifId, tema.nombre, detalle)
   }, [addToast, logAction])
 
@@ -468,9 +542,9 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
     if (!confirmArchive) return
     const { id, nombre } = confirmArchive
     const now = new Date().toISOString()
-    const { error } = await supabase.from('temas').update({ archived: true, archived_at: now }).eq('id', id)
+    const { error } = await supabase.from('temas').update({ archived: true, archived_at: now, status: 'Completado' }).eq('id', id)
     if (error) { addToast('Error al archivar el tema.', 'error'); return }
-    setTemas(prev => prev.map(t => t.id === id ? { ...t, archived: true, archived_at: now } : t))
+    setTemas(prev => prev.map(t => t.id === id ? { ...t, archived: true, archived_at: now, status: 'Completado' } : t))
     setConfirmArchive(null)
     await logAction('ARCHIVAR', id, nombre, `Archivó tema "${nombre}"`)
     addToast(`"${nombre}" archivado.`, 'success')
@@ -486,13 +560,50 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
   const handleDoReactivateTema = useCallback(async () => {
     if (!confirmReactivate) return
     const { id, nombre } = confirmReactivate
-    const { error } = await supabase.from('temas').update({ archived: false, archived_at: null }).eq('id', id)
+    const { error } = await supabase.from('temas').update({ archived: false, archived_at: null, status: 'En desarrollo' }).eq('id', id)
     if (error) { addToast('Error al reactivar el tema.', 'error'); return }
-    setTemas(prev => prev.map(t => t.id === id ? { ...t, archived: false, archived_at: null } : t))
+    setTemas(prev => prev.map(t => t.id === id ? { ...t, archived: false, archived_at: null, status: 'En desarrollo' } : t))
     setConfirmReactivate(null)
     await logAction('REACTIVAR', id, nombre, `Reactivó tema "${nombre}"`)
     addToast(`"${nombre}" reactivado y visible en Activos.`, 'success')
   }, [confirmReactivate, addToast, logAction])
+
+  const handleStatusChange = useCallback(async (temaId, newStatus) => {
+    if (newStatus === 'Completado') {
+      const tema = temasRef.current.find(t => t.id === temaId)
+      if (!tema) return
+      setConfirmStatusComplete({ id: temaId, nombre: tema.nombre || 'Sin nombre' })
+      return
+    }
+    const tema = temasRef.current.find(t => t.id === temaId)
+    if (!tema) return
+    const oldStatus = tema.status
+    setTemas(prev => prev.map(t => t.id === temaId ? { ...t, status: newStatus } : t))
+    const { error } = await supabase.from('temas').update({ status: newStatus }).eq('id', temaId)
+    if (error) {
+      addToast('Error al actualizar el status.', 'error')
+      setTemas(prev => prev.map(t => t.id === temaId ? { ...t, status: oldStatus } : t))
+      return
+    }
+    await logAction('MODIFICAR', temaId, tema.nombre, `Status → "${newStatus}"`)
+  }, [addToast, logAction])
+
+  const handleDoStatusComplete = useCallback(async () => {
+    if (!confirmStatusComplete) return
+    const { id, nombre } = confirmStatusComplete
+    const now = new Date().toISOString()
+    const { error } = await supabase
+      .from('temas')
+      .update({ status: 'Completado', archived: true, archived_at: now })
+      .eq('id', id)
+    if (error) { addToast('Error al completar el tema.', 'error'); return }
+    setTemas(prev => prev.map(t =>
+      t.id === id ? { ...t, status: 'Completado', archived: true, archived_at: now } : t
+    ))
+    setConfirmStatusComplete(null)
+    addToast(`"${nombre}" marcado como completado y archivado.`, 'success')
+    await logAction('ARCHIVAR', id, nombre, 'Marcado como Completado → archivado automático')
+  }, [confirmStatusComplete, addToast, logAction])
 
   function handleExport(selectedIds) {
     try {
@@ -513,6 +624,7 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
     filterGroup !== 'all',
     filterCellStatus !== 'all',
     filterDateRange.from || filterDateRange.to,
+    activeColumnFilters.size > 0,
   ].filter(Boolean).length
 
   // ── Tabs UI (compartido entre desktop y mobile) ────────────────
@@ -694,7 +806,7 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
               </div>
               <div className="filter-pills-divider" />
               <div className="filter-pills">
-                {[{ value: 'all', label: 'Todas las celdas' }, { value: 'si', label: '✓ Confirmado' }, { value: 'pd', label: '◉ Por definir' }, { value: 'no', label: '✕ No aplica' }, { value: 'empty', label: '○ Vacías' }].map(f => (
+                {[{ value: 'all', label: 'Todas las celdas' }, { value: 'si', label: '✓ Confirmado' }, { value: 'pd', label: '◉ Por definir' }, { value: 'empty', label: '○ Vacías' }].map(f => (
                   <button key={f.value} className={`pill ${filterCellStatus === f.value ? 'pill-active' : ''}`} onClick={() => setFilterCellStatus(f.value)}>{f.label}</button>
                 ))}
               </div>
@@ -706,6 +818,20 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
                 <span className="filter-count">{displayTemas.length} de {activeCount} temas · {displayPlanifs} de {totalPlanifs} fechas</span>
                 {filterGroup !== 'all' && <span className="filter-count"> · {visibleCols.length} columnas</span>}
                 <button className="filter-reset" onClick={() => { setFilterInput(''); setFilterGroup('all'); setFilterCellStatus('all'); setFilterDateRange({ from: '', to: '' }) }}>Limpiar filtros</button>
+              </div>
+            )}
+            {/* Column filter indicator — independent of hasActiveFilters */}
+            {activeColumnFilters.size > 0 && (
+              <div className="medios-filter-active medios-filter-cols-active">
+                <span className="column-filter-badge">
+                  ⚙ {activeColumnFilters.size} columna{activeColumnFilters.size !== 1 ? 's' : ''} filtrada{activeColumnFilters.size !== 1 ? 's' : ''}
+                </span>
+                <span className="filter-count">
+                  {displayTemas.length} de {activeCount} tema{activeCount !== 1 ? 's' : ''}
+                </span>
+                <button className="filter-reset" onClick={clearColumnFilters}>
+                  Limpiar columnas
+                </button>
               </div>
             )}
           </>
@@ -761,6 +887,7 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
               onAddPlanificacion={handleOpenAddPlanificacion}
               onArchiveTema={requestArchiveTema}
               onReactivateTema={requestReactivateTema}
+              onStatusChange={handleStatusChange}
               isArchived={activeTab === 'archived'}
               totalTemas={activeTab === 'active' ? activeCount : archivedCount}
               filterQuery={filterInput}
@@ -770,6 +897,9 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
               onToggleGroup={toggleGroup}
               expandedTemas={expandedTemas}
               onToggleTema={toggleTema}
+              activeColumnFilters={activeColumnFilters}
+              onToggleColumnFilter={toggleColumnFilter}
+              onClearColumnFilters={clearColumnFilters}
             />
           </div>
           <div className="mobile-only">
@@ -781,6 +911,7 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
               onAddPlanificacion={handleOpenAddPlanificacion}
               onArchiveTema={requestArchiveTema}
               onReactivateTema={requestReactivateTema}
+              onStatusChange={handleStatusChange}
               isArchived={activeTab === 'archived'}
               totalTemas={activeTab === 'active' ? activeCount : archivedCount}
               filterQuery={filterInput}
@@ -866,6 +997,18 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
         />
       )}
 
+      {/* Confirm: marcar como Completado → archivado automático */}
+      {confirmStatusComplete && (
+        <ConfirmDialog
+          title={`¿Marcar "${confirmStatusComplete.nombre}" como completado?`}
+          body="El tema será archivado automáticamente. Podrás reactivarlo desde la pestaña Archivados."
+          confirmLabel="Marcar como completado"
+          confirmClass="btn-confirm-action"
+          onConfirm={handleDoStatusComplete}
+          onCancel={() => setConfirmStatusComplete(null)}
+        />
+      )}
+
       {showExportModal && activeTab === 'active' && (
         <ExportModal
           title="Exportar reporte ejecutivo"
@@ -910,7 +1053,6 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
                 { value: 'all',   label: 'Todas' },
                 { value: 'si',    label: 'Confirmado' },
                 { value: 'pd',    label: 'Por definir' },
-                { value: 'no',    label: 'No aplica' },
                 { value: 'empty', label: 'Vacías' },
               ].map(f => (
                 <button
@@ -928,6 +1070,31 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
               <span className="sheet-date-sep">→</span>
               <input type="date" value={filterDateRange.to} onChange={e => setFilterDateRange(p => ({ ...p, to: e.target.value }))} className="sheet-date-input" />
             </div>
+          </div>
+          <div className="sheet-filter-group">
+            <p className="sheet-filter-label">FILTRAR POR COLUMNA</p>
+            {GROUPS.map(g => (
+              <div key={g.id} className="sheet-col-group">
+                <p className="sheet-col-group-label">{g.label}</p>
+                <div className="sheet-col-checkboxes">
+                  {MEDIA_COLS.filter(c => c.group === g.id).map(col => (
+                    <label key={col.id} className="sheet-col-check-label">
+                      <input
+                        type="checkbox"
+                        checked={activeColumnFilters.has(col.id)}
+                        onChange={() => toggleColumnFilter(col.id)}
+                      />
+                      <span>{col.label}{col.sub ? ` · ${col.sub}` : ''}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            ))}
+            {activeColumnFilters.size > 0 && (
+              <button className="sheet-clear-btn" onClick={clearColumnFilters} style={{ marginTop: 8 }}>
+                Limpiar filtros de columna ({activeColumnFilters.size})
+              </button>
+            )}
           </div>
         </BottomSheet>
       )}

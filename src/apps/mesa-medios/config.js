@@ -44,3 +44,5 @@ export const GROUPS = [
   { id: 'PUB_PAGADA', label: 'Publicidad Pagada',  className: 'group-pub-pagada' },
 ]
 
+export const STALE_THRESHOLD_DAYS = 14
+
