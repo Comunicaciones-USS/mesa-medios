@@ -531,33 +531,23 @@ git push && npm run deploy
 
 ## 8. Estado del Git
 
-### Branch actual: `main` (HEAD: `cfc42df`)
+### Branch actual: `main` (HEAD: post fix/post-release-2 merge)
 
 ### Últimos commits:
 ```
+merge(fix/post-release-2): 8 post-release-2 fixes
+fix(cell-popover): wider popover, detail section, correct text display on Enter
 cfc42df merge(feat/release-mejoras-2): status + alertas + popover rediseñado + filtros multi-columna
-21296e5 feat(column-filters): toolbar badge, clear button, mobile column filter section
-d38f16a fix(column-filters): use stable EMPTY_SET constant as default prop
-ae8d247 feat(column-filters): filter icons in column headers, empty state for filtered view
-efbeeaa fix(column-filters): add temas to auto-expand effect deps, document filter-sort order
-075623b feat(column-filters): state, logic, auto-expand and displayTemas filtering in App
-813e3b7 fix(cell-cleanup): remove No state from MobileCardView + dead CSS
-f38cfb9 feat(cell-cleanup): remove No state from getCellMeta, filters and pills
-818fc9e fix(cell-popover): enter key only on input, remove dead v1 CSS
-43153df feat(cell-popover): redesign with direct-input flow, remove No state
-53e6143 feat(stale-alert): badge warning for stale En desarrollo topics
-2009b32 fix(medios-status): remove dead stopPropagation, guard select with status check
-e62670c feat(medios-status): status badge + dropdown in TemaRow, CSS badges
-b40bf99 fix(medios-status): rollback on status error, guard auto-transition writes
-6e3896f feat(medios-status): status handlers, auto-transitions, confirmDialog in App
-0e0a954 fix(sql): remove no-cells cleanly via key exclusion, not JSONB null
+...
 ```
 
 ### Branches:
 ```
 main                              ← producción ✅
+fix/post-release-2                ← mergeada a main ✅
 ```
-> Todas las branches de features previas fueron mergeadas a main.
+> Pendiente: push manual al remoto y deploy (autenticación GitHub no disponible en sesión actual).
+> Ejecutar: `git push && npm run deploy`
 
 ---
 
@@ -652,7 +642,11 @@ Todos en `scripts/`. Ejecutar en **Supabase SQL Editor** (no en producción auto
 | **Status de temas (Nuevo / En desarrollo / Completado):** Badge de color + select en cada tema. Auto-transición Nuevo→En desarrollo al editar primera celda o agregar planificación. Completado→archivado automático con ConfirmDialog. Require SQL: `add-medios-status.sql`. | ✅ |
 | **Alerta fecha desfasada:** Badge naranja "⚠ Cerrar tema" en temas "En desarrollo" con todas las planificaciones con fecha > 14 días pasados. Click → ConfirmDialog → archivado. Umbral: `STALE_THRESHOLD_DAYS = 14` en `config.js`. | ✅ |
 | **CellPopover rediseñado:** Input directo enfocado al abrir. Enter = Confirmar (si). Botones: Por definir (pd), Vaciar, Confirmar. Sin modos view/edit, sin estado "No". Compatible con formato legacy `"si/Juan"`. | ✅ |
+| **CellPopover UX mejorado (fix/post-release-2):** min-width 340px, padding cómodo, sección "Detalle actual" cuando hay texto guardado. Enter guarda texto escrito o "sí" si vacío. getCellMeta recibe `notas` → celdas muestran texto real (no "Sí" genérico). Fix aplicado en MediaTable y MobileCardView. | ✅ |
 | **Filtros multi-columna:** Icono funnel/X en cada header de columna. Selección múltiple. `visibleCols` prioriza columnas activas sobre grupo. `displayTemas` filtra planifs por datos en columnas filtradas. Auto-expand de temas con datos. Badge "X columnas filtradas" en toolbar + botón "Limpiar columnas". Sección con checkboxes por grupo en BottomSheet mobile. Filtros se resetean al cambiar tab. | ✅ |
+| **Filtros multi-columna desktop mejorados (fix/post-release-2):** Chips por columna activa con X individual. Select "+ Añadir columna" con optgroups para sumar columnas sin limpiar el filtro. | ✅ |
+| **Status "Nuevo" no seleccionable manualmente:** Badge informativo solo. "Nuevo" no aparece en dropdown al usuario. Auto-transición a "En desarrollo" después de 7 días via `checkAndTransitionStaleNew()` en fetchData. | ✅ |
+| **Hitos sincronizados desde Editorial:** fetchData trae `tipo` de acciones editoriales con `sync_to_medios=true` usando `tema_id` FK. Badge read-only en TemaRow: Ancla (amarillo), Soporte (azul), Always ON (verde). | ✅ |
 
 ### Mesa Editorial
 
