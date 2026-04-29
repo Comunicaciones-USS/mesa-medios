@@ -4278,8 +4278,8 @@ body {
   align-items: center;
   gap: 2px;
   background: #0f2b41;
-  padding: 0 1rem;
-  height: 42px;
+  padding: 12px 1rem;
+  min-height: 60px;
   border-bottom: 1px solid rgba(255,255,255,0.1);
 }
 
@@ -4894,8 +4894,8 @@ body {
   display: flex;
   align-items: center;
   gap: 2px;
-  padding: 0 1rem;
-  height: 42px;
+  padding: 12px 1rem;
+  min-height: 60px;
   background: #0f2b41;
   border-bottom: 1px solid rgba(255,255,255,0.1);
 }
@@ -5548,10 +5548,10 @@ body {
   background: rgba(15, 43, 65, 0.1);
 }
 
-/* === Sheet Viewer Buttons (en barra de tabs) === */
+/* === Sheet Viewer Buttons — estilo dark ghost (sobre header navy) === */
 .sheet-buttons {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   align-items: center;
   margin-left: auto;
 }
@@ -5559,33 +5559,33 @@ body {
 .btn-sheet-viewer {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  height: 34px;
-  padding: 0 14px;
-  background: #fff;
-  border: 1px solid var(--border);
+  gap: 8px;
+  height: 38px;
+  padding: 0 18px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.22);
   border-radius: 6px;
-  color: var(--primary);
+  color: #fff;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  transition: background 0.15s, border-color 0.15s;
   white-space: nowrap;
 }
 
 .btn-sheet-viewer:hover {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: #fff;
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.4);
 }
 
 .btn-sheet-viewer:focus-visible {
-  outline: 2px solid var(--secondary);
+  outline: 2px solid #fff;
   outline-offset: 2px;
 }
 
 .btn-sheet-viewer svg {
   flex-shrink: 0;
+  opacity: 0.9;
 }
 
 /* === Sheet Viewer Modal === */
@@ -5678,8 +5678,8 @@ body {
     border-radius: 0;
   }
   .btn-sheet-viewer {
-    padding: 0 10px;
-    height: 32px;
+    padding: 0 12px;
+    height: 36px;
     font-size: 0;
     gap: 0;
   }
@@ -5688,6 +5688,6 @@ body {
     height: 16px;
   }
   .sheet-buttons {
-    gap: 6px;
+    gap: 8px;
   }
 }
