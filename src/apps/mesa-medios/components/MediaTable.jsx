@@ -3,6 +3,9 @@ import { MEDIA_COLS, GROUPS, STALE_THRESHOLD_DAYS } from '../config'
 import { getCellData } from '../utils'
 import CellPopover from './CellPopover'
 
+// ── Constants ──────────────────────────────────────────────────────
+const EMPTY_SET = new Set()
+
 // ── Helpers ───────────────────────────────────────────────────────
 
 function getCellMeta(raw) {
@@ -520,7 +523,7 @@ export default function MediaTable({
   onToggleGroup,
   expandedTemas   = new Set(),
   onToggleTema,
-  activeColumnFilters = new Set(),
+  activeColumnFilters = EMPTY_SET,
   onToggleColumnFilter,
   onClearColumnFilters,
 }) {
