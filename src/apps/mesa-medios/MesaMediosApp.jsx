@@ -30,6 +30,7 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
   const [confirmDelete,    setConfirmDelete]    = useState(null)
   const [confirmArchive,   setConfirmArchive]   = useState(null) // { id, nombre, n }
   const [confirmReactivate,setConfirmReactivate]= useState(null) // { id, nombre }
+  const [confirmStatusComplete, setConfirmStatusComplete] = useState(null) // { id, nombre }
   const [filterInput,      setFilterInput]      = useState('')
   const filterText = useDebounce(filterInput, 300)
   const [sortDir,          setSortDir]          = useState('asc')
@@ -168,6 +169,7 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
       const tag = document.activeElement?.tagName
       const inInput = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || document.activeElement?.isContentEditable
       if (e.key === 'Escape') {
+        if (confirmStatusComplete){ setConfirmStatusComplete(null); return }
         if (showExportModal)  { setShowExportModal(false);  return }
         if (showProfile)      { setShowProfile(false);      return }
         if (confirmArchive)   { setConfirmArchive(null);    return }
@@ -181,13 +183,13 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
         document.querySelector('.filter-input')?.focus()
         return
       }
-      if (e.key.toLowerCase() === 'n' && !inInput && !showModal && !showLogs && !confirmDelete && !confirmArchive && !confirmReactivate) {
+      if (e.key.toLowerCase() === 'n' && !inInput && !showModal && !showLogs && !confirmDelete && !confirmArchive && !confirmReactivate && !confirmStatusComplete) {
         setShowModal('new')
       }
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [confirmDelete, confirmArchive, confirmReactivate, showModal, showLogs, showExportModal])
+  }, [confirmDelete, confirmArchive, confirmReactivate, confirmStatusComplete, showModal, showLogs, showExportModal])
 
   async function fetchData() {
     setLoading(true)
@@ -345,6 +347,13 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
         .from('temas').insert([{ nombre, origen: 'medios' }]).select().single()
       if (error) { addToast('Error al crear el tema. Intenta nuevamente.', 'error'); return }
       targetTemaId = newTema.id
+    } else {
+      // Auto-transición: Nuevo → En desarrollo al agregar primera planificación
+      const existingTema = temasRef.current.find(t => t.id === temaId)
+      if (existingTema?.status === 'Nuevo') {
+        await supabase.from('temas').update({ status: 'En desarrollo' }).eq('id', temaId)
+        setTemas(prev => prev.map(t => t.id === temaId ? { ...t, status: 'En desarrollo' } : t))
+      }
     }
     const { data, error } = await supabase
       .from('contenidos').insert([{ nombre, semana, medios: {}, tema_id: targetTemaId }]).select().single()
@@ -372,6 +381,11 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
     const { error } = await supabase.from('contenidos').update({ medios: newMedios }).eq('id', planifId)
     if (error) { addToast('Error al guardar. Los datos se recargarán.', 'error'); fetchData(); return }
     const detalle = value ? `"${colId}" → "${value}"${notas ? ' (con notas)' : ''}` : `Limpió "${colId}"`
+    // Auto-transición: Nuevo → En desarrollo al editar una celda con valor
+    if (tema.status === 'Nuevo' && value) {
+      await supabase.from('temas').update({ status: 'En desarrollo' }).eq('id', tema.id)
+      setTemas(prev => prev.map(t => t.id === tema.id ? { ...t, status: 'En desarrollo' } : t))
+    }
     await logAction('MODIFICAR', planifId, tema.nombre, detalle)
   }, [addToast, logAction])
 
@@ -468,9 +482,9 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
     if (!confirmArchive) return
     const { id, nombre } = confirmArchive
     const now = new Date().toISOString()
-    const { error } = await supabase.from('temas').update({ archived: true, archived_at: now }).eq('id', id)
+    const { error } = await supabase.from('temas').update({ archived: true, archived_at: now, status: 'Completado' }).eq('id', id)
     if (error) { addToast('Error al archivar el tema.', 'error'); return }
-    setTemas(prev => prev.map(t => t.id === id ? { ...t, archived: true, archived_at: now } : t))
+    setTemas(prev => prev.map(t => t.id === id ? { ...t, archived: true, archived_at: now, status: 'Completado' } : t))
     setConfirmArchive(null)
     await logAction('ARCHIVAR', id, nombre, `Archivó tema "${nombre}"`)
     addToast(`"${nombre}" archivado.`, 'success')
@@ -486,13 +500,43 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
   const handleDoReactivateTema = useCallback(async () => {
     if (!confirmReactivate) return
     const { id, nombre } = confirmReactivate
-    const { error } = await supabase.from('temas').update({ archived: false, archived_at: null }).eq('id', id)
+    const { error } = await supabase.from('temas').update({ archived: false, archived_at: null, status: 'En desarrollo' }).eq('id', id)
     if (error) { addToast('Error al reactivar el tema.', 'error'); return }
-    setTemas(prev => prev.map(t => t.id === id ? { ...t, archived: false, archived_at: null } : t))
+    setTemas(prev => prev.map(t => t.id === id ? { ...t, archived: false, archived_at: null, status: 'En desarrollo' } : t))
     setConfirmReactivate(null)
     await logAction('REACTIVAR', id, nombre, `Reactivó tema "${nombre}"`)
     addToast(`"${nombre}" reactivado y visible en Activos.`, 'success')
   }, [confirmReactivate, addToast, logAction])
+
+  const handleStatusChange = useCallback(async (temaId, newStatus) => {
+    if (newStatus === 'Completado') {
+      const tema = temasRef.current.find(t => t.id === temaId)
+      if (!tema) return
+      setConfirmStatusComplete({ id: temaId, nombre: tema.nombre || 'Sin nombre' })
+      return
+    }
+    setTemas(prev => prev.map(t => t.id === temaId ? { ...t, status: newStatus } : t))
+    const { error } = await supabase.from('temas').update({ status: newStatus }).eq('id', temaId)
+    if (error) { addToast('Error al actualizar el status.', 'error'); return }
+    await logAction('MODIFICAR', temaId, null, `Status → "${newStatus}"`)
+  }, [addToast, logAction])
+
+  const handleDoStatusComplete = useCallback(async () => {
+    if (!confirmStatusComplete) return
+    const { id, nombre } = confirmStatusComplete
+    const now = new Date().toISOString()
+    const { error } = await supabase
+      .from('temas')
+      .update({ status: 'Completado', archived: true, archived_at: now })
+      .eq('id', id)
+    if (error) { addToast('Error al completar el tema.', 'error'); return }
+    setTemas(prev => prev.map(t =>
+      t.id === id ? { ...t, status: 'Completado', archived: true, archived_at: now } : t
+    ))
+    setConfirmStatusComplete(null)
+    addToast(`"${nombre}" marcado como completado y archivado.`, 'success')
+    await logAction('ARCHIVAR', id, nombre, 'Marcado como Completado → archivado automático')
+  }, [confirmStatusComplete, addToast, logAction])
 
   function handleExport(selectedIds) {
     try {
@@ -761,6 +805,7 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
               onAddPlanificacion={handleOpenAddPlanificacion}
               onArchiveTema={requestArchiveTema}
               onReactivateTema={requestReactivateTema}
+              onStatusChange={handleStatusChange}
               isArchived={activeTab === 'archived'}
               totalTemas={activeTab === 'active' ? activeCount : archivedCount}
               filterQuery={filterInput}
@@ -781,6 +826,7 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
               onAddPlanificacion={handleOpenAddPlanificacion}
               onArchiveTema={requestArchiveTema}
               onReactivateTema={requestReactivateTema}
+              onStatusChange={handleStatusChange}
               isArchived={activeTab === 'archived'}
               totalTemas={activeTab === 'active' ? activeCount : archivedCount}
               filterQuery={filterInput}
@@ -863,6 +909,18 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
           confirmClass="btn-confirm-action"
           onConfirm={handleDoReactivateTema}
           onCancel={() => setConfirmReactivate(null)}
+        />
+      )}
+
+      {/* Confirm: marcar como Completado → archivado automático */}
+      {confirmStatusComplete && (
+        <ConfirmDialog
+          title={`¿Marcar "${confirmStatusComplete.nombre}" como completado?`}
+          body="El tema será archivado automáticamente. Podrás reactivarlo desde la pestaña Archivados."
+          confirmLabel="Marcar como completado"
+          confirmClass="btn-confirm-action"
+          onConfirm={handleDoStatusComplete}
+          onCancel={() => setConfirmStatusComplete(null)}
         />
       )}
 
