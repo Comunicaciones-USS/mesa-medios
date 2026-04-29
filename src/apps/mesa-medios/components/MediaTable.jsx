@@ -285,11 +285,11 @@ const TemaRow = memo(function TemaRow({
             )}
 
             {/* Select para cambiar status manualmente (solo tab activos) */}
-            {!isArchived && (
+            {!isArchived && tema.status && (
               <select
                 className="tema-status-select"
                 value={tema.status || 'Nuevo'}
-                onChange={e => { e.stopPropagation(); onStatusChange?.(tema.id, e.target.value) }}
+                onChange={e => onStatusChange?.(tema.id, e.target.value)}
                 onClick={e => e.stopPropagation()}
                 aria-label="Cambiar status del tema"
                 title="Cambiar status"
