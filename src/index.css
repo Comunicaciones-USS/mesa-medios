@@ -5495,3 +5495,75 @@ body {
   font-family: inherit;
 }
 .tema-stale-badge:hover { opacity: 0.8; }
+
+/* ── CellPopover v2 (nuevo flujo) ──────────────────────────── */
+.cell-popover-v2 {
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.14);
+  background: white;
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
+}
+.cpv2-input-wrap {
+  padding: 12px 12px 8px;
+}
+.cpv2-input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1.5px solid #d1d5db;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-family: Montserrat, sans-serif;
+  outline: none;
+  color: var(--text-main);
+}
+.cpv2-input:focus {
+  border-color: var(--secondary);
+  box-shadow: 0 0 0 2px rgba(39, 93, 165, 0.15);
+}
+.cpv2-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px 12px;
+  border-top: 1px solid #f3f4f6;
+}
+.cpv2-btn-pd {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+}
+.cpv2-btn-pd:hover { background: #fde68a; }
+.cpv2-btn-vaciar {
+  color: #6b7280;
+  background: none;
+  border: none;
+  padding: 5px 6px;
+  font-size: 12px;
+  cursor: pointer;
+  text-decoration: underline;
+  font-family: inherit;
+}
+.cpv2-btn-vaciar:hover { color: #374151; }
+.cpv2-btn-confirm {
+  margin-left: auto;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+}
+.cpv2-btn-confirm:hover { background: var(--primary-light); }
