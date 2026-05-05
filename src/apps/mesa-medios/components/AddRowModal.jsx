@@ -23,9 +23,9 @@ function useIsMobile() {
  * 3. Nuevo subtema:
  *    Props: mode="add-subtema", parentId, parentNombre, onConfirmSubtema(parentId, nombre, fechaInicio, fechaTermino)
  *
- * 4. Agregar fecha a subtema:
- *    Props: mode="add-date-subtema", subtemaId, subtemaNombre, parentNombre, existingDates[],
- *           onConfirmDateSubtema(subtemaId, semana)
+ * 4. Editar subtema (nombre + fechas):
+ *    Props: mode="edit-subtema", subtemaId, subtemaNombre, fechaInicioInit, fechaTerminoInit, parentNombre,
+ *           onConfirmEditSubtema(subtemaId, { nombre, fechaInicio, fechaTermino })
  */
 export default function AddRowModal({
   // Modo 1 & 2
@@ -38,23 +38,31 @@ export default function AddRowModal({
   parentId = null,
   parentNombre = null,
   onConfirmSubtema = null,
-  // Modo 4
+  // Modo 4 — editar subtema
   subtemaId = null,
   subtemaNombre = null,
-  onConfirmDateSubtema = null,
+  fechaInicioInit = '',
+  fechaTerminoInit = '',
+  onConfirmEditSubtema = null,
   // Común
   onClose,
 }) {
   // ── Determinar modo ──────────────────────────────────────────────
-  const isAddDateSubtema = mode === 'add-date-subtema'
-  const isAddSubtema     = mode === 'add-subtema'
-  const isAddDate        = !!prefillTema && !isAddSubtema && !isAddDateSubtema
+  const isEditSubtema = mode === 'edit-subtema'
+  const isAddSubtema  = mode === 'add-subtema'
+  const isAddDate     = !!prefillTema && !isAddSubtema && !isEditSubtema
 
   // ── Estado de campos ─────────────────────────────────────────────
-  const [nombre,      setNombre]      = useState(prefillTema?.nombre || '')
+  const [nombre,      setNombre]      = useState(
+    isEditSubtema ? (subtemaNombre || '') : (prefillTema?.nombre || '')
+  )
   const [semana,      setSemana]      = useState('')
-  const [fechaInicio, setFechaInicio] = useState('')
-  const [fechaTermino, setFechaTermino] = useState('')
+  const [fechaInicio, setFechaInicio] = useState(
+    isEditSubtema ? (fechaInicioInit || '') : ''
+  )
+  const [fechaTermino, setFechaTermino] = useState(
+    isEditSubtema ? (fechaTerminoInit || '') : ''
+  )
 
   const inputRef = useRef(null)
   const modalRef = useRef(null)
@@ -83,10 +91,10 @@ export default function AddRowModal({
 
   // ── Validaciones ─────────────────────────────────────────────────
   const dateConflict = semana && existingDates.includes(semana)
-  const rangeError   = isAddSubtema && fechaInicio && fechaTermino && fechaInicio > fechaTermino
+  const rangeError   = (isAddSubtema || isEditSubtema) && fechaInicio && fechaTermino && fechaInicio > fechaTermino
 
   // Sugerencia de tema existente (solo modo nueva campaña)
-  const matchedTema = (!isAddDate && !isAddSubtema && !isAddDateSubtema)
+  const matchedTema = (!isAddDate && !isAddSubtema && !isEditSubtema)
     ? temas.find(t => t.nombre.trim().toLowerCase() === nombre.trim().toLowerCase())
     : null
 
@@ -95,9 +103,13 @@ export default function AddRowModal({
     e.preventDefault()
     if (dateConflict || rangeError) return
 
-    if (isAddDateSubtema) {
-      if (!semana) return
-      onConfirmDateSubtema(subtemaId, semana)
+    if (isEditSubtema) {
+      if (!nombre.trim()) return
+      onConfirmEditSubtema(subtemaId, {
+        nombre:        nombre.trim(),
+        fecha_inicio:  fechaInicio  || null,
+        fecha_termino: fechaTermino || null,
+      })
       return
     }
 
@@ -118,34 +130,56 @@ export default function AddRowModal({
 
   // ── Contenido del formulario según modo ─────────────────────────
   function renderFormContent() {
-    // Modo 4: agregar fecha a subtema
-    if (isAddDateSubtema) {
+    // Modo 4: editar subtema (nombre + fechas)
+    if (isEditSubtema) {
       return (
         <>
+          {parentNombre && (
+            <div className="form-group">
+              <label>Campaña padre</label>
+              <input type="text" value={parentNombre} readOnly className="input-readonly" />
+            </div>
+          )}
           <div className="form-group">
-            <label>Campaña</label>
-            <input type="text" value={parentNombre || ''} readOnly className="input-readonly" />
-          </div>
-          <div className="form-group">
-            <label>Subtema</label>
-            <input type="text" value={subtemaNombre || ''} readOnly className="input-readonly" />
-          </div>
-          <div className="form-group">
-            <label htmlFor="semana-sub">Fecha *</label>
+            <label htmlFor="edit-subtema-nombre">Nombre del subtema *</label>
             <input
               ref={inputRef}
-              id="semana-sub"
-              type="date"
-              value={semana}
-              onChange={e => setSemana(e.target.value)}
+              id="edit-subtema-nombre"
+              type="text"
+              placeholder="Ej: Semana 1, Etapa Lanzamiento..."
+              value={nombre}
+              onChange={e => setNombre(e.target.value)}
               required
             />
-            {dateConflict && (
-              <p className="modal-hint modal-hint-warn">
-                Ya existe una planificación para esta fecha en "{subtemaNombre}".
-              </p>
-            )}
           </div>
+          <div className="form-group form-group-row">
+            <div className="form-group-half">
+              <label htmlFor="edit-fecha-inicio">Fecha inicio</label>
+              <input
+                id="edit-fecha-inicio"
+                type="date"
+                value={fechaInicio}
+                onChange={e => setFechaInicio(e.target.value)}
+              />
+            </div>
+            <div className="form-group-half">
+              <label htmlFor="edit-fecha-termino">Fecha término</label>
+              <input
+                id="edit-fecha-termino"
+                type="date"
+                value={fechaTermino}
+                onChange={e => setFechaTermino(e.target.value)}
+              />
+            </div>
+          </div>
+          {rangeError && (
+            <p className="modal-hint modal-hint-warn">
+              La fecha de inicio no puede ser posterior a la fecha de término.
+            </p>
+          )}
+          <p className="modal-hint">
+            Las fechas son opcionales y sirven para filtrar por período.
+          </p>
         </>
       )
     }
@@ -281,16 +315,16 @@ export default function AddRowModal({
   }
 
   // ── Labels ────────────────────────────────────────────────────────
-  const titleLabel = isAddDateSubtema
-    ? 'Agregar fecha al subtema'
+  const titleLabel = isEditSubtema
+    ? 'Editar subtema'
     : isAddSubtema
     ? 'Nuevo subtema'
     : isAddDate
     ? 'Agregar fecha al tema'
     : 'Agregar tema'
 
-  const submitLabel = isAddDateSubtema
-    ? 'Agregar fecha'
+  const submitLabel = isEditSubtema
+    ? 'Guardar cambios'
     : isAddSubtema
     ? 'Crear subtema'
     : isAddDate
@@ -299,8 +333,7 @@ export default function AddRowModal({
     ? 'Agregar al tema'
     : 'Crear tema'
 
-  const isSubmitDisabled = dateConflict || rangeError ||
-    (isAddDateSubtema ? !semana : !nombre.trim())
+  const isSubmitDisabled = dateConflict || rangeError || !nombre.trim()
 
   const formContent = renderFormContent()
 

@@ -5850,6 +5850,55 @@ body {
   padding-left: 48px !important;
 }
 
+/* ── SubtemaRow modelo single-row ──────────────────────────────── */
+.subtema-data-row {
+  background: #f4f8fd;
+}
+
+.subtema-data-row:hover {
+  background: #eaf2fb;
+}
+
+.subtema-data-name-cell {
+  padding-left: 0 !important;
+}
+
+.subtema-data-name-inner {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 6px 8px 6px 28px;
+  min-height: 36px;
+}
+
+.subtema-data-name-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1;
+}
+
+.subtema-name-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--primary, #1e4a6b);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.subtema-data-fechas {
+  font-size: 10px;
+  color: var(--text-muted, #6b7280);
+  white-space: nowrap;
+}
+
+/* Celdas de medios dentro de la fila de subtema */
+.subtema-media-cell {
+  opacity: 0.92;
+}
+
 /* AddRowModal: tabs de modo */
 .add-row-mode-tabs {
   display: flex;
@@ -5887,6 +5936,19 @@ body {
   margin: 6px 0 6px 12px;
   padding: 8px 10px;
   border-radius: 6px;
+}
+
+.mobile-subtema-card-single .mobile-subtema-header {
+  cursor: default;
+}
+
+.mobile-subtema-semana {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: rgba(0,0,0,0.04);
+  border-radius: 4px;
+  padding: 1px 5px;
 }
 
 .mobile-subtema-header {
@@ -6100,4 +6162,86 @@ body {
   .btn-header-collapse {
     padding: 3px 5px;
   }
+}
+
+/* ── KebabMenu — menú contextual de tres puntos ─────────────────── */
+.kebab-menu-container {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.kebab-menu-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  background: transparent;
+  border-radius: 4px;
+  color: var(--text-muted, #6b7280);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.12s, color 0.12s;
+  flex-shrink: 0;
+}
+
+.kebab-menu-trigger:hover,
+.kebab-menu-trigger:focus-visible {
+  background: var(--hover-bg, rgba(0,0,0,0.06));
+  color: var(--text-primary, #111827);
+  outline: none;
+}
+
+.kebab-menu-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  min-width: 160px;
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  z-index: 250;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.kebab-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 14px;
+  border: none;
+  background: transparent;
+  text-align: left;
+  font-size: 13px;
+  color: var(--text-primary, #111827);
+  cursor: pointer;
+  transition: background 0.1s;
+  white-space: nowrap;
+}
+
+.kebab-menu-item:hover {
+  background: var(--hover-bg, rgba(0,0,0,0.05));
+}
+
+.kebab-menu-item-icon {
+  font-size: 14px;
+  width: 16px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.kebab-menu-item-danger {
+  color: var(--error, #dc2626);
+}
+
+.kebab-menu-item-danger:hover {
+  background: rgba(220, 38, 38, 0.06);
 }

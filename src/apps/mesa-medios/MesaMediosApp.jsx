@@ -24,7 +24,7 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
   useEffect(() => { temasRef.current = temas }, [temas])
   const [loading,          setLoading]          = useState(true)
   const [error,            setError]            = useState(null)
-  // showModal: null | 'new' | { temaId, temaNombre, existingDates[] } | { mode, parentId?, parentNombre?, subtemaId?, subtemaNombre?, existingDates? }
+  // showModal: null | 'new' | { temaId, temaNombre, existingDates[] } | { mode: 'add-subtema', parentId, parentNombre } | { mode: 'edit-subtema', subtemaId, subtemaNombre, fechaInicioInit, fechaTerminoInit, parentNombre }
   const [showModal,        setShowModal]        = useState(null)
   const [showLogs,         setShowLogs]         = useState(false)
   const [showProfile,      setShowProfile]      = useState(false)
@@ -56,9 +56,8 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
   // Sticky toolbar measurement
   const filterBarRef = useRef(null)
 
-  // Expanded temas y subtemas
-  const [expandedTemas,    setExpandedTemas]    = useState(new Set())
-  const [expandedSubtemas, setExpandedSubtemas] = useState(new Set())
+  // Expanded temas
+  const [expandedTemas, setExpandedTemas] = useState(new Set())
 
   // Mobile filters sheet
   const [showMobileFilters, setShowMobileFilters] = useState(false)
@@ -85,7 +84,6 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
     setFilterDateRange({ from: '', to: '' })
     setFilterIncludeSubtemaRange(false)
     setExpandedTemas(new Set())
-    setExpandedSubtemas(new Set())
     setActiveColumnFilters(new Set())
   }
 
@@ -103,15 +101,6 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
       const next = new Set(prev)
       if (next.has(temaId)) next.delete(temaId)
       else next.add(temaId)
-      return next
-    })
-  }, [])
-
-  const toggleSubtema = useCallback((subtemaId) => {
-    setExpandedSubtemas(prev => {
-      const next = new Set(prev)
-      if (next.has(subtemaId)) next.delete(subtemaId)
-      else next.add(subtemaId)
       return next
     })
   }, [])
@@ -346,9 +335,7 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
   useEffect(() => {
     if (activeColumnFilters.size > 0) {
       const activeColIds = [...activeColumnFilters]
-
       const padresExpand = new Set()
-      const subtemasExpand = new Set()
 
       temas.filter(t => !t.archived).forEach(padre => {
         // Verificar planificaciones directas
@@ -361,9 +348,9 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
         if (hasDirectMatch) {
           padresExpand.add(padre.id)
         }
-        // Verificar subtemas
+        // Verificar subtemas (siempre visibles cuando el padre está expandido)
         ;(padre.subtemas || []).forEach(subtema => {
-          const hasSubMatch = subtema.planificaciones.some(p =>
+          const hasSubMatch = (subtema.planificaciones || []).some(p =>
             activeColIds.some(colId => {
               const { valor } = getCellData(p.medios, colId)
               return valor && valor !== ''
@@ -371,13 +358,11 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
           )
           if (hasSubMatch) {
             padresExpand.add(padre.id)
-            subtemasExpand.add(subtema.id)
           }
         })
       })
 
       setExpandedTemas(padresExpand)
-      setExpandedSubtemas(subtemasExpand)
     }
   }, [activeColumnFilters, temas])
 
@@ -459,7 +444,6 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
     const tree = buildTree(temasData || [], planifs || [], hitoMap)
     setTemas(tree)
     setExpandedTemas(new Set())
-    setExpandedSubtemas(new Set())
     setLoading(false)
 
     // Transición silenciosa Nuevo → En desarrollo si pasaron 7+ días
@@ -692,7 +676,7 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
     setShowModal(null)
   }
 
-  // ── handleAddSubtema: crea subtema bajo un padre ─────────────────
+  // ── handleAddSubtema: crea subtema + 1 contenido inicial ─────────
   const handleAddSubtema = useCallback(async (parentId, nombre, fechaInicio, fechaTermino) => {
     const { data: newSubtema, error } = await supabase
       .from('temas')
@@ -707,11 +691,28 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
       .select()
       .single()
     if (error) { addToast('Error al crear el subtema. Intenta nuevamente.', 'error'); return }
+
+    // Crear 1 contenido vacío para el subtema (modelo single-row)
+    const { data: newPlanif, error: pErr } = await supabase
+      .from('contenidos')
+      .insert([{
+        nombre,
+        semana: fechaInicio || null,
+        medios: {},
+        tema_id: newSubtema.id,
+      }])
+      .select()
+      .single()
+    if (pErr) { addToast('Subtema creado pero hubo un error al inicializar la fila.', 'error') }
+
     setTemas(prev => prev.map(t => {
       if (t.id === parentId) {
         return {
           ...t,
-          subtemas: [...(t.subtemas || []), { ...newSubtema, planificaciones: [] }],
+          subtemas: [
+            ...(t.subtemas || []),
+            { ...newSubtema, planificaciones: newPlanif ? [newPlanif] : [] },
+          ],
         }
       }
       return t
@@ -737,8 +738,52 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
     await logAction('MODIFICAR', subtemaId, fields.nombre || subtemaId, `Actualizó subtema`)
   }, [addToast, logAction])
 
-  // ── handleAddPlanificacionToSubtema: agrega fecha a un subtema ───
-  const handleAddPlanificacionToSubtema = useCallback(async (subtemaId, fecha) => {
+  // ── handleEditSubtema: abre modal de edición del subtema ─────────
+  const handleEditSubtema = useCallback((subtema) => {
+    let padre = null
+    for (const t of temasRef.current) {
+      if ((t.subtemas || []).some(s => s.id === subtema.id)) { padre = t; break }
+    }
+    setShowModal({
+      mode: 'edit-subtema',
+      subtemaId: subtema.id,
+      subtemaNombre: subtema.nombre,
+      fechaInicioInit: subtema.fecha_inicio || '',
+      fechaTerminoInit: subtema.fecha_termino || '',
+      parentNombre: padre?.nombre || '',
+    })
+  }, [])
+
+  // ── handleConfirmEditSubtema: guarda cambios del subtema ──────────
+  const handleConfirmEditSubtema = useCallback(async (subtemaId, fields) => {
+    setTemas(prev => prev.map(t => ({
+      ...t,
+      subtemas: (t.subtemas || []).map(s => s.id === subtemaId ? { ...s, ...fields } : s),
+    })))
+    const { error } = await supabase.from('temas').update(fields).eq('id', subtemaId)
+    if (error) {
+      addToast('Error al actualizar el subtema.', 'error')
+      fetchData()
+      return
+    }
+    // Sync contenidos.nombre when the subtema name changes
+    if (fields.nombre) {
+      let planifId = null
+      for (const t of temasRef.current) {
+        const s = (t.subtemas || []).find(s => s.id === subtemaId)
+        if (s) { planifId = s.planificaciones?.[0]?.id || null; break }
+      }
+      if (planifId) {
+        await supabase.from('contenidos').update({ nombre: fields.nombre }).eq('id', planifId)
+      }
+    }
+    await logAction('MODIFICAR', subtemaId, fields.nombre || subtemaId, `Actualizó subtema`)
+    addToast('Subtema actualizado.', 'success')
+    setShowModal(null)
+  }, [addToast, logAction])
+
+  // ── handleDeleteSubtema: elimina subtema + CASCADE a contenidos ───
+  const handleDeleteSubtema = useCallback(async (subtemaId) => {
     let subtema = null
     let padre = null
     for (const t of temasRef.current) {
@@ -747,32 +792,15 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
     }
     if (!subtema) return
 
-    // Auto-transición del padre: Nuevo → En desarrollo
-    if (padre?.status === 'Nuevo') {
-      const { error: statusErr } = await supabase.from('temas').update({ status: 'En desarrollo' }).eq('id', padre.id)
-      if (!statusErr) {
-        setTemas(prev => prev.map(t => t.id === padre.id ? { ...t, status: 'En desarrollo' } : t))
-      }
-    }
+    const { error } = await supabase.from('temas').delete().eq('id', subtemaId)
+    if (error) { addToast('Error al eliminar el subtema.', 'error'); return }
 
-    const { data, error } = await supabase
-      .from('contenidos')
-      .insert([{ nombre: subtema.nombre, semana: fecha, medios: {}, tema_id: subtemaId }])
-      .select()
-      .single()
-
-    if (error) { addToast('Error al agregar la fecha. Intenta nuevamente.', 'error'); return }
-
-    setTemas(prev => prev.map(t => ({
+    setTemas(prev => prev.map(t => t.id === padre.id ? {
       ...t,
-      subtemas: (t.subtemas || []).map(s =>
-        s.id === subtemaId
-          ? { ...s, planificaciones: [...(s.planificaciones || []), data] }
-          : s
-      ),
-    })))
-    await logAction('AGREGAR', data.id, subtema.nombre, `Agregó fecha en subtema "${subtema.nombre}"`)
-    setShowModal(null)
+      subtemas: (t.subtemas || []).filter(s => s.id !== subtemaId),
+    } : t))
+    await logAction('ELIMINAR', subtemaId, subtema.nombre, `Eliminó subtema "${subtema.nombre}" de "${padre?.nombre}"`)
+    addToast(`Subtema "${subtema.nombre}" eliminado.`, 'success')
   }, [addToast, logAction])
 
   // ── handleCellChange: actualiza una celda de una planificación ───
@@ -921,25 +949,6 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
       temaId: tema.id,
       temaNombre: tema.nombre,
       existingDates: tema.planificaciones.map(p => p.semana).filter(Boolean),
-    })
-  }, [])
-
-  // Abrir modal para agregar planificación a un subtema específico
-  const handleOpenAddPlanificacionSubtema = useCallback((subtemaId) => {
-    let subtema = null
-    let padre = null
-    for (const t of temasRef.current) {
-      const s = (t.subtemas || []).find(s => s.id === subtemaId)
-      if (s) { subtema = s; padre = t; break }
-    }
-    if (!subtema) return
-    const existingDates = (subtema.planificaciones || []).map(p => p.semana).filter(Boolean)
-    setShowModal({
-      mode: 'add-date-subtema',
-      subtemaId: subtema.id,
-      subtemaNombre: subtema.nombre,
-      parentNombre: padre?.nombre,
-      existingDates,
     })
   }, [])
 
@@ -1420,9 +1429,10 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
               onDeleteTema={requestDeleteTema}
               onRenameTema={handleRenameTema}
               onAddPlanificacion={handleOpenAddPlanificacion}
-              onAddPlanificacionSubtema={handleOpenAddPlanificacionSubtema}
               onAddSubtema={(parentId) => setShowModal({ mode: 'add-subtema', parentId, parentNombre: temasRef.current.find(t => t.id === parentId)?.nombre })}
               onUpdateSubtema={handleUpdateSubtema}
+              onEditSubtema={handleEditSubtema}
+              onDeleteSubtema={handleDeleteSubtema}
               onArchiveTema={requestArchiveTema}
               onReactivateTema={requestReactivateTema}
               onStatusChange={handleStatusChange}
@@ -1435,8 +1445,6 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
               onToggleGroup={toggleGroup}
               expandedTemas={expandedTemas}
               onToggleTema={toggleTema}
-              expandedSubtemas={expandedSubtemas}
-              onToggleSubtema={toggleSubtema}
               activeColumnFilters={activeColumnFilters}
               onToggleColumnFilter={toggleColumnFilter}
               onClearColumnFilters={clearColumnFilters}
@@ -1449,9 +1457,9 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
               onFieldChange={handleFieldChange}
               onDeleteRow={requestDeleteRow}
               onAddPlanificacion={handleOpenAddPlanificacion}
-              onAddPlanificacionSubtema={handleOpenAddPlanificacionSubtema}
               onAddSubtema={(parentId) => setShowModal({ mode: 'add-subtema', parentId, parentNombre: temasRef.current.find(t => t.id === parentId)?.nombre })}
-              onUpdateSubtema={handleUpdateSubtema}
+              onEditSubtema={handleEditSubtema}
+              onDeleteSubtema={handleDeleteSubtema}
               onArchiveTema={requestArchiveTema}
               onReactivateTema={requestReactivateTema}
               onStatusChange={handleStatusChange}
@@ -1491,14 +1499,15 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
           onClose={() => setShowModal(null)}
         />
       )}
-      {activeTab === 'active' && showModal && typeof showModal === 'object' && showModal.mode === 'add-date-subtema' && (
+      {showModal && typeof showModal === 'object' && showModal.mode === 'edit-subtema' && (
         <AddRowModal
-          mode="add-date-subtema"
+          mode="edit-subtema"
           subtemaId={showModal.subtemaId}
           subtemaNombre={showModal.subtemaNombre}
+          fechaInicioInit={showModal.fechaInicioInit}
+          fechaTerminoInit={showModal.fechaTerminoInit}
           parentNombre={showModal.parentNombre}
-          existingDates={showModal.existingDates || []}
-          onConfirmDateSubtema={handleAddPlanificacionToSubtema}
+          onConfirmEditSubtema={handleConfirmEditSubtema}
           onClose={() => setShowModal(null)}
         />
       )}

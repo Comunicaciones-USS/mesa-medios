@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { MEDIA_COLS } from '../config'
 import { getCellData } from '../utils'
+import KebabMenu from '../../shared/components/KebabMenu'
 
 // ── Helpers ─────────────────────────────────────────────────────
 function getCellMeta(raw, notas) {
@@ -249,15 +250,28 @@ function PlanifCard({ planif, temaNombre, onCellChange, onDeleteRow, isReadOnly,
   )
 }
 
-// ── Subtema card ──────────────────────────────────────────────────
-function SubtemaCard({ subtema, onCellChange, onDeleteRow, onAddPlanificacion, isReadOnly }) {
-  const [expanded, setExpanded] = useState(false)
-  const n = subtema.planificaciones?.length || 0
+// ── Subtema card — modelo single-row (1 planif por subtema) ──────
+function SubtemaCard({ subtema, onCellChange, onDeleteRow, onEditSubtema, onDeleteSubtema, isReadOnly }) {
+  const planif = subtema.planificaciones?.[0] || null
+
+  const kebabItems = isReadOnly ? [] : [
+    {
+      label: 'Editar subtema',
+      icon: '✎',
+      onClick: () => onEditSubtema?.(subtema),
+    },
+    {
+      label: 'Eliminar subtema',
+      icon: '✕',
+      variant: 'danger',
+      onClick: () => onDeleteSubtema?.(subtema.id),
+    },
+  ]
 
   return (
-    <div className={`mobile-subtema-card${expanded ? ' expanded' : ''}`}>
+    <div className="mobile-subtema-card mobile-subtema-card-single">
       {/* Header del subtema */}
-      <div className="mobile-subtema-header" onClick={() => setExpanded(!expanded)}>
+      <div className="mobile-subtema-header">
         <div className="mobile-subtema-title-area">
           <span className="mobile-subtema-title">{subtema.nombre || 'Sin nombre'}</span>
           {(subtema.fecha_inicio || subtema.fecha_termino) && (
@@ -267,49 +281,28 @@ function SubtemaCard({ subtema, onCellChange, onDeleteRow, onAddPlanificacion, i
               {subtema.fecha_termino ? formatDate(subtema.fecha_termino) : '---'}
             </span>
           )}
-          <span className="mobile-subtema-count">{n} {n === 1 ? 'fecha' : 'fechas'}</span>
-        </div>
-        <div className="mobile-subtema-actions">
-          {!isReadOnly && (
-            <button
-              className="mobile-btn-add-fecha"
-              onClick={e => { e.stopPropagation(); onAddPlanificacion(subtema.id) }}
-              title="Agregar fecha al subtema"
-            >
-              + Fecha
-            </button>
+          {planif?.semana && (
+            <span className="mobile-subtema-semana">{formatDate(planif.semana)}</span>
           )}
         </div>
-        <svg className={`mobile-card-arrow ${expanded ? 'rotated' : ''}`} width="16" height="16" viewBox="0 0 16 16" fill="none">
-          <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
+        {!isReadOnly && kebabItems.length > 0 && (
+          <KebabMenu
+            items={kebabItems}
+            ariaLabel={`Acciones para subtema ${subtema.nombre || ''}`}
+          />
+        )}
       </div>
 
-      {/* Planificaciones del subtema */}
-      {expanded && (
-        <div className="mobile-subtema-planifs">
-          {n === 0 ? (
-            !isReadOnly && (
-              <div className="mobile-planif-empty">
-                <button className="btn-add-primera-fecha" onClick={() => onAddPlanificacion(subtema.id)}>
-                  + Agregar primera fecha al subtema
-                </button>
-              </div>
-            )
-          ) : (
-            subtema.planificaciones.map(planif => (
-              <PlanifCard
-                key={planif.id}
-                planif={planif}
-                temaNombre={subtema.nombre}
-                onCellChange={onCellChange}
-                onDeleteRow={onDeleteRow}
-                isReadOnly={isReadOnly}
-                isSubtema
-              />
-            ))
-          )}
-        </div>
+      {/* Planificación única del subtema */}
+      {planif && (
+        <PlanifCard
+          planif={planif}
+          temaNombre={subtema.nombre}
+          onCellChange={onCellChange}
+          onDeleteRow={onDeleteRow}
+          isReadOnly={isReadOnly}
+          isSubtema
+        />
       )}
     </div>
   )
@@ -322,8 +315,9 @@ function TemaCard({
   onFieldChange,
   onDeleteRow,
   onAddPlanificacion,
-  onAddPlanificacionSubtema,
   onAddSubtema,
+  onEditSubtema,
+  onDeleteSubtema,
   onArchiveTema,
   onReactivateTema,
   isArchived,
@@ -413,14 +407,15 @@ function TemaCard({
             />
           ))}
 
-          {/* Subtemas */}
+          {/* Subtemas — single-row model */}
           {subtemas.map(sub => (
             <SubtemaCard
               key={sub.id}
               subtema={sub}
               onCellChange={onCellChange}
               onDeleteRow={onDeleteRow}
-              onAddPlanificacion={onAddPlanificacionSubtema || onAddPlanificacion}
+              onEditSubtema={onEditSubtema}
+              onDeleteSubtema={onDeleteSubtema}
               isReadOnly={isArchived}
             />
           ))}
@@ -455,9 +450,9 @@ export default function MobileCardView({
   onFieldChange,
   onDeleteRow,
   onAddPlanificacion,
-  onAddPlanificacionSubtema,
   onAddSubtema,
-  onUpdateSubtema,
+  onEditSubtema,
+  onDeleteSubtema,
   onArchiveTema,
   onReactivateTema,
   onStatusChange,
@@ -498,8 +493,9 @@ export default function MobileCardView({
             onFieldChange={onFieldChange}
             onDeleteRow={onDeleteRow}
             onAddPlanificacion={onAddPlanificacion}
-            onAddPlanificacionSubtema={onAddPlanificacionSubtema}
             onAddSubtema={onAddSubtema}
+            onEditSubtema={onEditSubtema}
+            onDeleteSubtema={onDeleteSubtema}
             onArchiveTema={onArchiveTema}
             onReactivateTema={onReactivateTema}
             isArchived={isArchived}
