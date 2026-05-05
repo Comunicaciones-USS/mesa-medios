@@ -14,7 +14,7 @@ export const VISOR_SHEETS = [
   },
   {
     id: 'sheet-2',
-    label: 'PLACEHOLDER_LABEL_2',
-    url: 'PLACEHOLDER_URL_2',
+    label: 'Visual Medios 2026',
+    url: 'https://correouss.sharepoint.com/sites/MKT2026/_layouts/15/Doc.aspx?sourcedoc={f58c6413-d33b-4916-9f6c-16d57c2fe7e7}&action=embedview&wdAllowInteractivity=False&wdHideGridlines=True&wdHideHeaders=True&wdDownloadButton=True&wdInConfigurator=True&wdInConfigurator=True&edaebf=rslc0',
   },
 ];
