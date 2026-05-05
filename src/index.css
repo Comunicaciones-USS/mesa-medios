@@ -5997,3 +5997,99 @@ body {
   gap: 2px;
   flex: 1;
 }
+
+/* === FIX: btn-add-subtema-inline — botón inline en celda izquierda del TemaRow === */
+.btn-add-subtema-inline {
+  background: transparent;
+  border: 1px dashed var(--border);
+  color: var(--text-muted);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+  line-height: 1.5;
+}
+
+.btn-add-subtema-inline:hover {
+  border-color: var(--secondary);
+  color: var(--secondary);
+  background: #f0f6fc;
+}
+
+.btn-add-subtema-inline:focus-visible {
+  outline: 2px solid var(--secondary);
+  outline-offset: 2px;
+}
+
+/* === FIX: Header colapsable — Zona B === */
+
+/* Botón de colapso del header */
+.btn-header-collapse {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px 6px;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.btn-header-collapse:hover {
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+  border-color: rgba(255,255,255,0.25);
+}
+
+.btn-header-collapse svg {
+  transition: transform 0.2s ease;
+}
+
+.btn-header-collapse[aria-expanded="false"] svg {
+  transform: rotate(-90deg);
+}
+
+.btn-header-collapse[aria-expanded="true"] svg {
+  transform: rotate(0deg);
+}
+
+/* Punto indicador de filtros activos cuando header está colapsado */
+.filter-active-dot {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #f59e0b;
+  border: 1.5px solid var(--primary);
+  pointer-events: none;
+}
+
+/* Zona B colapsable — desktop: .medios-filter-bar */
+.medios-filter-bar {
+  transition: opacity 0.2s ease;
+}
+
+.medios-filter-bar.zona-b-collapsed {
+  display: none !important;
+}
+
+/* Zona B colapsable — mobile */
+.medios-tabs-mobile.zona-b-collapsed,
+.mobile-action-line.zona-b-collapsed {
+  display: none !important;
+}
+
+@media (max-width: 700px) {
+  .btn-header-collapse {
+    padding: 3px 5px;
+  }
+}
