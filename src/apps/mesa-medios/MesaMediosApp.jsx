@@ -24,12 +24,12 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
   useEffect(() => { temasRef.current = temas }, [temas])
   const [loading,          setLoading]          = useState(true)
   const [error,            setError]            = useState(null)
-  // showModal: null | 'new' | { temaId, temaNombre, existingDates[] }
+  // showModal: null | 'new' | { temaId, temaNombre, existingDates[] } | { mode, parentId?, parentNombre?, subtemaId?, subtemaNombre?, existingDates? }
   const [showModal,        setShowModal]        = useState(null)
   const [showLogs,         setShowLogs]         = useState(false)
   const [showProfile,      setShowProfile]      = useState(false)
   const [confirmDelete,    setConfirmDelete]    = useState(null)
-  const [confirmArchive,   setConfirmArchive]   = useState(null) // { id, nombre, n }
+  const [confirmArchive,   setConfirmArchive]   = useState(null) // { id, nombre, n, subtemaCount }
   const [confirmReactivate,setConfirmReactivate]= useState(null) // { id, nombre }
   const [confirmStatusComplete, setConfirmStatusComplete] = useState(null) // { id, nombre }
   const [filterInput,      setFilterInput]      = useState('')
@@ -42,6 +42,8 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
 
   // Filtros verticales
   const [filterDateRange, setFilterDateRange] = useState({ from: '', to: '' })
+  // Tarea 6: toggle para incluir subtemas con rango en el período filtrado
+  const [filterIncludeSubtemaRange, setFilterIncludeSubtemaRange] = useState(false)
 
   // Filtros horizontales
   const [filterGroup,      setFilterGroup]      = useState('all')
@@ -54,8 +56,9 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
   // Sticky toolbar measurement
   const filterBarRef = useRef(null)
 
-  // Expanded temas
-  const [expandedTemas, setExpandedTemas] = useState(new Set())
+  // Expanded temas y subtemas
+  const [expandedTemas,    setExpandedTemas]    = useState(new Set())
+  const [expandedSubtemas, setExpandedSubtemas] = useState(new Set())
 
   // Mobile filters sheet
   const [showMobileFilters, setShowMobileFilters] = useState(false)
@@ -68,7 +71,9 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
     setFilterGroup('all')
     setFilterCellStatus('all')
     setFilterDateRange({ from: '', to: '' })
+    setFilterIncludeSubtemaRange(false)
     setExpandedTemas(new Set())
+    setExpandedSubtemas(new Set())
     setActiveColumnFilters(new Set())
   }
 
@@ -86,6 +91,15 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
       const next = new Set(prev)
       if (next.has(temaId)) next.delete(temaId)
       else next.add(temaId)
+      return next
+    })
+  }, [])
+
+  const toggleSubtema = useCallback((subtemaId) => {
+    setExpandedSubtemas(prev => {
+      const next = new Set(prev)
+      if (next.has(subtemaId)) next.delete(subtemaId)
+      else next.add(subtemaId)
       return next
     })
   }, [])
@@ -137,17 +151,105 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
     }
   }, [])
 
+  // ── Helper: buscar propietario de una planificación ──────────────
+  // Retorna { padre, subtema|null, planif } buscando tanto en planificaciones
+  // directas del padre como en planificaciones de cada subtema.
+  function findPlanifOwner(planifId) {
+    for (const padre of temasRef.current) {
+      // Buscar en planificaciones directas del padre
+      const directPlanif = padre.planificaciones_directas?.find(p => p.id === planifId)
+        || padre.planificaciones?.find(p => p.id === planifId)
+      if (directPlanif) {
+        return { padre, subtema: null, planif: directPlanif }
+      }
+      // Buscar en planificaciones de subtemas
+      for (const subtema of (padre.subtemas || [])) {
+        const subPlanif = subtema.planificaciones?.find(p => p.id === planifId)
+        if (subPlanif) {
+          return { padre, subtema, planif: subPlanif }
+        }
+      }
+    }
+    return null
+  }
+
+  // ── Helper: construir árbol cliente desde arrays planos ──────────
+  function buildTree(temasData, planifs, hitoMap) {
+    const padres = temasData.filter(t => !t.parent_id)
+    const hijos  = temasData.filter(t =>  t.parent_id)
+
+    return padres.map(padre => {
+      const subtemas = hijos
+        .filter(h => h.parent_id === padre.id)
+        .map(subtema => ({
+          ...subtema,
+          planificaciones: planifs.filter(p => p.tema_id === subtema.id),
+        }))
+
+      const planificaciones_directas = planifs.filter(p => p.tema_id === padre.id)
+      // planificaciones para compatibilidad con los handlers legacy (incluye todo lo del padre)
+      const planificaciones = planificaciones_directas
+
+      return {
+        ...padre,
+        hito: hitoMap[padre.id] || null,
+        subtemas,
+        planificaciones,
+        planificaciones_directas,
+      }
+    })
+  }
+
   // Realtime subscriptions
   useEffect(() => {
     const chTemas = supabase
       .channel('temas-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'temas' }, (payload) => {
         if (payload.eventType === 'INSERT') {
-          setTemas(prev => [...prev, { ...payload.new, planificaciones: [] }])
+          const nuevo = payload.new
+          if (nuevo.parent_id) {
+            // Es un subtema — colgarlo del padre correcto
+            setTemas(prev => prev.map(t => {
+              if (t.id === nuevo.parent_id) {
+                return {
+                  ...t,
+                  subtemas: [...(t.subtemas || []), { ...nuevo, planificaciones: [] }],
+                }
+              }
+              return t
+            }))
+          } else {
+            // Es un padre nuevo
+            setTemas(prev => [...prev, {
+              ...nuevo,
+              hito: null,
+              subtemas: [],
+              planificaciones: [],
+              planificaciones_directas: [],
+            }])
+          }
         } else if (payload.eventType === 'UPDATE') {
-          setTemas(prev => prev.map(t => t.id === payload.new.id ? { ...t, ...payload.new } : t))
+          const updated = payload.new
+          if (updated.parent_id) {
+            // Subtema actualizado
+            setTemas(prev => prev.map(t => ({
+              ...t,
+              subtemas: (t.subtemas || []).map(s => s.id === updated.id ? { ...s, ...updated } : s),
+            })))
+          } else {
+            // Padre actualizado
+            setTemas(prev => prev.map(t => t.id === updated.id ? { ...t, ...updated } : t))
+          }
         } else if (payload.eventType === 'DELETE') {
-          setTemas(prev => prev.filter(t => t.id !== payload.old.id))
+          const deleted = payload.old
+          // Puede ser padre o subtema — intentar ambos
+          setTemas(prev => prev
+            .filter(t => t.id !== deleted.id) // eliminar si era padre
+            .map(t => ({
+              ...t,
+              subtemas: (t.subtemas || []).filter(s => s.id !== deleted.id),
+            }))
+          )
         }
       })
       .subscribe()
@@ -157,19 +259,66 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
       .on('postgres_changes', { event: '*', schema: 'public', table: 'contenidos' }, (payload) => {
         if (payload.eventType === 'INSERT') {
           const p = payload.new
-          setTemas(prev => prev.map(t =>
-            t.id === p.tema_id ? { ...t, planificaciones: [...t.planificaciones, p] } : t
-          ))
+          setTemas(prev => prev.map(padre => {
+            // Verificar si pertenece a este padre directamente
+            if (padre.id === p.tema_id) {
+              const newPlanif = p
+              return {
+                ...padre,
+                planificaciones: [...padre.planificaciones, newPlanif],
+                planificaciones_directas: [...(padre.planificaciones_directas || []), newPlanif],
+              }
+            }
+            // Verificar si pertenece a un subtema
+            const subtemaMatch = (padre.subtemas || []).some(s => s.id === p.tema_id)
+            if (subtemaMatch) {
+              return {
+                ...padre,
+                subtemas: (padre.subtemas || []).map(s =>
+                  s.id === p.tema_id
+                    ? { ...s, planificaciones: [...(s.planificaciones || []), p] }
+                    : s
+                ),
+              }
+            }
+            return padre
+          }))
         } else if (payload.eventType === 'UPDATE') {
-          setTemas(prev => prev.map(t => ({
-            ...t,
-            planificaciones: t.planificaciones.map(p => p.id === payload.new.id ? payload.new : p)
-          })))
+          setTemas(prev => prev.map(padre => {
+            // Actualizar en planificaciones directas del padre
+            const inDirect = (padre.planificaciones || []).some(pl => pl.id === payload.new.id)
+            if (inDirect) {
+              return {
+                ...padre,
+                planificaciones: padre.planificaciones.map(pl => pl.id === payload.new.id ? payload.new : pl),
+                planificaciones_directas: (padre.planificaciones_directas || []).map(pl => pl.id === payload.new.id ? payload.new : pl),
+              }
+            }
+            // Actualizar en subtemas
+            const inSubtema = (padre.subtemas || []).some(s => (s.planificaciones || []).some(pl => pl.id === payload.new.id))
+            if (inSubtema) {
+              return {
+                ...padre,
+                subtemas: (padre.subtemas || []).map(s => ({
+                  ...s,
+                  planificaciones: (s.planificaciones || []).map(pl => pl.id === payload.new.id ? payload.new : pl),
+                })),
+              }
+            }
+            return padre
+          }))
         } else if (payload.eventType === 'DELETE') {
-          setTemas(prev => prev.map(t => ({
-            ...t,
-            planificaciones: t.planificaciones.filter(p => p.id !== payload.old.id)
-          })))
+          setTemas(prev => prev.map(padre => {
+            return {
+              ...padre,
+              planificaciones: (padre.planificaciones || []).filter(pl => pl.id !== payload.old.id),
+              planificaciones_directas: (padre.planificaciones_directas || []).filter(pl => pl.id !== payload.old.id),
+              subtemas: (padre.subtemas || []).map(s => ({
+                ...s,
+                planificaciones: (s.planificaciones || []).filter(pl => pl.id !== payload.old.id),
+              })),
+            }
+          }))
         }
       })
       .subscribe()
@@ -185,20 +334,38 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
   useEffect(() => {
     if (activeColumnFilters.size > 0) {
       const activeColIds = [...activeColumnFilters]
-      const toExpand = new Set(
-        temas
-          .filter(t => !t.archived)
-          .filter(t =>
-            t.planificaciones.some(p =>
-              activeColIds.some(colId => {
-                const { valor } = getCellData(p.medios, colId)
-                return valor && valor !== ''
-              })
-            )
+
+      const padresExpand = new Set()
+      const subtemasExpand = new Set()
+
+      temas.filter(t => !t.archived).forEach(padre => {
+        // Verificar planificaciones directas
+        const hasDirectMatch = padre.planificaciones.some(p =>
+          activeColIds.some(colId => {
+            const { valor } = getCellData(p.medios, colId)
+            return valor && valor !== ''
+          })
+        )
+        if (hasDirectMatch) {
+          padresExpand.add(padre.id)
+        }
+        // Verificar subtemas
+        ;(padre.subtemas || []).forEach(subtema => {
+          const hasSubMatch = subtema.planificaciones.some(p =>
+            activeColIds.some(colId => {
+              const { valor } = getCellData(p.medios, colId)
+              return valor && valor !== ''
+            })
           )
-          .map(t => t.id)
-      )
-      setExpandedTemas(toExpand)
+          if (hasSubMatch) {
+            padresExpand.add(padre.id)
+            subtemasExpand.add(subtema.id)
+          }
+        })
+      })
+
+      setExpandedTemas(padresExpand)
+      setExpandedSubtemas(subtemasExpand)
     }
   }, [activeColumnFilters, temas])
 
@@ -234,8 +401,9 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
   // Si no lo son, los transiciona a 'En desarrollo' en BD de forma silenciosa
   async function checkAndTransitionStaleNew(temasList) {
     const now = new Date()
+    // Solo transicionar padres (parent_id IS NULL)
     const staleNewIds = temasList
-      .filter(t => t.status === 'Nuevo' && t.created_at)
+      .filter(t => !t.parent_id && t.status === 'Nuevo' && t.created_at)
       .filter(t => {
         const created = new Date(t.created_at)
         const days = Math.floor((now - created) / (1000 * 60 * 60 * 24))
@@ -260,7 +428,7 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
     const [{ data: temasData, error: tErr }, { data: planifs, error: pErr }, { data: accionesData }] = await Promise.all([
       supabase.from('temas').select('*').order('nombre'),
       supabase.from('contenidos').select('*').order('semana').order('nombre'),
-      // Fix 7: traer hitos de acciones editoriales vinculadas (sync_to_medios=true)
+      // Traer hitos de acciones editoriales vinculadas (sync_to_medios=true)
       supabase.from('mesa_editorial_acciones')
         .select('tema_id, tipo, archived')
         .eq('sync_to_medios', true)
@@ -268,25 +436,21 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
     ])
     if (tErr || pErr) { setError((tErr || pErr).message); setLoading(false); return }
 
-    // Fix 7: construir mapa tema_id → tipo (hito) usando la acción más reciente activa
+    // Construir mapa tema_id → tipo (hito)
     const hitoMap = {}
     for (const acc of (accionesData || [])) {
       if (acc.tema_id && acc.tipo) {
-        // Solo asignar si no existe ya (la primera es la más relevante por query order)
         if (!hitoMap[acc.tema_id]) hitoMap[acc.tema_id] = acc.tipo
       }
     }
 
-    const tree = (temasData || []).map(tema => ({
-      ...tema,
-      hito: hitoMap[tema.id] || null,
-      planificaciones: (planifs || []).filter(p => p.tema_id === tema.id),
-    }))
+    const tree = buildTree(temasData || [], planifs || [], hitoMap)
     setTemas(tree)
     setExpandedTemas(new Set())
+    setExpandedSubtemas(new Set())
     setLoading(false)
 
-    // Fix 6: transición silenciosa Nuevo → En desarrollo si pasaron 7+ días
+    // Transición silenciosa Nuevo → En desarrollo si pasaron 7+ días
     checkAndTransitionStaleNew(temasData || [])
   }
 
@@ -303,93 +467,138 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
     })
   }, [session])
 
+  // ── Filtro con soporte de subtemas ──────────────────────────────
   const displayTemas = useMemo(() => {
     const now = new Date()
     const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
 
+    // Pipeline de filtros para un array de planificaciones (compartida por directas y subtemas)
+    const filterPlanifs = (planifs) => {
+      let ps = [...planifs]
+      if (filterDateRange.from) ps = ps.filter(p => p.semana && p.semana >= filterDateRange.from)
+      if (filterDateRange.to)   ps = ps.filter(p => p.semana && p.semana <= filterDateRange.to)
+      if (filterCellStatus !== 'all') {
+        const targetCols = filterGroup === 'all' ? MEDIA_COLS : MEDIA_COLS.filter(c => c.group === filterGroup)
+        ps = ps.filter(p => targetCols.some(col => {
+          const { valor } = getCellData(p.medios, col.id)
+          if (filterCellStatus === 'si')    return valor?.toLowerCase().startsWith('si')
+          if (filterCellStatus === 'pd')    return valor?.toLowerCase().startsWith('pd')
+          if (filterCellStatus === 'empty') return !valor
+          return true
+        }))
+      }
+      if (activeColumnFilters.size > 0) {
+        const activeColIds = [...activeColumnFilters]
+        ps = ps.filter(p => activeColIds.some(colId => {
+          const { valor } = getCellData(p.medios, colId)
+          return valor && valor !== ''
+        }))
+      }
+      return ps
+    }
+
+    const sortPlanifs = (planifs) => [...planifs].sort((a, b) => {
+      if (!a.semana && !b.semana) return 0
+      if (!a.semana) return 1
+      if (!b.semana) return -1
+      const aFuture = a.semana >= todayStr
+      const bFuture = b.semana >= todayStr
+      if (aFuture && !bFuture) return -1
+      if (!aFuture && bFuture) return 1
+      return a.semana.localeCompare(b.semana)
+    })
+
     let result = temas
       .filter(t => activeTab === 'active' ? !t.archived : t.archived)
       .map(tema => {
-        let planifs = [...tema.planificaciones]
+        if (activeTab !== 'active') {
+          // Tab Archivados: filtro por rango de archived_at del padre
+          if (filterDateRange.from && tema.archived_at && tema.archived_at.slice(0, 10) < filterDateRange.from) return null
+          if (filterDateRange.to   && tema.archived_at && tema.archived_at.slice(0, 10) > filterDateRange.to)   return null
+          return { ...tema }
+        }
 
-        if (activeTab === 'active') {
-          // Filtro por rango de fecha sobre planificaciones (solo tab Activos)
-          if (filterDateRange.from) planifs = planifs.filter(p => p.semana && p.semana >= filterDateRange.from)
-          if (filterDateRange.to)   planifs = planifs.filter(p => p.semana && p.semana <= filterDateRange.to)
+        // ── Tab Activos ──
 
-          // Filtro por estado de celda sobre planificaciones (solo tab Activos)
-          if (filterCellStatus !== 'all') {
-            const targetCols = filterGroup === 'all' ? MEDIA_COLS : MEDIA_COLS.filter(c => c.group === filterGroup)
-            planifs = planifs.filter(p => targetCols.some(col => {
-              const { valor } = getCellData(p.medios, col.id)
-              if (filterCellStatus === 'si')    return valor?.toLowerCase().startsWith('si')
-              if (filterCellStatus === 'pd')    return valor?.toLowerCase().startsWith('pd')
-              if (filterCellStatus === 'empty') return !valor
-              return true
-            }))
-          }
-        } else {
-          // Tab Archivados: filtro por rango de archived_at si hay filtro activo
-          if (filterDateRange.from && tema.archived_at) {
-            if (tema.archived_at.slice(0, 10) < filterDateRange.from) return null
-          }
-          if (filterDateRange.to && tema.archived_at) {
-            if (tema.archived_at.slice(0, 10) > filterDateRange.to) return null
+        // 1. Planificaciones directas del padre: pipeline completa
+        const directPlanifs = sortPlanifs(filterPlanifs(tema.planificaciones_directas || tema.planificaciones || []))
+
+        // 2. Subtemas: pipeline completa por subtema
+        let filteredSubtemas = (tema.subtemas || []).map(sub => {
+          const subPlanifs = sortPlanifs(filterPlanifs(sub.planificaciones || []))
+          return { ...sub, planificaciones: subPlanifs }
+        })
+
+        // 3. Excluir subtemas vacíos post-filtro, salvo que filterIncludeSubtemaRange los rescate
+        const hasAnyPlanifFilter = filterDateRange.from || filterDateRange.to || filterCellStatus !== 'all' || activeColumnFilters.size > 0
+        if (hasAnyPlanifFilter) {
+          if (filterIncludeSubtemaRange && (filterDateRange.from || filterDateRange.to)) {
+            // Rescatar subtemas cuyo rango solapa el filtro de fechas aunque no tengan planifs
+            const rangeFrom = filterDateRange.from || '0000-01-01'
+            const rangeTo   = filterDateRange.to   || '9999-12-31'
+            filteredSubtemas = (tema.subtemas || []).map(sub => {
+              const already = filteredSubtemas.find(fs => fs.id === sub.id)
+              if (already && already.planificaciones.length > 0) return already
+              const subFrom = sub.fecha_inicio  || '0000-01-01'
+              const subTo   = sub.fecha_termino || '9999-12-31'
+              if (subFrom <= rangeTo && subTo >= rangeFrom) {
+                return already || { ...sub, planificaciones: [] }
+              }
+              return null
+            }).filter(Boolean)
+          } else {
+            // Sin toggle: solo subtemas con planificaciones post-filtro
+            filteredSubtemas = filteredSubtemas.filter(s => s.planificaciones.length > 0)
           }
         }
 
-        // Ordenar planificaciones: futuras primero (ascendente), luego pasadas (ascendente)
-        planifs.sort((a, b) => {
-          if (!a.semana && !b.semana) return 0
-          if (!a.semana) return 1
-          if (!b.semana) return -1
-          const aFuture = a.semana >= todayStr
-          const bFuture = b.semana >= todayStr
-          if (aFuture && !bFuture) return -1
-          if (!aFuture && bFuture) return 1
-          return a.semana.localeCompare(b.semana)
-        })
-        return { ...tema, planificaciones: planifs }
+        return {
+          ...tema,
+          planificaciones: directPlanifs,
+          planificaciones_directas: directPlanifs,
+          subtemas: filteredSubtemas,
+        }
       })
       .filter(Boolean)
 
-    // Filtro de texto sobre nombre del tema (ambas tabs)
+    // Filtro de texto — match en padre O en subtemas
     if (filterText.trim()) {
       const q = filterText.toLowerCase()
-      result = result.filter(t => t.nombre?.toLowerCase().includes(q))
-    }
-
-    // Si hay filtros de planificacion activos en tab Activos, ocultar temas sin resultados
-    if (activeTab === 'active' && (filterDateRange.from || filterDateRange.to || filterCellStatus !== 'all')) {
-      result = result.filter(t => t.planificaciones.length > 0)
-    }
-
-    // Column filter runs after planif sort — tema order reflects the nearest planif that has data in filtered columns
-    if (activeColumnFilters.size > 0 && activeTab === 'active') {
-      const activeColIds = [...activeColumnFilters]
       result = result
-        .map(tema => ({
-          ...tema,
-          planificaciones: tema.planificaciones.filter(p =>
-            activeColIds.some(colId => {
-              const { valor } = getCellData(p.medios, colId)
-              return valor && valor !== ''
-            })
-          )
-        }))
-        .filter(tema => tema.planificaciones.length > 0)
+        .map(tema => {
+          const parentMatch = tema.nombre?.toLowerCase().includes(q)
+          const subtemaMatches = (tema.subtemas || []).filter(s => s.nombre?.toLowerCase().includes(q))
+          if (parentMatch) return { ...tema, _textMatch: 'parent' }
+          if (subtemaMatches.length > 0) return { ...tema, subtemas: subtemaMatches, _textMatch: 'subtema' }
+          return null
+        })
+        .filter(Boolean)
+    }
+
+    // Si hay filtros activos en tab Activos, ocultar temas sin ningún resultado
+    if (activeTab === 'active' && (filterDateRange.from || filterDateRange.to || filterCellStatus !== 'all' || activeColumnFilters.size > 0)) {
+      result = result.filter(t => {
+        const hasDirect = (t.planificaciones || []).length > 0
+        const hasSubPlanifs = (t.subtemas || []).some(s => s.planificaciones.length > 0)
+        // Con filterIncludeSubtemaRange, un padre con subtemas incluidos por solapamiento de rango cuenta
+        const hasSubByRange = filterIncludeSubtemaRange && (t.subtemas || []).length > 0
+        return hasDirect || hasSubPlanifs || hasSubByRange
+      })
     }
 
     // Ordenar temas
     if (activeTab === 'archived') {
       result = [...result].sort((a, b) => (b.archived_at || '').localeCompare(a.archived_at || ''))
     } else {
-      // Clave de ordenamiento: fecha futura más próxima; si todas son pasadas, la más reciente pasada; null al final
       const getKey = (tema) => {
-        if (tema.planificaciones.length === 0) return null
-        const nearestFuture = tema.planificaciones.find(p => p.semana && p.semana >= todayStr)
+        const allPlanifs = [
+          ...(tema.planificaciones || []),
+          ...(tema.subtemas || []).flatMap(s => s.planificaciones || []),
+        ]
+        if (allPlanifs.length === 0) return null
+        const nearestFuture = allPlanifs.find(p => p.semana && p.semana >= todayStr)
         if (nearestFuture) return nearestFuture.semana
-        const withDate = tema.planificaciones.filter(p => p.semana)
+        const withDate = allPlanifs.filter(p => p.semana)
         return withDate.length > 0 ? withDate[withDate.length - 1].semana : null
       }
       result = [...result].sort((a, b) => {
@@ -409,7 +618,7 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
     }
 
     return result
-  }, [temas, activeTab, filterText, sortDir, filterDateRange, filterGroup, filterCellStatus, activeColumnFilters])
+  }, [temas, activeTab, filterText, sortDir, filterDateRange, filterGroup, filterCellStatus, activeColumnFilters, filterIncludeSubtemaRange])
 
   const visibleCols = useMemo(() => {
     if (activeColumnFilters.size > 0) {
@@ -420,17 +629,24 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
   }, [activeColumnFilters, filterGroup])
 
   // Contadores para badges de tabs
-  const activeCount   = useMemo(() => temas.filter(t => !t.archived).length, [temas])
-  const archivedCount = useMemo(() => temas.filter(t =>  t.archived).length, [temas])
+  const activeCount   = useMemo(() => temas.filter(t => !t.archived && !t.parent_id).length, [temas])
+  const archivedCount = useMemo(() => temas.filter(t =>  t.archived && !t.parent_id).length, [temas])
 
   const exportItems = useMemo(() =>
     temas
-      .filter(t => !t.archived)
-      .map(t => ({
-        id:   t.id,
-        name: t.nombre || '(sin nombre)',
-        meta: `${t.planificaciones.length} fecha${t.planificaciones.length !== 1 ? 's' : ''}`,
-      })),
+      .filter(t => !t.archived && !t.parent_id)
+      .map(t => {
+        const subCount = (t.subtemas || []).length
+        const totalPlanifs = (t.planificaciones || []).length +
+          (t.subtemas || []).reduce((acc, s) => acc + (s.planificaciones || []).length, 0)
+        return {
+          id:   t.id,
+          name: t.nombre || '(sin nombre)',
+          meta: subCount > 0
+            ? `${subCount} subtema${subCount !== 1 ? 's' : ''} · ${totalPlanifs} fecha${totalPlanifs !== 1 ? 's' : ''}`
+            : `${totalPlanifs} fecha${totalPlanifs !== 1 ? 's' : ''}`,
+        }
+      }),
     [temas]
   )
 
@@ -439,7 +655,7 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
     [displayTemas]
   )
 
-  // handleAddRow: crea tema (si es nuevo) + planificación
+  // ── handleAddRow: crea tema (si es nuevo) + planificación ────────
   async function handleAddRow({ nombre, semana, temaId }) {
     let targetTemaId = temaId
     if (!targetTemaId) {
@@ -464,61 +680,167 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
     setShowModal(null)
   }
 
-  // handleCellChange: actualiza una celda de una planificación
-  const handleCellChange = useCallback(async (planifId, colId, value, notas) => {
-    let planif = null
-    let tema = null
-    for (const t of temasRef.current) {
-      const p = t.planificaciones.find(p => p.id === planifId)
-      if (p) { planif = p; tema = t; break }
-    }
-    if (!planif) return
-    const { valor: oldValue, notas: oldNotas } = getCellData(planif.medios, colId)
-    if (oldValue === value && oldNotas === notas) return
-    const newMedios = setCellData(planif.medios, colId, value, notas)
-    setTemas(prev => prev.map(t => t.id === tema.id ? {
-      ...t,
-      planificaciones: t.planificaciones.map(p => p.id === planifId ? { ...p, medios: newMedios } : p)
-    } : t))
-    const { error } = await supabase.from('contenidos').update({ medios: newMedios }).eq('id', planifId)
-    if (error) { addToast('Error al guardar. Los datos se recargarán.', 'error'); fetchData(); return }
-    const detalle = value ? `"${colId}" → "${value}"${notas ? ' (con notas)' : ''}` : `Limpió "${colId}"`
-    // Auto-transición: Nuevo → En desarrollo al editar una celda con valor
-    if (tema.status === 'Nuevo' && value) {
-      const { error: statusErr } = await supabase.from('temas').update({ status: 'En desarrollo' }).eq('id', tema.id)
-      if (!statusErr) {
-        setTemas(prev => prev.map(t => t.id === tema.id ? { ...t, status: 'En desarrollo' } : t))
+  // ── handleAddSubtema: crea subtema bajo un padre ─────────────────
+  const handleAddSubtema = useCallback(async (parentId, nombre, fechaInicio, fechaTermino) => {
+    const { data: newSubtema, error } = await supabase
+      .from('temas')
+      .insert([{
+        nombre,
+        parent_id: parentId,
+        origen: 'medios',
+        archived: false,
+        fecha_inicio: fechaInicio || null,
+        fecha_termino: fechaTermino || null,
+      }])
+      .select()
+      .single()
+    if (error) { addToast('Error al crear el subtema. Intenta nuevamente.', 'error'); return }
+    setTemas(prev => prev.map(t => {
+      if (t.id === parentId) {
+        return {
+          ...t,
+          subtemas: [...(t.subtemas || []), { ...newSubtema, planificaciones: [] }],
+        }
       }
-    }
-    await logAction('MODIFICAR', planifId, tema.nombre, detalle)
+      return t
+    }))
+    const padre = temasRef.current.find(t => t.id === parentId)
+    await logAction('AGREGAR', newSubtema.id, nombre, `Creó subtema "${nombre}" en "${padre?.nombre}"`)
+    addToast(`Subtema "${nombre}" creado.`, 'success')
+    setShowModal(null)
   }, [addToast, logAction])
 
-  // handleFieldChange: edita campo de planificación (p.ej. semana)
-  const handleFieldChange = useCallback(async (planifId, field, value) => {
-    let tema = null
-    for (const t of temasRef.current) {
-      if (t.planificaciones.some(p => p.id === planifId)) { tema = t; break }
-    }
-    setTemas(prev => prev.map(t => t.id === tema?.id ? {
+  // ── handleUpdateSubtema: actualiza campos de un subtema ──────────
+  const handleUpdateSubtema = useCallback(async (subtemaId, fields) => {
+    setTemas(prev => prev.map(t => ({
       ...t,
-      planificaciones: t.planificaciones.map(p => p.id === planifId ? { ...p, [field]: value } : p)
-    } : t))
+      subtemas: (t.subtemas || []).map(s => s.id === subtemaId ? { ...s, ...fields } : s),
+    })))
+    const { error } = await supabase.from('temas').update(fields).eq('id', subtemaId)
+    if (error) {
+      addToast('Error al actualizar el subtema.', 'error')
+      fetchData()
+      return
+    }
+    await logAction('MODIFICAR', subtemaId, fields.nombre || subtemaId, `Actualizó subtema`)
+  }, [addToast, logAction])
+
+  // ── handleAddPlanificacionToSubtema: agrega fecha a un subtema ───
+  const handleAddPlanificacionToSubtema = useCallback(async (subtemaId, fecha) => {
+    let subtema = null
+    let padre = null
+    for (const t of temasRef.current) {
+      const s = (t.subtemas || []).find(s => s.id === subtemaId)
+      if (s) { subtema = s; padre = t; break }
+    }
+    if (!subtema) return
+
+    // Auto-transición del padre: Nuevo → En desarrollo
+    if (padre?.status === 'Nuevo') {
+      const { error: statusErr } = await supabase.from('temas').update({ status: 'En desarrollo' }).eq('id', padre.id)
+      if (!statusErr) {
+        setTemas(prev => prev.map(t => t.id === padre.id ? { ...t, status: 'En desarrollo' } : t))
+      }
+    }
+
+    const { data, error } = await supabase
+      .from('contenidos')
+      .insert([{ nombre: subtema.nombre, semana: fecha, medios: {}, tema_id: subtemaId }])
+      .select()
+      .single()
+
+    if (error) { addToast('Error al agregar la fecha. Intenta nuevamente.', 'error'); return }
+
+    setTemas(prev => prev.map(t => ({
+      ...t,
+      subtemas: (t.subtemas || []).map(s =>
+        s.id === subtemaId
+          ? { ...s, planificaciones: [...(s.planificaciones || []), data] }
+          : s
+      ),
+    })))
+    await logAction('AGREGAR', data.id, subtema.nombre, `Agregó fecha en subtema "${subtema.nombre}"`)
+    setShowModal(null)
+  }, [addToast, logAction])
+
+  // ── handleCellChange: actualiza una celda de una planificación ───
+  const handleCellChange = useCallback(async (planifId, colId, value, notas) => {
+    const owner = findPlanifOwner(planifId)
+    if (!owner) return
+
+    const { padre, subtema, planif } = owner
+    const { valor: oldValue, notas: oldNotas } = getCellData(planif.medios, colId)
+    if (oldValue === value && oldNotas === notas) return
+
+    const newMedios = setCellData(planif.medios, colId, value, notas)
+
+    if (subtema) {
+      setTemas(prev => prev.map(t => t.id === padre.id ? {
+        ...t,
+        subtemas: (t.subtemas || []).map(s => s.id === subtema.id ? {
+          ...s,
+          planificaciones: s.planificaciones.map(p => p.id === planifId ? { ...p, medios: newMedios } : p),
+        } : s),
+      } : t))
+    } else {
+      setTemas(prev => prev.map(t => t.id === padre.id ? {
+        ...t,
+        planificaciones: t.planificaciones.map(p => p.id === planifId ? { ...p, medios: newMedios } : p),
+        planificaciones_directas: (t.planificaciones_directas || []).map(p => p.id === planifId ? { ...p, medios: newMedios } : p),
+      } : t))
+    }
+
+    const { error } = await supabase.from('contenidos').update({ medios: newMedios }).eq('id', planifId)
+    if (error) { addToast('Error al guardar. Los datos se recargarán.', 'error'); fetchData(); return }
+
+    const detalle = value ? `"${colId}" → "${value}"${notas ? ' (con notas)' : ''}` : `Limpió "${colId}"`
+
+    // Auto-transición del padre: Nuevo → En desarrollo al editar una celda con valor
+    if (padre.status === 'Nuevo' && value) {
+      const { error: statusErr } = await supabase.from('temas').update({ status: 'En desarrollo' }).eq('id', padre.id)
+      if (!statusErr) {
+        setTemas(prev => prev.map(t => t.id === padre.id ? { ...t, status: 'En desarrollo' } : t))
+      }
+    }
+    await logAction('MODIFICAR', planifId, padre.nombre, detalle)
+  }, [addToast, logAction])
+
+  // ── handleFieldChange: edita campo de planificación (ej. semana) ─
+  const handleFieldChange = useCallback(async (planifId, field, value) => {
+    const owner = findPlanifOwner(planifId)
+    if (!owner) return
+    const { padre, subtema } = owner
+
+    if (subtema) {
+      setTemas(prev => prev.map(t => t.id === padre.id ? {
+        ...t,
+        subtemas: (t.subtemas || []).map(s => s.id === subtema.id ? {
+          ...s,
+          planificaciones: s.planificaciones.map(p => p.id === planifId ? { ...p, [field]: value } : p),
+        } : s),
+      } : t))
+    } else {
+      setTemas(prev => prev.map(t => t.id === padre.id ? {
+        ...t,
+        planificaciones: t.planificaciones.map(p => p.id === planifId ? { ...p, [field]: value } : p),
+        planificaciones_directas: (t.planificaciones_directas || []).map(p => p.id === planifId ? { ...p, [field]: value } : p),
+      } : t))
+    }
+
     const { error } = await supabase.from('contenidos').update({ [field]: value }).eq('id', planifId)
     if (error) { addToast('Error al guardar el campo. Los datos se recargarán.', 'error'); fetchData(); return }
-    await logAction('MODIFICAR', planifId, tema?.nombre, `Cambió "${field}" → "${value}"`)
+    await logAction('MODIFICAR', planifId, padre?.nombre, `Cambió "${field}" → "${value}"`)
   }, [addToast, logAction])
 
   const requestDeleteRow = useCallback((planifId) => {
+    const owner = findPlanifOwner(planifId)
     let nombre = 'planificación'
-    for (const t of temasRef.current) {
-      const p = t.planificaciones.find(p => p.id === planifId)
-      if (p) {
-        const dateStr = p.semana
-          ? new Date(p.semana + 'T12:00:00').toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' })
-          : 'sin fecha'
-        nombre = `planificación del ${dateStr} en "${t.nombre}"`
-        break
-      }
+    if (owner) {
+      const { padre, planif } = owner
+      const dateStr = planif.semana
+        ? new Date(planif.semana + 'T12:00:00').toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' })
+        : 'sin fecha'
+      nombre = `planificación del ${dateStr} en "${padre.nombre}"`
     }
     setConfirmDelete({ type: 'planif', id: planifId, nombre })
   }, [])
@@ -526,28 +848,43 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
   const requestDeleteTema = useCallback((temaId) => {
     const tema = temasRef.current.find(t => t.id === temaId)
     if (!tema) return
+    const subCount = (tema.subtemas || []).length
+    const totalPlanifs = (tema.planificaciones || []).length +
+      (tema.subtemas || []).reduce((acc, s) => acc + (s.planificaciones || []).length, 0)
     setConfirmDelete({
       type: 'tema',
       id: temaId,
       nombre: tema.nombre || 'Sin nombre',
-      n: tema.planificaciones.length,
+      n: totalPlanifs,
+      subCount,
       fromEditorial: tema.origen === 'editorial',
     })
   }, [])
 
   const handleDeleteRow = useCallback(async (planifId) => {
-    let tema = null
-    for (const t of temasRef.current) {
-      if (t.planificaciones.some(p => p.id === planifId)) { tema = t; break }
-    }
+    const owner = findPlanifOwner(planifId)
+    if (!owner) return
+    const { padre, subtema } = owner
+
     const { error } = await supabase.from('contenidos').delete().eq('id', planifId)
     if (error) { addToast('Error al eliminar.', 'error'); fetchData(); return }
-    setTemas(prev => prev.map(t =>
-      t.id === tema?.id
-        ? { ...t, planificaciones: t.planificaciones.filter(p => p.id !== planifId) }
-        : t
-    ))
-    await logAction('ELIMINAR', planifId, tema?.nombre)
+
+    if (subtema) {
+      setTemas(prev => prev.map(t => t.id === padre.id ? {
+        ...t,
+        subtemas: (t.subtemas || []).map(s => s.id === subtema.id ? {
+          ...s,
+          planificaciones: s.planificaciones.filter(p => p.id !== planifId),
+        } : s),
+      } : t))
+    } else {
+      setTemas(prev => prev.map(t => t.id === padre.id ? {
+        ...t,
+        planificaciones: t.planificaciones.filter(p => p.id !== planifId),
+        planificaciones_directas: (t.planificaciones_directas || []).filter(p => p.id !== planifId),
+      } : t))
+    }
+    await logAction('ELIMINAR', planifId, padre?.nombre)
   }, [addToast, logAction])
 
   const handleDeleteTema = useCallback(async (temaId) => {
@@ -575,38 +912,117 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
     })
   }, [])
 
-  // ── Archivar tema ──────────────────────────────────────────────
+  // Abrir modal para agregar planificación a un subtema específico
+  const handleOpenAddPlanificacionSubtema = useCallback((subtemaId) => {
+    let subtema = null
+    let padre = null
+    for (const t of temasRef.current) {
+      const s = (t.subtemas || []).find(s => s.id === subtemaId)
+      if (s) { subtema = s; padre = t; break }
+    }
+    if (!subtema) return
+    const existingDates = (subtema.planificaciones || []).map(p => p.semana).filter(Boolean)
+    setShowModal({
+      mode: 'add-date-subtema',
+      subtemaId: subtema.id,
+      subtemaNombre: subtema.nombre,
+      parentNombre: padre?.nombre,
+      existingDates,
+    })
+  }, [])
+
+  // ── Archivar tema (con cascade a subtemas) ──────────────────────
   const requestArchiveTema = useCallback((temaId) => {
     const tema = temasRef.current.find(t => t.id === temaId)
     if (!tema) return
-    setConfirmArchive({ id: temaId, nombre: tema.nombre || 'Sin nombre', n: tema.planificaciones.length })
+    const subtemaCount = (tema.subtemas || []).filter(s => !s.archived).length
+    setConfirmArchive({
+      id: temaId,
+      nombre: tema.nombre || 'Sin nombre',
+      n: (tema.planificaciones || []).length,
+      subtemaCount,
+    })
   }, [])
 
   const handleDoArchiveTema = useCallback(async () => {
     if (!confirmArchive) return
     const { id, nombre } = confirmArchive
     const now = new Date().toISOString()
+
+    // Archivar subtemas activos en cascade
+    const tema = temasRef.current.find(t => t.id === id)
+    const activeSubtemaIds = (tema?.subtemas || []).filter(s => !s.archived).map(s => s.id)
+
+    // Batch update subtemas
+    if (activeSubtemaIds.length > 0) {
+      await supabase.from('temas')
+        .update({ archived: true, archived_at: now })
+        .in('id', activeSubtemaIds)
+    }
+
     const { error } = await supabase.from('temas').update({ archived: true, archived_at: now, status: 'Completado' }).eq('id', id)
     if (error) { addToast('Error al archivar el tema.', 'error'); return }
-    setTemas(prev => prev.map(t => t.id === id ? { ...t, archived: true, archived_at: now, status: 'Completado' } : t))
+
+    setTemas(prev => prev.map(t => {
+      if (t.id === id) {
+        return {
+          ...t,
+          archived: true,
+          archived_at: now,
+          status: 'Completado',
+          subtemas: (t.subtemas || []).map(s =>
+            !s.archived ? { ...s, archived: true, archived_at: now } : s
+          ),
+        }
+      }
+      return t
+    }))
     setConfirmArchive(null)
-    await logAction('ARCHIVAR', id, nombre, `Archivó tema "${nombre}"`)
+    await logAction('ARCHIVAR', id, nombre, `Archivó tema "${nombre}"${activeSubtemaIds.length > 0 ? ` y ${activeSubtemaIds.length} subtema(s)` : ''}`)
     addToast(`"${nombre}" archivado.`, 'success')
   }, [confirmArchive, addToast, logAction])
 
-  // ── Reactivar tema ─────────────────────────────────────────────
+  // ── Reactivar tema (con cascade a subtemas archivados con el padre) ──
   const requestReactivateTema = useCallback((temaId) => {
     const tema = temasRef.current.find(t => t.id === temaId)
     if (!tema) return
-    setConfirmReactivate({ id: temaId, nombre: tema.nombre || 'Sin nombre' })
+    setConfirmReactivate({ id: temaId, nombre: tema.nombre || 'Sin nombre', archived_at: tema.archived_at })
   }, [])
 
   const handleDoReactivateTema = useCallback(async () => {
     if (!confirmReactivate) return
-    const { id, nombre } = confirmReactivate
+    const { id, nombre, archived_at } = confirmReactivate
     const { error } = await supabase.from('temas').update({ archived: false, archived_at: null, status: 'En desarrollo' }).eq('id', id)
     if (error) { addToast('Error al reactivar el tema.', 'error'); return }
-    setTemas(prev => prev.map(t => t.id === id ? { ...t, archived: false, archived_at: null, status: 'En desarrollo' } : t))
+
+    // Reactivar subtemas que fueron archivados con el mismo archived_at (cascade)
+    const tema = temasRef.current.find(t => t.id === id)
+    const cascadedSubtemaIds = archived_at
+      ? (tema?.subtemas || [])
+          .filter(s => s.archived && s.archived_at === archived_at)
+          .map(s => s.id)
+      : []
+
+    if (cascadedSubtemaIds.length > 0) {
+      await supabase.from('temas')
+        .update({ archived: false, archived_at: null })
+        .in('id', cascadedSubtemaIds)
+    }
+
+    setTemas(prev => prev.map(t => {
+      if (t.id === id) {
+        return {
+          ...t,
+          archived: false,
+          archived_at: null,
+          status: 'En desarrollo',
+          subtemas: (t.subtemas || []).map(s =>
+            cascadedSubtemaIds.includes(s.id) ? { ...s, archived: false, archived_at: null } : s
+          ),
+        }
+      }
+      return t
+    }))
     setConfirmReactivate(null)
     await logAction('REACTIVAR', id, nombre, `Reactivó tema "${nombre}"`)
     addToast(`"${nombre}" reactivado y visible en Activos.`, 'success')
@@ -641,8 +1057,28 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
       .update({ status: 'Completado', archived: true, archived_at: now })
       .eq('id', id)
     if (error) { addToast('Error al completar el tema.', 'error'); return }
+
+    // Archivar subtemas en cascade
+    const tema = temasRef.current.find(t => t.id === id)
+    const activeSubtemaIds = (tema?.subtemas || []).filter(s => !s.archived).map(s => s.id)
+    if (activeSubtemaIds.length > 0) {
+      await supabase.from('temas')
+        .update({ archived: true, archived_at: now })
+        .in('id', activeSubtemaIds)
+    }
+
     setTemas(prev => prev.map(t =>
-      t.id === id ? { ...t, status: 'Completado', archived: true, archived_at: now } : t
+      t.id === id
+        ? {
+            ...t,
+            status: 'Completado',
+            archived: true,
+            archived_at: now,
+            subtemas: (t.subtemas || []).map(s =>
+              !s.archived ? { ...s, archived: true, archived_at: now } : s
+            ),
+          }
+        : t
     ))
     setConfirmStatusComplete(null)
     addToast(`"${nombre}" marcado como completado y archivado.`, 'success')
@@ -661,8 +1097,18 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
   }
 
   const hasActiveFilters = filterInput || filterGroup !== 'all' || filterCellStatus !== 'all' || filterDateRange.from || filterDateRange.to
-  const totalPlanifs = temas.filter(t => !t.archived).reduce((acc, t) => acc + t.planificaciones.length, 0)
-  const displayPlanifs = displayTemas.reduce((acc, t) => acc + t.planificaciones.length, 0)
+
+  // Contar planificaciones de todos los niveles
+  const totalPlanifs = useMemo(() => temas
+    .filter(t => !t.archived && !t.parent_id)
+    .reduce((acc, t) => acc + (t.planificaciones || []).length + (t.subtemas || []).reduce((a, s) => a + (s.planificaciones || []).length, 0), 0),
+    [temas]
+  )
+
+  const displayPlanifs = useMemo(() => displayTemas
+    .reduce((acc, t) => acc + (t.planificaciones || []).length + (t.subtemas || []).reduce((a, s) => a + (s.planificaciones || []).length, 0), 0),
+    [displayTemas]
+  )
 
   const mobileActiveFilterCount = [
     filterGroup !== 'all',
@@ -670,29 +1116,6 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
     filterDateRange.from || filterDateRange.to,
     activeColumnFilters.size > 0,
   ].filter(Boolean).length
-
-  // ── Tabs UI (compartido entre desktop y mobile) ────────────────
-  function TabsBar() {
-    return (
-      <div className="medios-tabs">
-        <button
-          className={`tab-btn${activeTab === 'active' ? ' tab-active' : ''}`}
-          onClick={() => switchTab('active')}
-        >
-          <span className="tab-dot tab-dot-active" />
-          Activos
-          <span className="tab-badge">{activeCount}</span>
-        </button>
-        <button
-          className={`tab-btn${activeTab === 'archived' ? ' tab-active' : ''}`}
-          onClick={() => switchTab('archived')}
-        >
-          Archivados
-          <span className="tab-badge">{archivedCount}</span>
-        </button>
-      </div>
-    )
-  }
 
   return (
     <div className="app">
@@ -817,6 +1240,17 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
                   <button className="filter-clear-sm" onClick={() => setFilterDateRange({ from: '', to: '' })}>✕</button>
                 )}
               </div>
+              {/* Tarea 6: toggle incluir subtemas con rango en período */}
+              {(filterDateRange.from || filterDateRange.to) && (
+                <label className="filter-subtema-range-toggle" title="Incluir subtemas cuyo rango de fechas se solape con el período seleccionado">
+                  <input
+                    type="checkbox"
+                    checked={filterIncludeSubtemaRange}
+                    onChange={e => setFilterIncludeSubtemaRange(e.target.checked)}
+                  />
+                  <span>Incluir subtemas por rango</span>
+                </label>
+              )}
               <button className="sort-btn" onClick={() => setSortDir(d => d === 'asc' ? 'desc' : 'asc')}>
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                   <path d="M7 2v10M4 4l3-2.5L10 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: sortDir === 'asc' ? 1 : 0.3 }} />
@@ -862,7 +1296,7 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
               <div className="medios-filter-active">
                 <span className="filter-count">{displayTemas.length} de {activeCount} temas · {displayPlanifs} de {totalPlanifs} fechas</span>
                 {filterGroup !== 'all' && <span className="filter-count"> · {visibleCols.length} columnas</span>}
-                <button className="filter-reset" onClick={() => { setFilterInput(''); setFilterGroup('all'); setFilterCellStatus('all'); setFilterDateRange({ from: '', to: '' }) }}>Limpiar filtros</button>
+                <button className="filter-reset" onClick={() => { setFilterInput(''); setFilterGroup('all'); setFilterCellStatus('all'); setFilterDateRange({ from: '', to: '' }); setFilterIncludeSubtemaRange(false) }}>Limpiar filtros</button>
               </div>
             )}
             {/* Column filter indicator — independent of hasActiveFilters */}
@@ -871,7 +1305,7 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
                 <span className="column-filter-badge">
                   {activeColumnFilters.size} columna{activeColumnFilters.size !== 1 ? 's' : ''} filtrada{activeColumnFilters.size !== 1 ? 's' : ''}
                 </span>
-                {/* Fix 4: chips por columna activa con X para quitar una a la vez */}
+                {/* Chips por columna activa con X para quitar una a la vez */}
                 <div className="col-filter-chips">
                   {[...activeColumnFilters].map(colId => {
                     const col = MEDIA_COLS.find(c => c.id === colId)
@@ -971,6 +1405,9 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
               onDeleteTema={requestDeleteTema}
               onRenameTema={handleRenameTema}
               onAddPlanificacion={handleOpenAddPlanificacion}
+              onAddPlanificacionSubtema={handleOpenAddPlanificacionSubtema}
+              onAddSubtema={(parentId) => setShowModal({ mode: 'add-subtema', parentId, parentNombre: temasRef.current.find(t => t.id === parentId)?.nombre })}
+              onUpdateSubtema={handleUpdateSubtema}
               onArchiveTema={requestArchiveTema}
               onReactivateTema={requestReactivateTema}
               onStatusChange={handleStatusChange}
@@ -983,6 +1420,8 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
               onToggleGroup={toggleGroup}
               expandedTemas={expandedTemas}
               onToggleTema={toggleTema}
+              expandedSubtemas={expandedSubtemas}
+              onToggleSubtema={toggleSubtema}
               activeColumnFilters={activeColumnFilters}
               onToggleColumnFilter={toggleColumnFilter}
               onClearColumnFilters={clearColumnFilters}
@@ -995,6 +1434,9 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
               onFieldChange={handleFieldChange}
               onDeleteRow={requestDeleteRow}
               onAddPlanificacion={handleOpenAddPlanificacion}
+              onAddPlanificacionSubtema={handleOpenAddPlanificacionSubtema}
+              onAddSubtema={(parentId) => setShowModal({ mode: 'add-subtema', parentId, parentNombre: temasRef.current.find(t => t.id === parentId)?.nombre })}
+              onUpdateSubtema={handleUpdateSubtema}
               onArchiveTema={requestArchiveTema}
               onReactivateTema={requestReactivateTema}
               onStatusChange={handleStatusChange}
@@ -1020,12 +1462,32 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
       {/* Modales */}
       {activeTab === 'active' && showModal === 'new' && (
         <AddRowModal
-          temas={temas.filter(t => !t.archived)}
+          temas={temas.filter(t => !t.archived && !t.parent_id)}
           onConfirm={handleAddRow}
           onClose={() => setShowModal(null)}
         />
       )}
-      {activeTab === 'active' && showModal && typeof showModal === 'object' && (
+      {activeTab === 'active' && showModal && typeof showModal === 'object' && showModal.mode === 'add-subtema' && (
+        <AddRowModal
+          mode="add-subtema"
+          parentId={showModal.parentId}
+          parentNombre={showModal.parentNombre}
+          onConfirmSubtema={handleAddSubtema}
+          onClose={() => setShowModal(null)}
+        />
+      )}
+      {activeTab === 'active' && showModal && typeof showModal === 'object' && showModal.mode === 'add-date-subtema' && (
+        <AddRowModal
+          mode="add-date-subtema"
+          subtemaId={showModal.subtemaId}
+          subtemaNombre={showModal.subtemaNombre}
+          parentNombre={showModal.parentNombre}
+          existingDates={showModal.existingDates || []}
+          onConfirmDateSubtema={handleAddPlanificacionToSubtema}
+          onClose={() => setShowModal(null)}
+        />
+      )}
+      {activeTab === 'active' && showModal && typeof showModal === 'object' && !showModal.mode && (
         <AddRowModal
           prefillTema={{ id: showModal.temaId, nombre: showModal.temaNombre }}
           existingDates={showModal.existingDates}
@@ -1046,7 +1508,7 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
           }
           body={
             confirmDelete.type === 'tema'
-              ? `Se eliminará el tema y ${confirmDelete.n === 0 ? 'sus datos' : confirmDelete.n === 1 ? 'su 1 planificación' : `sus ${confirmDelete.n} planificaciones`}. Esta acción no se puede deshacer.${confirmDelete.fromEditorial ? '\n\nEste tema fue sincronizado desde Mesa Editorial. Eliminarlo solo afecta Mesa de Medios; la acción en Editorial no se modifica.' : ''}`
+              ? `Se eliminará el tema${confirmDelete.subCount > 0 ? `, sus ${confirmDelete.subCount} subtema${confirmDelete.subCount !== 1 ? 's' : ''}` : ''} y ${confirmDelete.n === 0 ? 'sus datos' : confirmDelete.n === 1 ? 'su 1 planificación' : `sus ${confirmDelete.n} planificaciones`}. Esta acción no se puede deshacer.${confirmDelete.fromEditorial ? '\n\nEste tema fue sincronizado desde Mesa Editorial. Eliminarlo solo afecta Mesa de Medios; la acción en Editorial no se modifica.' : ''}`
               : `Se eliminará la ${confirmDelete.nombre}. Esta acción no se puede deshacer.`
           }
           confirmLabel={confirmDelete.type === 'tema' ? 'Sí, eliminar' : 'Eliminar'}
@@ -1063,7 +1525,11 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
       {confirmArchive && (
         <ConfirmDialog
           title={`¿Archivar el tema "${confirmArchive.nombre}"?`}
-          body={`Sus ${confirmArchive.n === 0 ? 'datos quedarán' : confirmArchive.n === 1 ? '1 planificación quedará' : `${confirmArchive.n} planificaciones quedarán`} como histórico consultable en la pestaña Archivados. Puedes reactivarlo en cualquier momento.`}
+          body={
+            confirmArchive.subtemaCount > 0
+              ? `Esta campaña tiene ${confirmArchive.subtemaCount} subtema${confirmArchive.subtemaCount !== 1 ? 's' : ''}. Archivar la campaña archivará también todos sus subtemas. Sus planificaciones quedarán como histórico consultable en Archivados. Puedes reactivarlo en cualquier momento.`
+              : `Sus ${confirmArchive.n === 0 ? 'datos quedarán' : confirmArchive.n === 1 ? '1 planificación quedará' : `${confirmArchive.n} planificaciones quedarán`} como histórico consultable en la pestaña Archivados. Puedes reactivarlo en cualquier momento.`
+          }
           confirmLabel="Archivar"
           confirmClass="btn-confirm-action"
           onConfirm={handleDoArchiveTema}
@@ -1115,7 +1581,7 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
           applyLabel={`Aplicar filtros (${displayTemas.length} ${displayTemas.length === 1 ? 'tema' : 'temas'})`}
         >
           <div className="sheet-clear-row">
-            <button className="sheet-clear-btn" onClick={() => { setFilterGroup('all'); setFilterCellStatus('all'); setFilterDateRange({ from: '', to: '' }) }}>
+            <button className="sheet-clear-btn" onClick={() => { setFilterGroup('all'); setFilterCellStatus('all'); setFilterDateRange({ from: '', to: '' }); setFilterIncludeSubtemaRange(false) }}>
               Limpiar todo
             </button>
           </div>
@@ -1156,6 +1622,16 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
               <span className="sheet-date-sep">→</span>
               <input type="date" value={filterDateRange.to} onChange={e => setFilterDateRange(p => ({ ...p, to: e.target.value }))} className="sheet-date-input" />
             </div>
+            {(filterDateRange.from || filterDateRange.to) && (
+              <label className="sheet-subtema-range-toggle" style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
+                <input
+                  type="checkbox"
+                  checked={filterIncludeSubtemaRange}
+                  onChange={e => setFilterIncludeSubtemaRange(e.target.checked)}
+                />
+                <span>Incluir subtemas con rango en este período</span>
+              </label>
+            )}
           </div>
           <div className="sheet-filter-group">
             <p className="sheet-filter-label">FILTRAR POR COLUMNA</p>

@@ -11,27 +11,62 @@ function useIsMobile() {
   return mobile
 }
 
-// Modo "nuevo tema" (temas + onConfirm)
-// Modo "agregar fecha" (prefillTema + existingDates + onConfirm)
-export default function AddRowModal({ onConfirm, onClose, temas = [], prefillTema = null, existingDates = [] }) {
-  const [nombre, setNombre] = useState(prefillTema?.nombre || '')
-  const [semana, setSemana] = useState('')
+/**
+ * AddRowModal — cuatro modos:
+ *
+ * 1. Nueva campaña (modo default):
+ *    Props: temas[], onConfirm({ nombre, semana, temaId })
+ *
+ * 2. Agregar fecha a campaña existente (modo legacy):
+ *    Props: prefillTema={ id, nombre }, existingDates[], onConfirm({ nombre, semana, temaId })
+ *
+ * 3. Nuevo subtema:
+ *    Props: mode="add-subtema", parentId, parentNombre, onConfirmSubtema(parentId, nombre, fechaInicio, fechaTermino)
+ *
+ * 4. Agregar fecha a subtema:
+ *    Props: mode="add-date-subtema", subtemaId, subtemaNombre, parentNombre, existingDates[],
+ *           onConfirmDateSubtema(subtemaId, semana)
+ */
+export default function AddRowModal({
+  // Modo 1 & 2
+  onConfirm,
+  temas = [],
+  prefillTema = null,
+  existingDates = [],
+  // Modo 3
+  mode = null,
+  parentId = null,
+  parentNombre = null,
+  onConfirmSubtema = null,
+  // Modo 4
+  subtemaId = null,
+  subtemaNombre = null,
+  onConfirmDateSubtema = null,
+  // Común
+  onClose,
+}) {
+  // ── Determinar modo ──────────────────────────────────────────────
+  const isAddDateSubtema = mode === 'add-date-subtema'
+  const isAddSubtema     = mode === 'add-subtema'
+  const isAddDate        = !!prefillTema && !isAddSubtema && !isAddDateSubtema
+
+  // ── Estado de campos ─────────────────────────────────────────────
+  const [nombre,      setNombre]      = useState(prefillTema?.nombre || '')
+  const [semana,      setSemana]      = useState('')
+  const [fechaInicio, setFechaInicio] = useState('')
+  const [fechaTermino, setFechaTermino] = useState('')
+
   const inputRef = useRef(null)
   const modalRef = useRef(null)
   const isMobile = useIsMobile()
-
-  // Capture trigger element synchronously at render time for focus return on close
   const triggerRef = useRef(typeof document !== 'undefined' ? document.activeElement : null)
 
-  // Focus trap for desktop modal
   useFocusTrap(modalRef, !isMobile)
 
-  // Restore focus to trigger element when modal unmounts
   useEffect(() => {
     return () => { triggerRef.current?.focus() }
   }, [])
 
-  // Escape closes the modal
   useEffect(() => {
     function handleKey(e) {
       if (e.key === 'Escape') onClose()
@@ -40,100 +75,236 @@ export default function AddRowModal({ onConfirm, onClose, temas = [], prefillTem
     return () => document.removeEventListener('keydown', handleKey)
   }, [onClose])
 
-  const isAddDate = !!prefillTema   // true = agregar fecha a tema existente
-
-  // Fecha ya existe en este tema
-  const dateConflict = semana && existingDates.includes(semana)
-
-  // Si el nombre escrito coincide con un tema existente, reutilizarlo
-  const matchedTema = !isAddDate
-    ? temas.find(t => t.nombre.trim().toLowerCase() === nombre.trim().toLowerCase())
-    : null
-
   useEffect(() => {
     inputRef.current?.focus()
     if (isMobile) document.body.style.overflow = 'hidden'
     return () => { document.body.style.overflow = '' }
   }, [isMobile])
 
+  // ── Validaciones ─────────────────────────────────────────────────
+  const dateConflict = semana && existingDates.includes(semana)
+  const rangeError   = isAddSubtema && fechaInicio && fechaTermino && fechaInicio > fechaTermino
+
+  // Sugerencia de tema existente (solo modo nueva campaña)
+  const matchedTema = (!isAddDate && !isAddSubtema && !isAddDateSubtema)
+    ? temas.find(t => t.nombre.trim().toLowerCase() === nombre.trim().toLowerCase())
+    : null
+
+  // ── Submit ────────────────────────────────────────────────────────
   function handleSubmit(e) {
     e.preventDefault()
-    if (!nombre.trim() || dateConflict) return
+    if (dateConflict || rangeError) return
+
+    if (isAddDateSubtema) {
+      if (!semana) return
+      onConfirmDateSubtema(subtemaId, semana)
+      return
+    }
+
+    if (isAddSubtema) {
+      if (!nombre.trim()) return
+      onConfirmSubtema(parentId, nombre.trim(), fechaInicio || null, fechaTermino || null)
+      return
+    }
+
+    // Modo nueva campaña o agregar fecha a campaña
+    if (!nombre.trim()) return
     onConfirm({
-      nombre:  nombre.trim(),
+      nombre: nombre.trim(),
       semana:  semana || null,
       temaId:  isAddDate ? prefillTema.id : (matchedTema?.id || null),
     })
   }
 
-  const formContent = (
-    <>
-      {/* Campo tema */}
-      <div className="form-group">
-        <label htmlFor="nombre">
-          {isAddDate ? 'Tema' : 'Nombre del tema *'}
-        </label>
-        {isAddDate ? (
-          <input
-            id="nombre"
-            type="text"
-            value={nombre}
-            readOnly
-            className="input-readonly"
-          />
-        ) : (
-          <>
+  // ── Contenido del formulario según modo ─────────────────────────
+  function renderFormContent() {
+    // Modo 4: agregar fecha a subtema
+    if (isAddDateSubtema) {
+      return (
+        <>
+          <div className="form-group">
+            <label>Campaña</label>
+            <input type="text" value={parentNombre || ''} readOnly className="input-readonly" />
+          </div>
+          <div className="form-group">
+            <label>Subtema</label>
+            <input type="text" value={subtemaNombre || ''} readOnly className="input-readonly" />
+          </div>
+          <div className="form-group">
+            <label htmlFor="semana-sub">Fecha *</label>
             <input
               ref={inputRef}
-              id="nombre"
+              id="semana-sub"
+              type="date"
+              value={semana}
+              onChange={e => setSemana(e.target.value)}
+              required
+            />
+            {dateConflict && (
+              <p className="modal-hint modal-hint-warn">
+                Ya existe una planificación para esta fecha en "{subtemaNombre}".
+              </p>
+            )}
+          </div>
+        </>
+      )
+    }
+
+    // Modo 3: nuevo subtema
+    if (isAddSubtema) {
+      return (
+        <>
+          <div className="form-group">
+            <label>Campaña padre</label>
+            <input type="text" value={parentNombre || ''} readOnly className="input-readonly" />
+          </div>
+          <div className="form-group">
+            <label htmlFor="subtema-nombre">Nombre del subtema *</label>
+            <input
+              ref={inputRef}
+              id="subtema-nombre"
               type="text"
-              list="nombre-suggestions"
-              placeholder="Ej: Nuevo Rector, Feria del Libro..."
+              placeholder="Ej: Semana 1, Etapa Lanzamiento..."
               value={nombre}
               onChange={e => setNombre(e.target.value)}
               required
             />
-            <datalist id="nombre-suggestions">
-              {temas.map(t => <option key={t.id} value={t.nombre} />)}
-            </datalist>
-            {matchedTema && (
-              <p className="modal-hint modal-hint-info">
-                Se añadirá una nueva fecha al tema existente "{matchedTema.nombre}".
+          </div>
+          <div className="form-group form-group-row">
+            <div className="form-group-half">
+              <label htmlFor="fecha-inicio">Fecha inicio</label>
+              <input
+                id="fecha-inicio"
+                type="date"
+                value={fechaInicio}
+                onChange={e => setFechaInicio(e.target.value)}
+              />
+            </div>
+            <div className="form-group-half">
+              <label htmlFor="fecha-termino">Fecha término</label>
+              <input
+                id="fecha-termino"
+                type="date"
+                value={fechaTermino}
+                onChange={e => setFechaTermino(e.target.value)}
+              />
+            </div>
+          </div>
+          {rangeError && (
+            <p className="modal-hint modal-hint-warn">
+              La fecha de inicio no puede ser posterior a la fecha de término.
+            </p>
+          )}
+          <p className="modal-hint">
+            Las fechas son opcionales y sirven para filtrar por período.
+          </p>
+        </>
+      )
+    }
+
+    // Modo 2: agregar fecha a campaña existente (legacy)
+    if (isAddDate) {
+      return (
+        <>
+          <div className="form-group">
+            <label htmlFor="nombre">Tema</label>
+            <input
+              id="nombre"
+              type="text"
+              value={nombre}
+              readOnly
+              className="input-readonly"
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="semana">Fecha</label>
+            <input
+              ref={inputRef}
+              id="semana"
+              type="date"
+              value={semana}
+              onChange={e => setSemana(e.target.value)}
+            />
+            {dateConflict && (
+              <p className="modal-hint modal-hint-warn">
+                Ya existe una planificación para esta fecha en "{nombre}".
               </p>
             )}
-          </>
-        )}
-      </div>
+          </div>
+        </>
+      )
+    }
 
-      {/* Campo fecha */}
-      <div className="form-group">
-        <label htmlFor="semana">Fecha</label>
-        <input
-          ref={isAddDate ? inputRef : undefined}
-          id="semana"
-          type="date"
-          value={semana}
-          onChange={e => setSemana(e.target.value)}
-        />
-        {dateConflict && (
-          <p className="modal-hint modal-hint-warn">
-            Ya existe una planificación para esta fecha en "{nombre}".
-          </p>
-        )}
-      </div>
-
-      {!isAddDate && (
+    // Modo 1: nueva campaña
+    return (
+      <>
+        <div className="form-group">
+          <label htmlFor="nombre">Nombre del tema *</label>
+          <input
+            ref={inputRef}
+            id="nombre"
+            type="text"
+            list="nombre-suggestions"
+            placeholder="Ej: Nuevo Rector, Feria del Libro..."
+            value={nombre}
+            onChange={e => setNombre(e.target.value)}
+            required
+          />
+          <datalist id="nombre-suggestions">
+            {temas.map(t => <option key={t.id} value={t.nombre} />)}
+          </datalist>
+          {matchedTema && (
+            <p className="modal-hint modal-hint-info">
+              Se añadirá una nueva fecha al tema existente "{matchedTema.nombre}".
+            </p>
+          )}
+        </div>
+        <div className="form-group">
+          <label htmlFor="semana">Fecha</label>
+          <input
+            id="semana"
+            type="date"
+            value={semana}
+            onChange={e => setSemana(e.target.value)}
+          />
+          {dateConflict && (
+            <p className="modal-hint modal-hint-warn">
+              Ya existe una planificación para esta fecha en "{nombre}".
+            </p>
+          )}
+        </div>
         <p className="modal-hint">
           Podrás asignar el estado de cada medio después de crearlo.
         </p>
-      )}
-    </>
-  )
+      </>
+    )
+  }
 
-  const submitLabel = isAddDate ? 'Agregar fecha' : (matchedTema ? 'Agregar al tema' : 'Crear tema')
-  const titleLabel  = isAddDate ? 'Agregar fecha al tema' : 'Agregar tema'
+  // ── Labels ────────────────────────────────────────────────────────
+  const titleLabel = isAddDateSubtema
+    ? 'Agregar fecha al subtema'
+    : isAddSubtema
+    ? 'Nuevo subtema'
+    : isAddDate
+    ? 'Agregar fecha al tema'
+    : 'Agregar tema'
 
-  // ── Mobile: bottom sheet ──────────────────────────────────────
+  const submitLabel = isAddDateSubtema
+    ? 'Agregar fecha'
+    : isAddSubtema
+    ? 'Crear subtema'
+    : isAddDate
+    ? 'Agregar fecha'
+    : matchedTema
+    ? 'Agregar al tema'
+    : 'Crear tema'
+
+  const isSubmitDisabled = dateConflict || rangeError ||
+    (isAddDateSubtema ? !semana : !nombre.trim())
+
+  const formContent = renderFormContent()
+
+  // ── Mobile: bottom sheet ─────────────────────────────────────────
   if (isMobile) {
     return (
       <>
@@ -146,7 +317,7 @@ export default function AddRowModal({ onConfirm, onClose, temas = [], prefillTem
             <button
               type="submit"
               className="sheet-confirm-btn"
-              disabled={!nombre.trim() || !!dateConflict}
+              disabled={isSubmitDisabled}
               style={{ marginTop: 8 }}
             >
               {submitLabel}
@@ -160,7 +331,7 @@ export default function AddRowModal({ onConfirm, onClose, temas = [], prefillTem
     )
   }
 
-  // ── Desktop: centered modal ───────────────────────────────────
+  // ── Desktop: centered modal ──────────────────────────────────────
   return (
     <div className="modal-backdrop" onClick={e => e.target === e.currentTarget && onClose()}>
       <div ref={modalRef} className="modal" role="dialog" aria-modal="true" aria-labelledby="add-row-modal-title">
@@ -180,7 +351,7 @@ export default function AddRowModal({ onConfirm, onClose, temas = [], prefillTem
             <button type="button" className="btn-secondary" onClick={onClose}>
               Cancelar
             </button>
-            <button type="submit" className="btn-primary" disabled={!nombre.trim() || !!dateConflict}>
+            <button type="submit" className="btn-primary" disabled={isSubmitDisabled}>
               {submitLabel}
             </button>
           </div>
