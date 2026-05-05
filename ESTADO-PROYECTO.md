@@ -1,5 +1,5 @@
 # Estado del Proyecto — Mesa de Medios USS
-**Actualizado:** 2026-05-05 | **Branch:** `feat/subtemas-mesa-medios` | **Commit:** `feat(subtemas): hierarchical Tema → Subtema in Mesa de Medios`
+**Actualizado:** 2026-05-05 | **Branch:** `main` | **Commit:** `merge(fix/medios-ui-improvements): reposition subtema button and add collapsible header`
 
 ---
 
@@ -183,6 +183,7 @@ El registro de LOGIN lo hace únicamente `Login.jsx` via `logAuditEntry()`. `App
 | `expandedTemas` | Set | IDs de temas con filas expandidas |
 | `confirmStatusComplete` | Object\|null | `{ id, nombre }` — pendiente de confirmar cambio a Completado |
 | `showMobileFilters` | Boolean | Bottom sheet de filtros mobile visible |
+| `headerExpanded` | Boolean | Zona B (tabs + filtros) visible; persistido en `localStorage` clave `uss_medios_header_expanded` |
 
 **Funciones clave:**
 - `handleCellChange(temaId, planId, colId, value)` — Guarda celda en BD (optimistic)
@@ -446,6 +447,12 @@ success      BOOLEAN     DEFAULT FALSE
 | `.sub-header-row` | Fila de sub-headers (nombres de canales) |
 | `.data-row` | Fila de datos, `height: 38px` |
 | `.medios-filter-bar` | `position: sticky; top: 68px; z-index: 90` |
+| `.medios-filter-bar.zona-b-collapsed` | `display: none !important` — Zona B colapsada (desktop) |
+| `.medios-tabs-mobile.zona-b-collapsed` | `display: none !important` — Zona B colapsada (mobile tabs) |
+| `.mobile-action-line.zona-b-collapsed` | `display: none !important` — Zona B colapsada (mobile actions) |
+| `.btn-header-collapse` | Botón chevron colapso header; `aria-expanded` controla rotación SVG via CSS |
+| `.filter-active-dot` | Punto ámbar en `.btn-header-collapse` cuando hay filtros activos y header colapsado |
+| `.btn-add-subtema-inline` | Botón "+ Subtema" inline en celda sticky izquierda del TemaRow (11px, dashed) |
 
 **Mesa Editorial:**
 | Clase | Propósito |
@@ -535,24 +542,23 @@ git push && npm run deploy
 
 ## 8. Estado del Git
 
-### Branch actual: `feat/subtemas-mesa-medios` (pendiente merge + deploy)
+### Branch actual: `main` (estable)
 
 ### Últimos commits:
 ```
-feat(subtemas): hierarchical Tema → Subtema in Mesa de Medios  ← branch actual
-merge(fix/sheet-buttons-styling)  ← dark ghost styling + breathing room en tabs row
-03d355c merge(fix/ui-adjustments): UI fixes for sheet viewers and status dropdown
-04b60c3 fix(ui): reposition sheet viewers and hide status dropdown for 'Nuevo'
-e92d7f1 chore(sheets): set production URL for sheet-1 (Grilla RR.SS)
+merge(fix/medios-ui-improvements): reposition subtema button and add collapsible header  ← HEAD
+fix(medios-ui): reposition subtema button and add collapsible header
+merge(feat/subtemas-mesa-medios): Jerarquía Campaña → Subtemas en Mesa de Medios
+feat(subtemas): hierarchical Tema → Subtema in Mesa de Medios
+merge(fix/sheet-buttons-styling): dark ghost styling + breathing room en tabs row
 ```
 
 ### Branches:
 ```
-feat/subtemas-mesa-medios         ← activo, pendiente merge a main + deploy manual
-main                              ← estable (pre-subtemas)
+main                              ← estable ✅
+fix/medios-ui-improvements        ← mergeada a main ✅
+feat/subtemas-mesa-medios         ← mergeada a main ✅
 fix/sheet-buttons-styling         ← mergeada a main ✅
-fix/ui-adjustments                ← mergeada a main ✅
-feat/sheet-viewers                ← mergeada a main ✅
 ```
 
 ### ANTES DEL DEPLOY — ejecutar en Supabase SQL Editor:
@@ -661,6 +667,8 @@ Todos en `scripts/`. Ejecutar en **Supabase SQL Editor** (no en producción auto
 | **Status "Nuevo" no seleccionable manualmente:** Badge informativo solo. Cuando status es "Nuevo", MediaTable muestra solo el badge (sin dropdown). Para "En desarrollo" y "Completado" aparece el select (sin opción "Nuevo"). Auto-transición a "En desarrollo" después de 7 días via `checkAndTransitionStaleNew()` en fetchData. | ✅ |
 | **Hitos sincronizados desde Editorial:** fetchData trae `tipo` de acciones editoriales con `sync_to_medios=true` usando `tema_id` FK. Badge read-only en TemaRow: Ancla (amarillo), Soporte (azul), Always ON (verde). | ✅ |
 | **Jerarquía Campaña → Subtemas:** Tabla `temas` con `parent_id` auto-referencial. Árbol 3 niveles: TemaRow (padre) → SubtemaRow (subtema) → PlanRow (planificación). Cada subtema tiene `fecha_inicio`/`fecha_termino` opcionales para filtro por período. Archivado y reactivación en cascada. Filtros (texto, fecha, celda, columna) aplicados uniformemente en directas y subtemas. `filterIncludeSubtemaRange` toggle para incluir subtemas por solapamiento de rango aunque no tengan planifs. Export Excel con sub-headers por subtema. Vista mobile con SubtemaCard. Require SQL: `add-subtemas-jerarquia.sql`. | ✅ |
+| **Botón "+ Subtema" inline en TemaRow:** Movido de `tema-action-btns` (celda derecha) a la celda izquierda sticky (`tema-header-name`), después del nombre y el badge de inactividad. Clase `.btn-add-subtema-inline` (dashed border, compacto, 11px). Oculto cuando tema está archivado. Mobile no cambia (ya usa `.btn-add-subtema` en card header). | ✅ |
+| **Header colapsable con persistencia:** Botón chevron en `header-row-actions` colapsa/expande Zona B (`.medios-filter-bar` desktop + `.medios-tabs-mobile` + `.mobile-action-line` mobile) vía clase `zona-b-collapsed`. Estado persistido en `localStorage` clave `uss_medios_header_expanded`. Punto ámbar (`filter-active-dot`) indica filtros activos cuando header colapsado. `hasActiveFilters` corregido para incluir `activeColumnFilters.size > 0`. | ✅ |
 
 ### Mesa Editorial
 
