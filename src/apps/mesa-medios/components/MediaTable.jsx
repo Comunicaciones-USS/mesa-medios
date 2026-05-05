@@ -689,7 +689,7 @@ export default function MediaTable({
       <div className="table-scroll">
         <table className="media-table">
           <colgroup>
-            <col style={{ width: 200, minWidth: 200, maxWidth: 200 }} />
+            <col style={{ width: 320, minWidth: 320, maxWidth: 320 }} />
             <col style={{ width: 100, minWidth: 100, maxWidth: 100 }} />
             {activeGroups.flatMap(g => {
               if (collapsedGroups.has(g.id)) return [<col key={g.id} style={{ width: 32 }} />]
