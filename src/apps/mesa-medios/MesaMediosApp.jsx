@@ -64,6 +64,18 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
   const [showMobileFilters, setShowMobileFilters] = useState(false)
   const [showExportModal, setShowExportModal] = useState(false)
 
+  // Header collapsible (Zona B)
+  const [headerExpanded, setHeaderExpandedState] = useState(() => {
+    try {
+      const saved = localStorage.getItem('uss_medios_header_expanded')
+      return saved === null ? true : saved === 'true'
+    } catch { return true }
+  })
+  const setHeaderExpanded = useCallback((val) => {
+    setHeaderExpandedState(val)
+    try { localStorage.setItem('uss_medios_header_expanded', String(val)) } catch {}
+  }, [])
+
   // Tab switch — resetea todos los filtros
   function switchTab(tab) {
     setActiveTab(tab)
@@ -1096,7 +1108,7 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
     }
   }
 
-  const hasActiveFilters = filterInput || filterGroup !== 'all' || filterCellStatus !== 'all' || filterDateRange.from || filterDateRange.to
+  const hasActiveFilters = !!(filterInput || filterGroup !== 'all' || filterCellStatus !== 'all' || filterDateRange.from || filterDateRange.to || activeColumnFilters.size > 0)
 
   // Contar planificaciones de todos los niveles
   const totalPlanifs = useMemo(() => temas
@@ -1130,9 +1142,12 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
           onShowProfile={() => setShowProfile(true)}
           onSwitchDashboard={onSwitchDashboard}
           otherDashboardName={otherDashboardName}
+          headerExpanded={headerExpanded}
+          setHeaderExpanded={setHeaderExpanded}
+          hasActiveFilters={hasActiveFilters}
         />
         {/* Mobile: tabs */}
-        <div className="medios-tabs medios-tabs-mobile">
+        <div className={`medios-tabs medios-tabs-mobile${!headerExpanded ? ' zona-b-collapsed' : ''}`}>
           <button
             className={`tab-btn${activeTab === 'active' ? ' tab-active' : ''}`}
             onClick={() => switchTab('active')}
@@ -1150,7 +1165,7 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
           </button>
         </div>
         {/* Mobile: línea única de acción (search + filtros + añadir) */}
-        <div className="mobile-action-line">
+        <div className={`mobile-action-line${!headerExpanded ? ' zona-b-collapsed' : ''}`}>
           <div className="mobile-search-wrap">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
               <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.3"/>
@@ -1192,7 +1207,7 @@ export default function MesaMediosApp({ session, userName, onLogout, onBackToSel
         </div>
       </div>
 
-      <div className="medios-filter-bar" ref={filterBarRef}>
+      <div className={`medios-filter-bar${!headerExpanded ? ' zona-b-collapsed' : ''}`} ref={filterBarRef}>
         {/* Tabs (desktop) */}
         <div className="medios-tabs medios-tabs-desktop">
           <button

@@ -446,6 +446,16 @@ const TemaRow = memo(function TemaRow({
               Inactivo · {inactiveDays}d
             </span>
           )}
+          {!isArchived && (
+            <button
+              className="btn-add-subtema-inline"
+              onClick={e => { e.stopPropagation(); onAddSubtema(tema.id) }}
+              title="Agregar subtema"
+              aria-label={`Agregar subtema a ${tema.nombre}`}
+            >
+              + Subtema
+            </button>
+          )}
         </div>
       </td>
 
@@ -526,14 +536,6 @@ const TemaRow = memo(function TemaRow({
           <div className="tema-header-spacer" />
           {!isArchived ? (
             <div className="tema-action-btns">
-              <button
-                className="btn-add-subtema"
-                onClick={e => { e.stopPropagation(); onAddSubtema(tema.id) }}
-                title="Agregar subtema"
-                aria-label={`Agregar subtema a ${tema.nombre}`}
-              >
-                + Subtema
-              </button>
               <button
                 className="tema-archive-btn"
                 onClick={e => { e.stopPropagation(); onArchiveTema(tema.id) }}

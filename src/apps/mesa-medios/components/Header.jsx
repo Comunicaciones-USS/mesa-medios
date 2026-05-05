@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import logoUSS from '../../../assets/escudo-uss-horizontal-blanco.svg'
 
-export default function Header({ userName, userEmail, onAdd, onLogout, onShowLogs, onBackToSelector, onShowProfile, onSwitchDashboard, otherDashboardName }) {
+export default function Header({ userName, userEmail, onAdd, onLogout, onShowLogs, onBackToSelector, onShowProfile, onSwitchDashboard, otherDashboardName, headerExpanded, setHeaderExpanded, hasActiveFilters }) {
   const initials = userName
     ? userName.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
     : '?'
@@ -113,6 +113,20 @@ export default function Header({ userName, userEmail, onAdd, onLogout, onShowLog
               <path d="M1 7h12M9 3l4 4-4 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
             <span>{otherDashboardName}</span>
+          </button>
+        )}
+        {setHeaderExpanded && (
+          <button
+            className="btn-header-collapse"
+            onClick={() => setHeaderExpanded(!headerExpanded)}
+            aria-expanded={headerExpanded}
+            title={headerExpanded ? 'Colapsar filtros' : 'Expandir filtros'}
+            aria-label={headerExpanded ? 'Colapsar barra de filtros' : 'Expandir barra de filtros'}
+          >
+            {hasActiveFilters && !headerExpanded && <span className="filter-active-dot" aria-hidden="true" />}
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+              <path d="M3 5l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
           </button>
         )}
         <button className="btn-add" onClick={onAdd}>
