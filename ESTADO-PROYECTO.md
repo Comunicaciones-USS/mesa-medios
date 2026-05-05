@@ -1,5 +1,5 @@
 # Estado del Proyecto — Mesa de Medios USS
-**Actualizado:** 2026-05-05 | **Branch:** `main` | **Commit:** `merge(fix/medios-ui-improvements): reposition subtema button and add collapsible header`
+**Actualizado:** 2026-05-05 | **Branch:** `main` | **Commit:** `merge(fix/editorial-collapsible-header): collapsible header in Editorial`
 
 ---
 
@@ -546,19 +546,20 @@ git push && npm run deploy
 
 ### Últimos commits:
 ```
-merge(fix/medios-ui-improvements): reposition subtema button and add collapsible header  ← HEAD
+merge(fix/editorial-collapsible-header): collapsible header in Editorial  ← HEAD
+feat(editorial): collapsible header matching Mesa Medios pattern
+merge(fix/medios-ui-improvements): reposition subtema button and add collapsible header
 fix(medios-ui): reposition subtema button and add collapsible header
 merge(feat/subtemas-mesa-medios): Jerarquía Campaña → Subtemas en Mesa de Medios
-feat(subtemas): hierarchical Tema → Subtema in Mesa de Medios
-merge(fix/sheet-buttons-styling): dark ghost styling + breathing room en tabs row
 ```
 
 ### Branches:
 ```
-main                              ← estable ✅
-fix/medios-ui-improvements        ← mergeada a main ✅
-feat/subtemas-mesa-medios         ← mergeada a main ✅
-fix/sheet-buttons-styling         ← mergeada a main ✅
+main                                   ← estable ✅
+fix/editorial-collapsible-header       ← mergeada a main ✅
+fix/medios-ui-improvements             ← mergeada a main ✅
+feat/subtemas-mesa-medios              ← mergeada a main ✅
+fix/sheet-buttons-styling              ← mergeada a main ✅
 ```
 
 ### ANTES DEL DEPLOY — ejecutar en Supabase SQL Editor:
@@ -700,6 +701,7 @@ Todos en `scripts/`. Ejecutar en **Supabase SQL Editor** (no en producción auto
 | Audit log | ✅ |
 | Vista mobile (cards) | ✅ |
 | **Exportación Excel:** Botón "Exportar" en toolbar (solo tab Activas, desktop). Modal con selección de acciones, búsqueda, pre-selección según filtros activos. Genera `.xlsx` con bloques por eje, colores de eje en subheaders, columnas STATUS con colores. Helper: `shared/utils/excelExportEditorial.js`. | ✅ |
+| **Header colapsable con persistencia:** Botón chevron en `header-row-actions` colapsa/expande Zona B (`.editorial-tabs` + `.editorial-kpi-bar` + `.editorial-filter-bar` + `.editorial-mobile-action-line` + `.explorer-active-filter`) vía clase `zona-b-collapsed`. Estado persistido en `localStorage` clave `uss_editorial_header_expanded` (independiente de Medios). Punto ámbar (`filter-active-dot`) indica filtros activos cuando header colapsado. `hasActiveFilters` incluye: `filterInput`, `filterEje`, `filterStatus`, `filterTipoAccion`, `filterDateRange`, `sortDir`. KPI bar mobile desaparece junto con Zona B al colapsar (comportamiento esperado). | ✅ |
 
 ### Autenticación y Admin
 
