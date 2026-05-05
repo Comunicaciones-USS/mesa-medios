@@ -6088,6 +6088,14 @@ body {
   display: none !important;
 }
 
+/* Zona B colapsable — Mesa Editorial */
+.editorial-tabs.zona-b-collapsed,
+.editorial-kpi-bar.zona-b-collapsed,
+.editorial-filter-bar.zona-b-collapsed,
+.explorer-active-filter.zona-b-collapsed {
+  display: none !important;
+}
+
 @media (max-width: 700px) {
   .btn-header-collapse {
     padding: 3px 5px;
