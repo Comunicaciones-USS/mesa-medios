@@ -5691,3 +5691,309 @@ body {
     gap: 8px;
   }
 }
+
+/* === Subtemas — jerarquía visual === */
+.subtema-row {
+  background: #fafbfc;
+  border-left: 3px solid var(--secondary);
+}
+
+.subtema-row .col-contenidos {
+  padding-left: 28px;
+  font-weight: 500;
+  color: var(--primary);
+}
+
+.subtema-row .col-contenidos::before {
+  content: "└─ ";
+  color: var(--text-muted);
+  margin-right: 4px;
+}
+
+.subtema-fechas {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.subtema-fechas input[type="date"] {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 4px;
+  font-size: 12px;
+  height: 24px;
+}
+
+.btn-add-subtema {
+  background: transparent;
+  border: 1px dashed var(--border);
+  color: var(--text-muted);
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-add-subtema:hover {
+  border-color: var(--secondary);
+  color: var(--secondary);
+  background: #f0f6fc;
+}
+
+.subtema-counter {
+  display: inline-block;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-left: 8px;
+}
+
+/* Plan row anidada bajo subtema: doble indentación */
+.subtema-row + .data-row .col-contenidos,
+.data-row.under-subtema .col-contenidos {
+  padding-left: 48px;
+}
+
+/* Card mobile: jerarquía */
+.tema-card-padre {
+  border-left: 4px solid var(--primary);
+}
+
+.subtema-card {
+  background: #f8fafc;
+  border-left: 3px solid var(--secondary);
+  margin: 8px 0 8px 16px;
+  padding: 10px 12px;
+  border-radius: 6px;
+}
+
+.subtema-card-fechas {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+/* Search: subtema match con padre como contexto */
+.row-context-only {
+  opacity: 0.55;
+}
+
+/* === Subtemas — fila de subtema en MediaTable === */
+.subtema-header-row {
+  background: #f4f8fd;
+}
+
+.subtema-header-row:hover {
+  background: #eaf2fb;
+}
+
+.subtema-header-sticky-col {
+  padding-left: 28px !important;
+  font-weight: 500;
+}
+
+.subtema-name-display {
+  cursor: text;
+  color: var(--primary);
+  font-size: 13px;
+}
+
+.subtema-name-display:hover {
+  text-decoration: underline dotted;
+}
+
+.subtema-name-edit {
+  border: 1px solid var(--secondary);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 13px;
+  width: 180px;
+}
+
+.subtema-info-cell {
+  padding: 6px 10px;
+}
+
+.subtema-info-inner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.subtema-planif-count {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.btn-add-fecha-subtema {
+  background: transparent;
+  border: 1px dashed var(--border);
+  color: var(--text-muted);
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-add-fecha-subtema:hover {
+  border-color: var(--secondary);
+  color: var(--secondary);
+  background: #f0f6fc;
+}
+
+/* Fila de planificación bajo subtema */
+.planif-under-subtema .planif-indent-cell {
+  padding-left: 48px !important;
+}
+
+/* AddRowModal: tabs de modo */
+.add-row-mode-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid var(--border);
+  margin-bottom: 16px;
+}
+
+.add-row-mode-tab {
+  background: transparent;
+  border: none;
+  padding: 8px 14px;
+  font-size: 13px;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: all 0.15s;
+}
+
+.add-row-mode-tab:hover {
+  color: var(--primary);
+}
+
+.add-row-mode-tab.active {
+  color: var(--primary);
+  font-weight: 600;
+  border-bottom-color: var(--secondary);
+}
+
+/* Mobile subtema card */
+.mobile-subtema-card {
+  background: #f8fafc;
+  border-left: 3px solid var(--secondary);
+  margin: 6px 0 6px 12px;
+  padding: 8px 10px;
+  border-radius: 6px;
+}
+
+.mobile-subtema-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.mobile-subtema-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--primary);
+  flex: 1;
+}
+
+.mobile-subtema-fechas {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.mobile-subtema-count {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.mobile-subtema-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mobile-btn-add-fecha {
+  background: transparent;
+  border: 1px dashed var(--border);
+  color: var(--text-muted);
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.mobile-btn-add-fecha:hover {
+  border-color: var(--secondary);
+  color: var(--secondary);
+}
+
+/* SubtemaRow: contenedor nombre + expand btn */
+.subtema-header-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+}
+
+/* Espaciador de indentación en subtema (alinea al nivel del padre) */
+.subtema-indent-spacer {
+  display: inline-block;
+  width: 12px;
+  flex-shrink: 0;
+}
+
+/* PlanifCard dentro de subtema: indentación adicional en mobile */
+.mobile-planif-card-subtema {
+  margin-left: 8px;
+  border-left: 2px solid #c7d9ed;
+  border-radius: 0 6px 6px 0;
+}
+
+/* Planificaciones dentro del subtema card en mobile */
+.mobile-subtema-planifs {
+  margin-top: 6px;
+}
+
+/* AddRowModal: campos de fechas lado a lado */
+.form-group-row {
+  display: flex;
+  gap: 12px;
+}
+
+.form-group-half {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.form-group-half label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.form-group-half input[type="date"] {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--primary);
+  background: #fff;
+}
+
+/* Mobile: título-área del subtema */
+.mobile-subtema-title-area {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}

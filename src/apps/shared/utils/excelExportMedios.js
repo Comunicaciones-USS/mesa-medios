@@ -3,17 +3,18 @@ import { MEDIA_COLS } from '../../mesa-medios/config'
 import { getCellData } from '../../mesa-medios/utils'
 
 const C = {
-  NAVY:        '0F2B41',
-  WHITE:       'FFFFFF',
-  GRAY_HEADER: 'F5F5F5',
-  GRAY_TEXT:   '374151',
-  BODY_TEXT:   '1F2937',
-  ALT_ROW:     'FAFAFA',
-  GREEN_BG:    'D1FAE5',
-  GREEN_FG:    '065F46',
-  YELLOW_BG:   'FEF3C7',
-  YELLOW_FG:   '92400E',
-  BORDER:      'E5E7EB',
+  NAVY:         '0F2B41',
+  WHITE:        'FFFFFF',
+  GRAY_HEADER:  'F5F5F5',
+  GRAY_TEXT:    '374151',
+  BODY_TEXT:    '1F2937',
+  ALT_ROW:      'FAFAFA',
+  GREEN_BG:     'D1FAE5',
+  GREEN_FG:     '065F46',
+  YELLOW_BG:    'FEF3C7',
+  YELLOW_FG:    '92400E',
+  BORDER:       'E5E7EB',
+  SUBTEMA_BG:   '1E4A6B',  // navy más claro para sub-headers de subtema
 }
 
 function fmtDate(d) {
@@ -85,8 +86,42 @@ export function generateMediosExcel({ temas, selectedIds, userName }) {
   // Tema blocks start at row 5
   const selectedTemas = temas.filter(t => !t.archived && selectedIds.has(t.id))
 
+  // Helper: escribe filas de planificaciones para un bloque (padre directo o subtema)
+  function writePlanifBlock(planificaciones, dataCountRef) {
+    const sortedPlanifs = [...(planificaciones ?? [])].sort((a, b) =>
+      (a.semana || '').localeCompare(b.semana || '')
+    )
+    for (const planif of sortedPlanifs) {
+      for (const col of MEDIA_COLS) {
+        const { valor, notas } = getCellData(planif.medios, col.id)
+        const v    = (valor || '').toLowerCase()
+        const isSi = v.startsWith('si') || v.startsWith('sí')
+        const isPd = v.startsWith('pd')
+        if (!isSi && !isPd) continue
+
+        const alt      = dataCountRef.n % 2 === 1
+        const baseBg   = alt ? C.ALT_ROW : C.WHITE
+        const notesStr = notas?.trim()
+
+        const descBg  = notesStr ? baseBg : (isSi ? C.GREEN_BG  : C.YELLOW_BG)
+        const descFg  = notesStr ? C.BODY_TEXT : (isSi ? C.GREEN_FG : C.YELLOW_FG)
+        const descTxt = notesStr || (isSi ? 'Sí' : 'Por definir')
+
+        const canal = col.sub ? `${col.label} / ${col.sub}` : col.label
+
+        ws[XLSX.utils.encode_cell({ r: row, c: 0 })] = makeCell(fmtDate(planif.semana),  bodyStyle(baseBg, C.BODY_TEXT))
+        ws[XLSX.utils.encode_cell({ r: row, c: 1 })] = makeCell(canal,                   bodyStyle(baseBg, C.BODY_TEXT))
+        ws[XLSX.utils.encode_cell({ r: row, c: 2 })] = makeCell(descTxt,                 bodyStyle(descBg, descFg))
+        ws[XLSX.utils.encode_cell({ r: row, c: 3 })] = makeCell(planif.responsable || '', bodyStyle(baseBg, C.BODY_TEXT))
+
+        row++
+        dataCountRef.n++
+      }
+    }
+  }
+
   for (const tema of selectedTemas) {
-    // Subheader: tema name (navy, white bold)
+    // Subheader del tema padre (navy oscuro)
     const subheaderStyle = {
       font:      { name: 'Montserrat', sz: 12, bold: true, color: { rgb: C.WHITE } },
       fill:      { patternType: 'solid', fgColor: { rgb: C.NAVY } },
@@ -102,7 +137,7 @@ export function generateMediosExcel({ temas, selectedIds, userName }) {
     merges.push({ s: { r: row, c: 0 }, e: { r: row, c: NCOLS - 1 } })
     row++
 
-    // Column headers (gray bg, dark bold text)
+    // Column headers (gray bg)
     const colHeaders = ['FECHA', 'CANAL', 'ACCIÓN / DESCRIPCIÓN', 'RESPONSABLE']
     const colHeaderStyle = {
       font:      { name: 'Montserrat', sz: 10, bold: true, color: { rgb: C.GRAY_TEXT } },
@@ -115,41 +150,40 @@ export function generateMediosExcel({ temas, selectedIds, userName }) {
     })
     row++
 
-    // Data rows: one row per cell with valor 'si'/'sí' or 'pd'
-    let dataCount = 0
-    const sortedPlanifs = [...(tema.planificaciones ?? [])].sort((a, b) =>
-      (a.semana || '').localeCompare(b.semana || '')
-    )
+    // Contador compartido para alternar filas (continúa entre directas y subtemas)
+    const dataCountRef = { n: 0 }
 
-    for (const planif of sortedPlanifs) {
-      for (const col of MEDIA_COLS) {
-        const { valor, notas } = getCellData(planif.medios, col.id)
-        const v    = (valor || '').toLowerCase()
-        const isSi = v.startsWith('si') || v.startsWith('sí')
-        const isPd = v.startsWith('pd')
-        if (!isSi && !isPd) continue
+    // Planificaciones directas del padre
+    writePlanifBlock(tema.planificaciones || tema.planificaciones_directas || [], dataCountRef)
 
-        const alt      = dataCount % 2 === 1
-        const baseBg   = alt ? C.ALT_ROW : C.WHITE
-        const notesStr = notas?.trim()
+    // Subtemas: sub-header (navy más claro) + sus planificaciones
+    const subtemas = tema.subtemas || []
+    for (const sub of subtemas) {
+      if (!sub.planificaciones || sub.planificaciones.length === 0) continue
 
-        const descBg  = notesStr ? baseBg : (isSi ? C.GREEN_BG  : C.YELLOW_BG)
-        const descFg  = notesStr ? C.BODY_TEXT : (isSi ? C.GREEN_FG : C.YELLOW_FG)
-        const descTxt = notesStr || (isSi ? 'Sí' : 'Por definir')
-
-        const canal = col.sub ? `${col.label} / ${col.sub}` : col.label
-
-        ws[XLSX.utils.encode_cell({ r: row, c: 0 })] = makeCell(fmtDate(planif.semana),   bodyStyle(baseBg, C.BODY_TEXT))
-        ws[XLSX.utils.encode_cell({ r: row, c: 1 })] = makeCell(canal,                    bodyStyle(baseBg, C.BODY_TEXT))
-        ws[XLSX.utils.encode_cell({ r: row, c: 2 })] = makeCell(descTxt,                  bodyStyle(descBg, descFg))
-        ws[XLSX.utils.encode_cell({ r: row, c: 3 })] = makeCell(planif.responsable || '',  bodyStyle(baseBg, C.BODY_TEXT))
-
-        row++
-        dataCount++
+      // Sub-header del subtema
+      const subtemaHeaderStyle = {
+        font:      { name: 'Montserrat', sz: 10, bold: true, color: { rgb: C.WHITE } },
+        fill:      { patternType: 'solid', fgColor: { rgb: C.SUBTEMA_BG } },
+        alignment: { vertical: 'center', indent: 2 },
       }
+      const subLabel = sub.nombre || 'Subtema'
+      const subFechas = (sub.fecha_inicio || sub.fecha_termino)
+        ? ` (${sub.fecha_inicio ? fmtDate(sub.fecha_inicio) : '---'} — ${sub.fecha_termino ? fmtDate(sub.fecha_termino) : '---'})`
+        : ''
+      ws[XLSX.utils.encode_cell({ r: row, c: 0 })] = makeCell(`  ${subLabel}${subFechas}`, subtemaHeaderStyle)
+      for (let c = 1; c < NCOLS; c++) {
+        ws[XLSX.utils.encode_cell({ r: row, c })] = makeCell('', {
+          fill: { patternType: 'solid', fgColor: { rgb: C.SUBTEMA_BG } }
+        })
+      }
+      merges.push({ s: { r: row, c: 0 }, e: { r: row, c: NCOLS - 1 } })
+      row++
+
+      writePlanifBlock(sub.planificaciones, dataCountRef)
     }
 
-    // Empty row separator between temas
+    // Separador vacío entre temas
     ws[XLSX.utils.encode_cell({ r: row, c: 0 })] = makeCell('')
     row++
   }

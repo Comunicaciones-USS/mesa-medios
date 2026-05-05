@@ -1,5 +1,5 @@
 # Estado del Proyecto — Mesa de Medios USS
-**Actualizado:** 2026-04-29 | **Branch:** `main` | **Commit:** `merge(fix/sheet-buttons-styling)`
+**Actualizado:** 2026-05-05 | **Branch:** `feat/subtemas-mesa-medios` | **Commit:** `feat(subtemas): hierarchical Tema → Subtema in Mesa de Medios`
 
 ---
 
@@ -298,19 +298,23 @@ Props: `nombre`, `title`, `body`, `confirmLabel`, `confirmClass`, `onConfirm`, `
 
 ### Tabla: `temas` (entidad canónica de topic)
 ```sql
-id          UUID        PRIMARY KEY DEFAULT gen_random_uuid()
-nombre      TEXT        NOT NULL
-origen      TEXT        NOT NULL DEFAULT 'medios'   -- 'medios' | 'editorial'
-eje         TEXT
-archived    BOOLEAN     DEFAULT FALSE
-archived_at TIMESTAMPTZ
-status      TEXT        DEFAULT 'Nuevo'             -- 'Nuevo' | 'En desarrollo' | 'Completado'
-created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
-updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()     -- Auto-actualizado por trigger
+id           UUID        PRIMARY KEY DEFAULT gen_random_uuid()
+nombre       TEXT        NOT NULL
+origen       TEXT        NOT NULL DEFAULT 'medios'   -- 'medios' | 'editorial'
+eje          TEXT
+archived     BOOLEAN     DEFAULT FALSE
+archived_at  TIMESTAMPTZ
+status       TEXT        DEFAULT 'Nuevo'             -- 'Nuevo' | 'En desarrollo' | 'Completado'
+parent_id    UUID        REFERENCES temas(id) ON DELETE CASCADE  -- NULL = padre; NOT NULL = subtema
+fecha_inicio DATE                                    -- Solo subtemas
+fecha_termino DATE                                   -- Solo subtemas
+created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+updated_at   TIMESTAMPTZ NOT NULL DEFAULT now()     -- Auto-actualizado por trigger
 ```
 > Trigger `temas_updated_at_trigger` actualiza `updated_at` en cada UPDATE.
-> Índices: `idx_temas_archived ON temas(archived)` (script `add-archived-medios.sql`); `idx_temas_status ON temas(status)` (script `add-medios-status.sql`).
-> Columna `status` agregada con `scripts/add-medios-status.sql` — ejecutar antes de hacer deploy de release-mejoras-2.
+> Índices: `idx_temas_archived ON temas(archived)` (script `add-archived-medios.sql`); `idx_temas_status ON temas(status)` (script `add-medios-status.sql`); `idx_temas_parent_id ON temas(parent_id)` (script `add-subtemas-jerarquia.sql`).
+> Columnas `parent_id`, `fecha_inicio`, `fecha_termino` agregadas con `scripts/add-subtemas-jerarquia.sql` — ejecutar en Supabase SQL Editor antes de deploy.
+> Regla semántica: `status` se ignora para subtemas (no se muestra ni edita). Auto-transición afecta solo al padre.
 
 ---
 
@@ -531,25 +535,29 @@ git push && npm run deploy
 
 ## 8. Estado del Git
 
-### Branch actual: `main` (HEAD: `merge(fix/sheet-buttons-styling)`)
+### Branch actual: `feat/subtemas-mesa-medios` (pendiente merge + deploy)
 
 ### Últimos commits:
 ```
+feat(subtemas): hierarchical Tema → Subtema in Mesa de Medios  ← branch actual
 merge(fix/sheet-buttons-styling)  ← dark ghost styling + breathing room en tabs row
 03d355c merge(fix/ui-adjustments): UI fixes for sheet viewers and status dropdown
 04b60c3 fix(ui): reposition sheet viewers and hide status dropdown for 'Nuevo'
 e92d7f1 chore(sheets): set production URL for sheet-1 (Grilla RR.SS)
-49e8555 docs(estado): update after feat/sheet-viewers — document Excel Online viewers feature
 ```
 
 ### Branches:
 ```
-main                              ← mergeado, pendiente push + deploy manual
+feat/subtemas-mesa-medios         ← activo, pendiente merge a main + deploy manual
+main                              ← estable (pre-subtemas)
 fix/sheet-buttons-styling         ← mergeada a main ✅
 fix/ui-adjustments                ← mergeada a main ✅
 feat/sheet-viewers                ← mergeada a main ✅
-fix/post-release-2                ← mergeada a main ✅
-feat/release-mejoras-2            ← mergeada a main ✅
+```
+
+### ANTES DEL DEPLOY — ejecutar en Supabase SQL Editor:
+```
+scripts/add-subtemas-jerarquia.sql
 ```
 
 ---
@@ -575,6 +583,7 @@ Todos en `scripts/`. Ejecutar en **Supabase SQL Editor** (no en producción auto
 | `add-archived-medios.sql` | ⏳ **PENDIENTE** | `archived BOOLEAN` + `archived_at TIMESTAMPTZ` + índice en tabla `temas` — **ejecutar antes de usar la feature** |
 | `add-medios-status.sql` | ✅ Ejecutado | `status TEXT DEFAULT 'Nuevo'` + CHECK + backfill + índice en tabla `temas` |
 | `migrate-cell-no-to-empty.sql` | ✅ Ejecutado | Limpia celdas con valor `'no'` en JSONB de `contenidos.medios` |
+| `add-subtemas-jerarquia.sql` | ⏳ **PENDIENTE — EJECUTAR ANTES DEL DEPLOY** | `parent_id UUID`, `fecha_inicio DATE`, `fecha_termino DATE` en `temas` + índice. Agrega jerarquía Campaña → Subtemas. |
 
 ---
 
@@ -651,6 +660,7 @@ Todos en `scripts/`. Ejecutar en **Supabase SQL Editor** (no en producción auto
 | **Filtros multi-columna desktop mejorados (fix/post-release-2):** Chips por columna activa con X individual. Select "+ Añadir columna" con optgroups para sumar columnas sin limpiar el filtro. | ✅ |
 | **Status "Nuevo" no seleccionable manualmente:** Badge informativo solo. Cuando status es "Nuevo", MediaTable muestra solo el badge (sin dropdown). Para "En desarrollo" y "Completado" aparece el select (sin opción "Nuevo"). Auto-transición a "En desarrollo" después de 7 días via `checkAndTransitionStaleNew()` en fetchData. | ✅ |
 | **Hitos sincronizados desde Editorial:** fetchData trae `tipo` de acciones editoriales con `sync_to_medios=true` usando `tema_id` FK. Badge read-only en TemaRow: Ancla (amarillo), Soporte (azul), Always ON (verde). | ✅ |
+| **Jerarquía Campaña → Subtemas:** Tabla `temas` con `parent_id` auto-referencial. Árbol 3 niveles: TemaRow (padre) → SubtemaRow (subtema) → PlanRow (planificación). Cada subtema tiene `fecha_inicio`/`fecha_termino` opcionales para filtro por período. Archivado y reactivación en cascada. Filtros (texto, fecha, celda, columna) aplicados uniformemente en directas y subtemas. `filterIncludeSubtemaRange` toggle para incluir subtemas por solapamiento de rango aunque no tengan planifs. Export Excel con sub-headers por subtema. Vista mobile con SubtemaCard. Require SQL: `add-subtemas-jerarquia.sql`. | ✅ |
 
 ### Mesa Editorial
 

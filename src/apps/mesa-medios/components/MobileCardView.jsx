@@ -3,7 +3,6 @@ import { MEDIA_COLS } from '../config'
 import { getCellData } from '../utils'
 
 // ── Helpers ─────────────────────────────────────────────────────
-// Fix 2: getCellMeta recibe también notas para mostrar el texto guardado
 function getCellMeta(raw, notas) {
   if (!raw) return { status: 'empty', display: '' }
   const lower = raw.toLowerCase().trim()
@@ -142,8 +141,8 @@ function CellBottomSheet({ medio, currentValue, currentNotas, onSave, onClose })
   )
 }
 
-// ── Planificación card (dentro del tema) ────────────────────────
-function PlanifCard({ planif, temaNombre, onCellChange, onDeleteRow, isReadOnly }) {
+// ── Planificación card (reutilizable en padre y subtema) ─────────
+function PlanifCard({ planif, temaNombre, onCellChange, onDeleteRow, isReadOnly, isSubtema = false }) {
   const [expanded, setExpanded] = useState(false)
   const [sheet,    setSheet]    = useState(null)
 
@@ -182,9 +181,15 @@ function PlanifCard({ planif, temaNombre, onCellChange, onDeleteRow, isReadOnly 
     )
   }
 
+  const cardClass = [
+    'mobile-planif-card',
+    expanded ? 'expanded' : '',
+    isSubtema ? 'mobile-planif-card-subtema' : '',
+  ].filter(Boolean).join(' ')
+
   return (
     <>
-      <div className={`mobile-planif-card ${expanded ? 'expanded' : ''}`}>
+      <div className={cardClass}>
         <div className="mobile-planif-header" onClick={() => setExpanded(!expanded)}>
           <span className="mobile-planif-date">{formatDate(planif.semana)}</span>
           {!expanded && assigned.length > 0 && (
@@ -244,18 +249,105 @@ function PlanifCard({ planif, temaNombre, onCellChange, onDeleteRow, isReadOnly 
   )
 }
 
-// ── Tema card ────────────────────────────────────────────────────
-function TemaCard({ tema, onCellChange, onFieldChange, onDeleteRow, onAddPlanificacion, onArchiveTema, onReactivateTema, isArchived }) {
-  const [expanded, setExpanded] = useState(tema.planificaciones.length <= 1)
-  const n = tema.planificaciones.length
+// ── Subtema card ──────────────────────────────────────────────────
+function SubtemaCard({ subtema, onCellChange, onDeleteRow, onAddPlanificacion, isReadOnly }) {
+  const [expanded, setExpanded] = useState(false)
+  const n = subtema.planificaciones?.length || 0
 
   return (
-    <div className={`mobile-tema-card ${expanded ? 'expanded' : ''}${isArchived ? ' mobile-tema-archived' : ''}`}>
+    <div className={`mobile-subtema-card${expanded ? ' expanded' : ''}`}>
+      {/* Header del subtema */}
+      <div className="mobile-subtema-header" onClick={() => setExpanded(!expanded)}>
+        <div className="mobile-subtema-title-area">
+          <span className="mobile-subtema-title">{subtema.nombre || 'Sin nombre'}</span>
+          {(subtema.fecha_inicio || subtema.fecha_termino) && (
+            <span className="mobile-subtema-fechas">
+              {subtema.fecha_inicio ? formatDate(subtema.fecha_inicio) : '---'}
+              {' — '}
+              {subtema.fecha_termino ? formatDate(subtema.fecha_termino) : '---'}
+            </span>
+          )}
+          <span className="mobile-subtema-count">{n} {n === 1 ? 'fecha' : 'fechas'}</span>
+        </div>
+        <div className="mobile-subtema-actions">
+          {!isReadOnly && (
+            <button
+              className="mobile-btn-add-fecha"
+              onClick={e => { e.stopPropagation(); onAddPlanificacion(subtema.id) }}
+              title="Agregar fecha al subtema"
+            >
+              + Fecha
+            </button>
+          )}
+        </div>
+        <svg className={`mobile-card-arrow ${expanded ? 'rotated' : ''}`} width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </div>
+
+      {/* Planificaciones del subtema */}
+      {expanded && (
+        <div className="mobile-subtema-planifs">
+          {n === 0 ? (
+            !isReadOnly && (
+              <div className="mobile-planif-empty">
+                <button className="btn-add-primera-fecha" onClick={() => onAddPlanificacion(subtema.id)}>
+                  + Agregar primera fecha al subtema
+                </button>
+              </div>
+            )
+          ) : (
+            subtema.planificaciones.map(planif => (
+              <PlanifCard
+                key={planif.id}
+                planif={planif}
+                temaNombre={subtema.nombre}
+                onCellChange={onCellChange}
+                onDeleteRow={onDeleteRow}
+                isReadOnly={isReadOnly}
+                isSubtema
+              />
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Tema card ────────────────────────────────────────────────────
+function TemaCard({
+  tema,
+  onCellChange,
+  onFieldChange,
+  onDeleteRow,
+  onAddPlanificacion,
+  onAddPlanificacionSubtema,
+  onAddSubtema,
+  onArchiveTema,
+  onReactivateTema,
+  isArchived,
+}) {
+  const directPlanifs = tema.planificaciones || []
+  const subtemas      = tema.subtemas || []
+  const allPlanifs    = [...directPlanifs, ...subtemas.flatMap(s => s.planificaciones || [])]
+  const n             = allPlanifs.length
+  const nSubtemas     = subtemas.length
+
+  const [expanded, setExpanded] = useState(n <= 1)
+
+  return (
+    <div className={`mobile-tema-card${expanded ? ' expanded' : ''}${isArchived ? ' mobile-tema-archived' : ''} tema-card-padre`}>
       {/* Header del tema */}
       <div className="mobile-tema-header">
         <div className="mobile-tema-title-area" onClick={() => setExpanded(!expanded)}>
           <span className="mobile-tema-title">{tema.nombre || 'Sin nombre'}</span>
-          <span className="planif-count">{n} {n === 1 ? 'fecha' : 'fechas'}</span>
+          <span className="planif-count">
+            {n} {n === 1 ? 'fecha' : 'fechas'}
+            {nSubtemas > 0 && (
+              <span className="subtema-counter"> · {nSubtemas} subtema{nSubtemas !== 1 ? 's' : ''}</span>
+            )}
+          </span>
           {tema.origen === 'editorial' && (
             <span className="sync-badge" style={{ fontSize: '0.6rem' }}>Editorial</span>
           )}
@@ -265,6 +357,15 @@ function TemaCard({ tema, onCellChange, onFieldChange, onDeleteRow, onAddPlanifi
         </div>
         {/* Botones de acción */}
         <div className="mobile-tema-actions">
+          {!isArchived && (
+            <button
+              className="btn-add-subtema"
+              onClick={e => { e.stopPropagation(); onAddSubtema?.(tema.id) }}
+              title="Agregar subtema"
+            >
+              + Subtema
+            </button>
+          )}
           {!isArchived ? (
             <button
               className="mobile-tema-archive-btn"
@@ -297,37 +398,49 @@ function TemaCard({ tema, onCellChange, onFieldChange, onDeleteRow, onAddPlanifi
         </svg>
       </div>
 
-      {/* Planificaciones expandidas */}
+      {/* Contenido expandido */}
       {expanded && (
         <div className="mobile-tema-planifs">
-          {n === 0 ? (
-            !isArchived && (
-              <div className="mobile-planif-empty">
-                <button className="btn-add-primera-fecha" onClick={() => onAddPlanificacion(tema.id)}>
-                  + Agregar primera fecha
-                </button>
-              </div>
-            )
-          ) : (
-            <>
-              {tema.planificaciones.map(planif => (
-                <PlanifCard
-                  key={planif.id}
-                  planif={planif}
-                  temaNombre={tema.nombre}
-                  onCellChange={onCellChange}
-                  onDeleteRow={onDeleteRow}
-                  isReadOnly={isArchived}
-                />
-              ))}
-              {!isArchived && (
-                <div className="mobile-planif-add">
-                  <button className="btn-add-otra-fecha" onClick={() => onAddPlanificacion(tema.id)}>
-                    + Agregar otra fecha
-                  </button>
-                </div>
-              )}
-            </>
+          {/* Planificaciones directas del padre */}
+          {directPlanifs.map(planif => (
+            <PlanifCard
+              key={planif.id}
+              planif={planif}
+              temaNombre={tema.nombre}
+              onCellChange={onCellChange}
+              onDeleteRow={onDeleteRow}
+              isReadOnly={isArchived}
+            />
+          ))}
+
+          {/* Subtemas */}
+          {subtemas.map(sub => (
+            <SubtemaCard
+              key={sub.id}
+              subtema={sub}
+              onCellChange={onCellChange}
+              onDeleteRow={onDeleteRow}
+              onAddPlanificacion={onAddPlanificacionSubtema || onAddPlanificacion}
+              isReadOnly={isArchived}
+            />
+          ))}
+
+          {/* Empty state: sin directas ni subtemas */}
+          {directPlanifs.length === 0 && subtemas.length === 0 && !isArchived && (
+            <div className="mobile-planif-empty">
+              <button className="btn-add-primera-fecha" onClick={() => onAddPlanificacion(tema.id)}>
+                + Agregar primera fecha
+              </button>
+            </div>
+          )}
+
+          {/* Footer: agregar fecha directa */}
+          {!isArchived && (directPlanifs.length > 0 || subtemas.length > 0) && (
+            <div className="mobile-planif-add">
+              <button className="btn-add-otra-fecha" onClick={() => onAddPlanificacion(tema.id)}>
+                {directPlanifs.length > 0 ? '+ Agregar otra fecha' : '+ Agregar fecha directa'}
+              </button>
+            </div>
           )}
         </div>
       )}
@@ -342,8 +455,12 @@ export default function MobileCardView({
   onFieldChange,
   onDeleteRow,
   onAddPlanificacion,
+  onAddPlanificacionSubtema,
+  onAddSubtema,
+  onUpdateSubtema,
   onArchiveTema,
   onReactivateTema,
+  onStatusChange,
   isArchived = false,
   totalTemas,
   filterQuery,
@@ -365,10 +482,10 @@ export default function MobileCardView({
             </>
           ) : (
             <>
-              <span className="empty-state-icon">🔍</span>
+              <span className="empty-state-icon">B</span>
               <p className="empty-state-title">Sin resultados para "{filterQuery}"</p>
               <span className="empty-state-sub">Prueba con otro término</span>
-              <button className="empty-state-ghost" onClick={onClearFilter}>✕ Limpiar búsqueda</button>
+              <button className="empty-state-ghost" onClick={onClearFilter}>Limpiar búsqueda</button>
             </>
           )}
         </div>
@@ -381,6 +498,8 @@ export default function MobileCardView({
             onFieldChange={onFieldChange}
             onDeleteRow={onDeleteRow}
             onAddPlanificacion={onAddPlanificacion}
+            onAddPlanificacionSubtema={onAddPlanificacionSubtema}
+            onAddSubtema={onAddSubtema}
             onArchiveTema={onArchiveTema}
             onReactivateTema={onReactivateTema}
             isArchived={isArchived}
