@@ -48,6 +48,18 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
   const [showExportModal,   setShowExportModal]   = useState(false)
   const [kpiExpanded,       setKpiExpanded]       = useState(false)
 
+  // Header collapsible (Zona B)
+  const [headerExpanded, setHeaderExpandedState] = useState(() => {
+    try {
+      const saved = localStorage.getItem('uss_editorial_header_expanded')
+      return saved === null ? true : saved === 'true'
+    } catch { return true }
+  })
+  const setHeaderExpanded = (val) => {
+    setHeaderExpandedState(val)
+    try { localStorage.setItem('uss_editorial_header_expanded', String(val)) } catch {}
+  }
+
   const { toasts, addToast, removeToast } = useToast()
 
   // Realtime subscription
@@ -431,6 +443,16 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
     filterDateRange.from || filterDateRange.to,
   ].filter(Boolean).length
 
+  const hasActiveFilters = !!(
+    filterInput.trim() ||
+    filterEje !== 'all' ||
+    filterStatus !== 'all' ||
+    filterTipoAccion !== 'all' ||
+    filterDateRange.from ||
+    filterDateRange.to ||
+    sortDir
+  )
+
   return (
     <div className="app app-editorial">
 
@@ -445,10 +467,13 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
           onShowProfile={() => setShowProfile(true)}
           onSwitchDashboard={onSwitchDashboard}
           otherDashboardName={otherDashboardName}
+          headerExpanded={headerExpanded}
+          setHeaderExpanded={setHeaderExpanded}
+          hasActiveFilters={hasActiveFilters}
         />
 
         {/* ── Tabs Activas / Archivadas ── */}
-        <div className="editorial-tabs" role="tablist" aria-label="Estado de acciones">
+        <div className={`editorial-tabs${!headerExpanded ? ' zona-b-collapsed' : ''}`} role="tablist" aria-label="Estado de acciones">
           <button
             id="tab-active"
             role="tab"
@@ -476,7 +501,7 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
         </div>
 
         {/* ── KPI Bar — colapsable en mobile ── */}
-        <div className={`editorial-kpi-bar${activeTab === 'archived' ? ' kpi-bar-archived' : ''}${kpiExpanded ? ' kpi-expanded' : ''}`}>
+        <div className={`editorial-kpi-bar${activeTab === 'archived' ? ' kpi-bar-archived' : ''}${kpiExpanded ? ' kpi-expanded' : ''}${!headerExpanded ? ' zona-b-collapsed' : ''}`}>
           {/* Resumen mobile (solo visible en mobile, siempre) */}
           <button
             className="kpi-mobile-summary"
@@ -522,7 +547,7 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
         </div>
 
         {/* ── Filter bar ── */}
-        <div className="editorial-filter-bar">
+        <div className={`editorial-filter-bar${!headerExpanded ? ' zona-b-collapsed' : ''}`}>
           <div className="editorial-filter-row">
             <div className="filter-search">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -628,14 +653,14 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
         </div>
 
         {activeTab === 'active' && explorerFilter && (
-          <div className="explorer-active-filter">
+          <div className={`explorer-active-filter${!headerExpanded ? ' zona-b-collapsed' : ''}`}>
             <span>Filtrando: {explorerFilter.eje}{explorerFilter.tema ? ` › ${explorerFilter.tema}` : ''}</span>
             <button onClick={() => setExplorerFilter(null)}>✕</button>
           </div>
         )}
 
         {/* Mobile: línea única de acción (search + filtros + añadir) */}
-        <div className="mobile-action-line editorial-mobile-action-line">
+        <div className={`mobile-action-line editorial-mobile-action-line${!headerExpanded ? ' zona-b-collapsed' : ''}`}>
           <div className="mobile-search-wrap">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
               <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.3"/>
