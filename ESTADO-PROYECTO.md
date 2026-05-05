@@ -1,5 +1,5 @@
 # Estado del Proyecto — Mesa de Medios USS
-**Actualizado:** 2026-05-05 | **Branch:** `main` | **Commit:** `merge(fix/editorial-collapsible-header): collapsible header in Editorial`
+**Actualizado:** 2026-05-05 | **Branch:** `main` | **Commit:** `refactor(subtemas): single row per subtema + migration + kebab menu`
 
 ---
 
@@ -84,7 +84,8 @@ sistema-gestion-main/
 │       │   │   ├── ConfirmDialog.jsx   # Modal confirmación genérico
 │       │   │   ├── USSLoader.jsx       # Spinner animado USS
 │       │   │   ├── BottomSheet.jsx     # Bottom sheet para filtros mobile
-│       │   │   └── ExportModal.jsx     # Modal selección de ítems para exportar a Excel
+│       │   │   ├── ExportModal.jsx     # Modal selección de ítems para exportar a Excel
+│       │   │   └── KebabMenu.jsx       # Dropdown kebab accesible (items[{label, icon, onClick, variant}])
 │       │   ├── hooks/
 │       │   │   ├── useToast.js         # Toast state: addToast / removeToast
 │       │   │   ├── useDebounce.js      # 300ms debounce para filtros
@@ -546,25 +547,27 @@ git push && npm run deploy
 
 ### Últimos commits:
 ```
-merge(fix/editorial-collapsible-header): collapsible header in Editorial  ← HEAD
+refactor(subtemas): single row per subtema + migration + kebab menu  ← HEAD
+merge(fix/editorial-collapsible-header): collapsible header in Editorial
 feat(editorial): collapsible header matching Mesa Medios pattern
 merge(fix/medios-ui-improvements): reposition subtema button and add collapsible header
 fix(medios-ui): reposition subtema button and add collapsible header
-merge(feat/subtemas-mesa-medios): Jerarquía Campaña → Subtemas en Mesa de Medios
 ```
 
 ### Branches:
 ```
-main                                   ← estable ✅
-fix/editorial-collapsible-header       ← mergeada a main ✅
-fix/medios-ui-improvements             ← mergeada a main ✅
-feat/subtemas-mesa-medios              ← mergeada a main ✅
-fix/sheet-buttons-styling              ← mergeada a main ✅
+main                                       ← estable ✅
+feat/subtema-single-row-refactor           ← mergeada a main ✅
+fix/editorial-collapsible-header           ← mergeada a main ✅
+fix/medios-ui-improvements                 ← mergeada a main ✅
+feat/subtemas-mesa-medios                  ← mergeada a main ✅
+fix/sheet-buttons-styling                  ← mergeada a main ✅
 ```
 
-### ANTES DEL DEPLOY — ejecutar en Supabase SQL Editor:
+### ANTES DEL DEPLOY — ejecutar en Supabase SQL Editor (en orden):
 ```
-scripts/add-subtemas-jerarquia.sql
+1. scripts/add-subtemas-jerarquia.sql          (si no se ejecutó antes)
+2. scripts/migrate-subtemas-to-single-row.sql  (NUEVO — obligatorio para el modelo single-row)
 ```
 
 ---
@@ -591,6 +594,7 @@ Todos en `scripts/`. Ejecutar en **Supabase SQL Editor** (no en producción auto
 | `add-medios-status.sql` | ✅ Ejecutado | `status TEXT DEFAULT 'Nuevo'` + CHECK + backfill + índice en tabla `temas` |
 | `migrate-cell-no-to-empty.sql` | ✅ Ejecutado | Limpia celdas con valor `'no'` en JSONB de `contenidos.medios` |
 | `add-subtemas-jerarquia.sql` | ⏳ **PENDIENTE — EJECUTAR ANTES DEL DEPLOY** | `parent_id UUID`, `fecha_inicio DATE`, `fecha_termino DATE` en `temas` + índice. Agrega jerarquía Campaña → Subtemas. |
+| `migrate-subtemas-to-single-row.sql` | ⏳ **PENDIENTE — EJECUTAR ANTES DEL DEPLOY** | Migra datos al modelo single-row: elimina contenidos duplicados por subtema (retiene el más reciente), crea fila de contenidos para subtemas sin ninguna. Obligatorio tras el refactor subtemas single-row. |
 
 ---
 
@@ -667,7 +671,7 @@ Todos en `scripts/`. Ejecutar en **Supabase SQL Editor** (no en producción auto
 | **Filtros multi-columna desktop mejorados (fix/post-release-2):** Chips por columna activa con X individual. Select "+ Añadir columna" con optgroups para sumar columnas sin limpiar el filtro. | ✅ |
 | **Status "Nuevo" no seleccionable manualmente:** Badge informativo solo. Cuando status es "Nuevo", MediaTable muestra solo el badge (sin dropdown). Para "En desarrollo" y "Completado" aparece el select (sin opción "Nuevo"). Auto-transición a "En desarrollo" después de 7 días via `checkAndTransitionStaleNew()` en fetchData. | ✅ |
 | **Hitos sincronizados desde Editorial:** fetchData trae `tipo` de acciones editoriales con `sync_to_medios=true` usando `tema_id` FK. Badge read-only en TemaRow: Ancla (amarillo), Soporte (azul), Always ON (verde). | ✅ |
-| **Jerarquía Campaña → Subtemas:** Tabla `temas` con `parent_id` auto-referencial. Árbol 3 niveles: TemaRow (padre) → SubtemaRow (subtema) → PlanRow (planificación). Cada subtema tiene `fecha_inicio`/`fecha_termino` opcionales para filtro por período. Archivado y reactivación en cascada. Filtros (texto, fecha, celda, columna) aplicados uniformemente en directas y subtemas. `filterIncludeSubtemaRange` toggle para incluir subtemas por solapamiento de rango aunque no tengan planifs. Export Excel con sub-headers por subtema. Vista mobile con SubtemaCard. Require SQL: `add-subtemas-jerarquia.sql`. | ✅ |
+| **Jerarquía Campaña → Subtemas (modelo single-row):** Tabla `temas` con `parent_id` auto-referencial. Árbol 2 niveles: TemaRow (padre) → SubtemaRow (subtema). Cada subtema tiene exactamente 1 fila en `contenidos` con las 39 celdas de medios. Fecha de la planif editable inline. KebabMenu por subtema (Editar subtema / Eliminar subtema). Modal `edit-subtema` para nombre + fecha_inicio + fecha_termino. Sin expand/collapse por subtema (siempre visible). `src/apps/shared/components/KebabMenu.jsx` como componente reutilizable. Require SQL: `add-subtemas-jerarquia.sql` + `migrate-subtemas-to-single-row.sql`. | ✅ |
 | **Botón "+ Subtema" inline en TemaRow:** Movido de `tema-action-btns` (celda derecha) a la celda izquierda sticky (`tema-header-name`), después del nombre y el badge de inactividad. Clase `.btn-add-subtema-inline` (dashed border, compacto, 11px). Oculto cuando tema está archivado. Mobile no cambia (ya usa `.btn-add-subtema` en card header). | ✅ |
 | **Header colapsable con persistencia:** Botón chevron en `header-row-actions` colapsa/expande Zona B (`.medios-filter-bar` desktop + `.medios-tabs-mobile` + `.mobile-action-line` mobile) vía clase `zona-b-collapsed`. Estado persistido en `localStorage` clave `uss_medios_header_expanded`. Punto ámbar (`filter-active-dot`) indica filtros activos cuando header colapsado. `hasActiveFilters` corregido para incluir `activeColumnFilters.size > 0`. | ✅ |
 
