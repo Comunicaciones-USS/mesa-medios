@@ -346,11 +346,6 @@ function TemaCard({
       icon: '+',
       onClick: () => onAddPlanificacion?.(tema.id),
     }] : []),
-    {
-      label: 'Agregar subtema',
-      icon: '+',
-      onClick: () => onAddSubtema?.(tema.id),
-    },
   ]
 
   return (
