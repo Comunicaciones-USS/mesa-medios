@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { EJES, EJE_COLOR_MAP, TIPOS_CONFIG, TIPOS_ORDER, STATUS_CONFIG, STATUS_OPTIONS, TIPOLOGIA_RESULTADO_OPTIONS } from '../config'
 import OrphanAssigner from './OrphanAssigner'
+import KebabMenu from '../../shared/components/KebabMenu'
 
 function formatDate(dateStr) {
   if (!dateStr) return '—'
@@ -251,6 +252,34 @@ function ResultadoRow({ row, onCellChange, onDeleteRow, backlogCount, onAddBackl
             </span>
             <span className="resultado-backlog-count">{backlogCount} backlog{backlogCount !== 1 ? 's' : ''}</span>
           </div>
+          {(() => {
+            const resultadoKebabItems = isArchived
+              ? [{ label: 'Reactivar', icon: '↩', onClick: () => onReactivate?.(row.id) }]
+              : [
+                  {
+                    label: row.sync_to_medios ? 'Desvincular de Mesa Medios' : 'Vincular a Mesa Medios',
+                    icon: '⇄',
+                    onClick: () => onSyncToggle?.(row.id, !row.sync_to_medios),
+                  },
+                  {
+                    label: 'Archivar',
+                    icon: '⊘',
+                    onClick: () => onCellChange(row.id, 'status', 'Completado'),
+                  },
+                  {
+                    label: 'Eliminar',
+                    icon: '✕',
+                    variant: 'danger',
+                    onClick: () => onDeleteRow(row.id),
+                  },
+                ]
+            return (
+              <KebabMenu
+                items={resultadoKebabItems}
+                ariaLabel={`Acciones para resultado "${row.accion || ''}"`}
+              />
+            )
+          })()}
         </div>
       </td>
 
@@ -411,14 +440,39 @@ function BacklogRow({ row, onCellChange, onDeleteRow, onSyncToggle, isArchived, 
 
       {/* Descripción - Acción */}
       <td className="col-accion">
-        <span
-          contentEditable={!isArchived}
-          suppressContentEditableWarning
-          onBlur={e => handleInlineEdit('accion', e.currentTarget.textContent.trim())}
-          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur() } }}
-          className="editorial-editable">
-          {row.accion || ''}
-        </span>
+        <div className="backlog-accion-wrap">
+          <span
+            contentEditable={!isArchived}
+            suppressContentEditableWarning
+            onBlur={e => handleInlineEdit('accion', e.currentTarget.textContent.trim())}
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur() } }}
+            className="editorial-editable">
+            {row.accion || ''}
+          </span>
+          {(() => {
+            const backlogKebabItems = isArchived
+              ? [{ label: 'Reactivar', icon: '↩', onClick: () => onReactivate?.(row.id) }]
+              : [
+                  {
+                    label: 'Archivar',
+                    icon: '⊘',
+                    onClick: () => onCellChange(row.id, 'status', 'Completado'),
+                  },
+                  {
+                    label: 'Eliminar',
+                    icon: '✕',
+                    variant: 'danger',
+                    onClick: () => onDeleteRow(row.id),
+                  },
+                ]
+            return (
+              <KebabMenu
+                items={backlogKebabItems}
+                ariaLabel={`Acciones para backlog "${row.accion || ''}"`}
+              />
+            )
+          })()}
+        </div>
       </td>
 
       {/* Fecha */}

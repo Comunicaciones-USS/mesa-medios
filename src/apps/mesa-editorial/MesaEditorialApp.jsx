@@ -728,6 +728,9 @@ export default function MesaEditorialApp({ session, userName, onLogout, onBackTo
               rows={displayRows}
               onCellChange={handleCellChange}
               onDeleteRow={requestDeleteRow}
+              onSyncToggle={handleSyncToggle}
+              onReactivate={requestReactivate}
+              isArchived={activeTab === 'archived'}
               totalRows={activeTab === 'archived' ? archivedCount : activeCount}
               filterQuery={filterInput}
               onClearFilter={() => setFilterInput('')}
