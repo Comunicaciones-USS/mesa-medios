@@ -3,9 +3,16 @@ import { MEDIA_COLS, GROUPS, STALE_THRESHOLD_DAYS } from '../config'
 import { getCellData } from '../utils'
 import CellPopover from './CellPopover'
 import KebabMenu from '../../shared/components/KebabMenu'
+import StatusPillDropdown from '../../shared/components/StatusPillDropdown'
 
 // ── Constants ──────────────────────────────────────────────────────
 const EMPTY_SET = new Set()
+
+const STATUS_OPTIONS = [
+  { value: 'Nuevo',         label: 'Nuevo',         color: 'blue'   },
+  { value: 'En desarrollo', label: 'En desarrollo', color: 'yellow' },
+  { value: 'Completado',    label: 'Completado',    color: 'green'  },
+]
 
 // ── Helpers ───────────────────────────────────────────────────────
 
@@ -625,26 +632,21 @@ const TemaRow = memo(function TemaRow({
             </>
           )}
           {!isArchived && tema.status && (
-            <span
-              className={`tema-status-badge tema-status-${tema.status === 'En desarrollo' ? 'en-desarrollo' : tema.status.toLowerCase()}`}
-              title={`Status: ${tema.status}`}
-            >
-              {tema.status === 'Nuevo' && '✦ '}
-              {tema.status}
-            </span>
-          )}
-          {!isArchived && tema.status && tema.status !== 'Nuevo' && (
-            <select
-              className="tema-status-select"
-              value={tema.status}
-              onChange={e => onStatusChange?.(tema.id, e.target.value)}
-              onClick={e => e.stopPropagation()}
-              aria-label="Cambiar status del tema"
-              title="Cambiar status"
-            >
-              <option value="En desarrollo">En desarrollo</option>
-              <option value="Completado">Completado</option>
-            </select>
+            tema.status === 'Nuevo' ? (
+              <StatusPillDropdown
+                value="Nuevo"
+                options={STATUS_OPTIONS}
+                readOnly
+                ariaLabel={`Estado del tema ${tema.nombre}: Nuevo (no editable)`}
+              />
+            ) : (
+              <StatusPillDropdown
+                value={tema.status}
+                options={STATUS_OPTIONS.filter(o => o.value !== 'Nuevo')}
+                onChange={newStatus => onStatusChange?.(tema.id, newStatus)}
+                ariaLabel={`Cambiar estado del tema ${tema.nombre}`}
+              />
+            )
           )}
           {isStale && (
             <button

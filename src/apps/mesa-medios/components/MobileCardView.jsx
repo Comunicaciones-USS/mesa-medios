@@ -2,6 +2,13 @@ import { useState, useEffect, useRef } from 'react'
 import { MEDIA_COLS } from '../config'
 import { getCellData } from '../utils'
 import KebabMenu from '../../shared/components/KebabMenu'
+import StatusPillDropdown from '../../shared/components/StatusPillDropdown'
+
+const STATUS_OPTIONS_MOBILE = [
+  { value: 'Nuevo',         label: 'Nuevo',         color: 'blue'   },
+  { value: 'En desarrollo', label: 'En desarrollo', color: 'yellow' },
+  { value: 'Completado',    label: 'Completado',    color: 'green'  },
+]
 
 // ── Helpers ─────────────────────────────────────────────────────
 function getCellMeta(raw, notas) {
@@ -320,6 +327,7 @@ function TemaCard({
   onDeleteSubtema,
   onArchiveTema,
   onReactivateTema,
+  onStatusChange,
   isArchived,
 }) {
   const directPlanifs = tema.planificaciones || []
@@ -365,6 +373,23 @@ function TemaCard({
           )}
           {isArchived && tema.archived_at && (
             <span className="mobile-archived-at">{formatDateFull(tema.archived_at)}</span>
+          )}
+          {!isArchived && tema.status && (
+            tema.status === 'Nuevo' ? (
+              <StatusPillDropdown
+                value="Nuevo"
+                options={STATUS_OPTIONS_MOBILE}
+                readOnly
+                ariaLabel={`Estado del tema ${tema.nombre}: Nuevo`}
+              />
+            ) : (
+              <StatusPillDropdown
+                value={tema.status}
+                options={STATUS_OPTIONS_MOBILE.filter(o => o.value !== 'Nuevo')}
+                onChange={newStatus => onStatusChange?.(tema.id, newStatus)}
+                ariaLabel={`Cambiar estado del tema ${tema.nombre}`}
+              />
+            )
           )}
         </div>
         {/* KebabMenu del tema (solo activos) */}
@@ -523,6 +548,7 @@ export default function MobileCardView({
             onDeleteSubtema={onDeleteSubtema}
             onArchiveTema={onArchiveTema}
             onReactivateTema={onReactivateTema}
+            onStatusChange={onStatusChange}
             isArchived={isArchived}
           />
         ))
