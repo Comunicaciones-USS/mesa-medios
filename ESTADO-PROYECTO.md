@@ -1,5 +1,5 @@
 # Estado del Proyecto — Mesa de Medios USS
-**Actualizado:** 2026-05-05 | **Branch:** `main` | **Commit:** `refactor(subtemas): single row per subtema + migration + kebab menu`
+**Actualizado:** 2026-05-06 | **Branch:** `main` | **Commit:** `merge(feat/kebab-menu-rollout): kebab menus across system, left-aligned`
 
 ---
 
@@ -547,11 +547,11 @@ git push && npm run deploy
 
 ### Últimos commits:
 ```
-refactor(subtemas): single row per subtema + migration + kebab menu  ← HEAD
+merge(feat/kebab-menu-rollout): kebab menus across system, left-aligned  ← HEAD
+feat(kebab): rollout to all rows with left-aligned position
+refactor(subtemas): single row per subtema + migration + kebab menu
 merge(fix/editorial-collapsible-header): collapsible header in Editorial
 feat(editorial): collapsible header matching Mesa Medios pattern
-merge(fix/medios-ui-improvements): reposition subtema button and add collapsible header
-fix(medios-ui): reposition subtema button and add collapsible header
 ```
 
 ### Branches:
@@ -674,6 +674,7 @@ Todos en `scripts/`. Ejecutar en **Supabase SQL Editor** (no en producción auto
 | **Jerarquía Campaña → Subtemas (modelo single-row):** Tabla `temas` con `parent_id` auto-referencial. Árbol 2 niveles: TemaRow (padre) → SubtemaRow (subtema). Cada subtema tiene exactamente 1 fila en `contenidos` con las 39 celdas de medios. Fecha de la planif editable inline. KebabMenu por subtema (Editar subtema / Eliminar subtema). Modal `edit-subtema` para nombre + fecha_inicio + fecha_termino. Sin expand/collapse por subtema (siempre visible). `src/apps/shared/components/KebabMenu.jsx` como componente reutilizable. Require SQL: `add-subtemas-jerarquia.sql` + `migrate-subtemas-to-single-row.sql`. | ✅ |
 | **Botón "+ Subtema" inline en TemaRow:** Movido de `tema-action-btns` (celda derecha) a la celda izquierda sticky (`tema-header-name`), después del nombre y el badge de inactividad. Clase `.btn-add-subtema-inline` (dashed border, compacto, 11px). Oculto cuando tema está archivado. Mobile no cambia (ya usa `.btn-add-subtema` en card header). | ✅ |
 | **Header colapsable con persistencia:** Botón chevron en `header-row-actions` colapsa/expande Zona B (`.medios-filter-bar` desktop + `.medios-tabs-mobile` + `.mobile-action-line` mobile) vía clase `zona-b-collapsed`. Estado persistido en `localStorage` clave `uss_medios_header_expanded`. Punto ámbar (`filter-active-dot`) indica filtros activos cuando header colapsado. `hasActiveFilters` corregido para incluir `activeColumnFilters.size > 0`. | ✅ |
+| **KebabMenu rollout (feat/kebab-menu-rollout):** KebabMenu desplegado en todas las filas del sistema. SubtemaRow: kebab movido de col-actions a la celda sticky de nombre (inline). TemaRow: kebab con items Editar nombre / Agregar fecha al tema (solo sin subtemas) / Agregar subtema; también en TemaCard (mobile Medios). PlanRow: kebab con Editar fecha / Eliminar planificación. ResultadoRow y BacklogRow (EjeSection): kebab en col-accion con items Vincular/Desvincular, Archivar, Eliminar (activo) o Reactivar (archivado). MobileCardViewEditorial: kebab por card; props `onSyncToggle`, `onReactivate`, `isArchived` threadeados desde MesaEditorialApp. CSS: `.backlog-accion-wrap` flex wrapper; triggers compactos en celdas de tabla. Todos los botones existentes conservados. | ✅ |
 
 ### Mesa Editorial
 
