@@ -6245,3 +6245,29 @@ body {
 .kebab-menu-item-danger:hover {
   background: rgba(220, 38, 38, 0.06);
 }
+
+/* ── KebabMenu inline — posicionamiento en celdas de tabla ─────── */
+
+/* Wrapper para accion + kebab en BacklogRow */
+.backlog-accion-wrap {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+/* Kebab inline en filas editoriales (accion wrap) */
+.resultado-accion-wrap .kebab-menu-container,
+.backlog-accion-wrap .kebab-menu-container {
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+/* Disparador más compacto dentro de celdas de tabla */
+.resultado-accion-wrap .kebab-menu-trigger,
+.backlog-accion-wrap .kebab-menu-trigger,
+.subtema-data-name-inner .kebab-menu-trigger,
+.tema-header-name .kebab-menu-trigger {
+  width: 22px;
+  height: 22px;
+  font-size: 14px;
+}

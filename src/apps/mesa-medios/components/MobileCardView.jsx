@@ -330,6 +330,29 @@ function TemaCard({
 
   const [expanded, setExpanded] = useState(n <= 1)
 
+  const temaKebabItems = isArchived ? [] : [
+    {
+      label: 'Editar nombre',
+      icon: '✎',
+      onClick: () => {
+        const newName = window.prompt('Nuevo nombre del tema:', tema.nombre || '')
+        if (newName && newName.trim() && newName.trim() !== tema.nombre) {
+          onFieldChange?.('renameTema', tema.id, newName.trim())
+        }
+      },
+    },
+    ...(nSubtemas === 0 ? [{
+      label: 'Agregar fecha al tema',
+      icon: '+',
+      onClick: () => onAddPlanificacion?.(tema.id),
+    }] : []),
+    {
+      label: 'Agregar subtema',
+      icon: '+',
+      onClick: () => onAddSubtema?.(tema.id),
+    },
+  ]
+
   return (
     <div className={`mobile-tema-card${expanded ? ' expanded' : ''}${isArchived ? ' mobile-tema-archived' : ''} tema-card-padre`}>
       {/* Header del tema */}
@@ -349,6 +372,13 @@ function TemaCard({
             <span className="mobile-archived-at">{formatDateFull(tema.archived_at)}</span>
           )}
         </div>
+        {/* KebabMenu del tema (solo activos) */}
+        {!isArchived && temaKebabItems.length > 0 && (
+          <KebabMenu
+            items={temaKebabItems}
+            ariaLabel={`Acciones para tema ${tema.nombre || ''}`}
+          />
+        )}
         {/* Botones de acción */}
         <div className="mobile-tema-actions">
           {!isArchived && (

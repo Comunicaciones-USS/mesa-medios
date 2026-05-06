@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { EJES, TIPOS_CONFIG, TIPOS_ORDER, STATUS_CONFIG, STATUS_OPTIONS, EJE_COLOR_MAP } from '../config'
+import KebabMenu from '../../shared/components/KebabMenu'
 
 function formatDate(dateStr) {
   if (!dateStr) return '—'
@@ -7,7 +8,7 @@ function formatDate(dateStr) {
   return d.toLocaleDateString('es-CL', { day: 'numeric', month: 'short', year: '2-digit' })
 }
 
-export default function MobileCardViewEditorial({ rows, onCellChange, onDeleteRow, totalRows, filterQuery, onClearFilter, onAdd }) {
+export default function MobileCardViewEditorial({ rows, onCellChange, onDeleteRow, onSyncToggle, onReactivate, isArchived = false, totalRows, filterQuery, onClearFilter, onAdd }) {
   const [expanded, setExpanded] = useState({})
 
   function toggleExpand(id) {
@@ -95,11 +96,44 @@ export default function MobileCardViewEditorial({ rows, onCellChange, onDeleteRo
               >
                 {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
-              <button className="btn-delete-row" onClick={() => onDeleteRow(resultado.id)}>
-                <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-                  <path d="M2 3.5h9M5 3.5V2.5a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v1M5.5 5.5v4M7.5 5.5v4M3.5 3.5l.5 7h5l.5-7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </button>
+              {isArchived ? (
+                <button className="btn-reactivate" onClick={() => onReactivate?.(resultado.id)} title="Reactivar esta acción" aria-label="Reactivar esta acción">
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                    <path d="M2 6a4 4 0 014-4 4 4 0 014 4 4 4 0 01-4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+                    <path d="M6 2L4 4l2 2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  Reactivar
+                </button>
+              ) : (
+                <>
+                  <KebabMenu
+                    items={[
+                      {
+                        label: resultado.sync_to_medios ? 'Desvincular de Mesa Medios' : 'Vincular a Mesa Medios',
+                        icon: '⇄',
+                        onClick: () => onSyncToggle?.(resultado.id, !resultado.sync_to_medios),
+                      },
+                      {
+                        label: 'Archivar',
+                        icon: '⊘',
+                        onClick: () => onCellChange(resultado.id, 'status', 'Completado'),
+                      },
+                      {
+                        label: 'Eliminar',
+                        icon: '✕',
+                        variant: 'danger',
+                        onClick: () => onDeleteRow(resultado.id),
+                      },
+                    ]}
+                    ariaLabel={`Acciones para resultado "${resultado.accion || ''}"`}
+                  />
+                  <button className="btn-delete-row" onClick={() => onDeleteRow(resultado.id)}>
+                    <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                      <path d="M2 3.5h9M5 3.5V2.5a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v1M5.5 5.5v4M7.5 5.5v4M3.5 3.5l.5 7h5l.5-7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </button>
+                </>
+              )}
             </div>
 
             {/* Backlogs hijos colapsables */}
@@ -143,11 +177,39 @@ export default function MobileCardViewEditorial({ rows, onCellChange, onDeleteRo
                             >
                               {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
                             </select>
-                            <button className="btn-delete-row" onClick={() => onDeleteRow(backlog.id)}>
-                              <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-                                <path d="M2 3.5h9M5 3.5V2.5a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v1M5.5 5.5v4M7.5 5.5v4M3.5 3.5l.5 7h5l.5-7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-                              </svg>
-                            </button>
+                            {isArchived ? (
+                              <button className="btn-reactivate" onClick={() => onReactivate?.(backlog.id)} title="Reactivar este backlog" aria-label="Reactivar este backlog">
+                                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                                  <path d="M2 6a4 4 0 014-4 4 4 0 014 4 4 4 0 01-4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+                                  <path d="M6 2L4 4l2 2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
+                                Reactivar
+                              </button>
+                            ) : (
+                              <>
+                                <KebabMenu
+                                  items={[
+                                    {
+                                      label: 'Archivar',
+                                      icon: '⊘',
+                                      onClick: () => onCellChange(backlog.id, 'status', 'Completado'),
+                                    },
+                                    {
+                                      label: 'Eliminar',
+                                      icon: '✕',
+                                      variant: 'danger',
+                                      onClick: () => onDeleteRow(backlog.id),
+                                    },
+                                  ]}
+                                  ariaLabel={`Acciones para backlog "${backlog.accion || ''}"`}
+                                />
+                                <button className="btn-delete-row" onClick={() => onDeleteRow(backlog.id)}>
+                                  <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                                    <path d="M2 3.5h9M5 3.5V2.5a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v1M5.5 5.5v4M7.5 5.5v4M3.5 3.5l.5 7h5l.5-7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                                  </svg>
+                                </button>
+                              </>
+                            )}
                           </div>
                         </div>
                       )
@@ -196,11 +258,39 @@ export default function MobileCardViewEditorial({ rows, onCellChange, onDeleteRo
               >
                 {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
-              <button className="btn-delete-row" onClick={() => onDeleteRow(row.id)}>
-                <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-                  <path d="M2 3.5h9M5 3.5V2.5a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v1M5.5 5.5v4M7.5 5.5v4M3.5 3.5l.5 7h5l.5-7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </button>
+              {isArchived ? (
+                <button className="btn-reactivate" onClick={() => onReactivate?.(row.id)} title="Reactivar" aria-label="Reactivar">
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                    <path d="M2 6a4 4 0 014-4 4 4 0 014 4 4 4 0 01-4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+                    <path d="M6 2L4 4l2 2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  Reactivar
+                </button>
+              ) : (
+                <>
+                  <KebabMenu
+                    items={[
+                      {
+                        label: 'Archivar',
+                        icon: '⊘',
+                        onClick: () => onCellChange(row.id, 'status', 'Completado'),
+                      },
+                      {
+                        label: 'Eliminar',
+                        icon: '✕',
+                        variant: 'danger',
+                        onClick: () => onDeleteRow(row.id),
+                      },
+                    ]}
+                    ariaLabel={`Acciones para "${row.accion || ''}"`}
+                  />
+                  <button className="btn-delete-row" onClick={() => onDeleteRow(row.id)}>
+                    <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                      <path d="M2 3.5h9M5 3.5V2.5a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v1M5.5 5.5v4M7.5 5.5v4M3.5 3.5l.5 7h5l.5-7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </button>
+                </>
+              )}
             </div>
           </div>
         )

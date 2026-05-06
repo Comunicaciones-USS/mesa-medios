@@ -183,6 +183,27 @@ const PlanRow = memo(function PlanRow({
       </td>
       {renderMediaCells()}
       <td className="col-actions td-actions">
+        {!isArchived && (() => {
+          const planKebabItems = [
+            {
+              label: 'Editar fecha',
+              icon: '✎',
+              onClick: () => startEditField('semana', planif.semana),
+            },
+            {
+              label: 'Eliminar planificación',
+              icon: '✕',
+              variant: 'danger',
+              onClick: () => onDeleteRow(planif.id),
+            },
+          ]
+          return (
+            <KebabMenu
+              items={planKebabItems}
+              ariaLabel={`Acciones para planificación ${planif.semana ? formatDate(planif.semana) : 'sin fecha'}`}
+            />
+          )
+        })()}
         {!isArchived && (
           <button
             className="btn-delete"
@@ -344,6 +365,12 @@ const SubtemaRow = memo(function SubtemaRow({
               </span>
             )}
           </div>
+          {!isArchived && kebabItems.length > 0 && (
+            <KebabMenu
+              items={kebabItems}
+              ariaLabel={`Acciones para subtema ${subtema.nombre || ''}`}
+            />
+          )}
         </div>
       </td>
 
@@ -379,15 +406,8 @@ const SubtemaRow = memo(function SubtemaRow({
       {/* Celdas de medios */}
       {renderMediaCells()}
 
-      {/* Columna de acciones: KebabMenu */}
-      <td className="col-actions td-actions">
-        {!isArchived && kebabItems.length > 0 && (
-          <KebabMenu
-            items={kebabItems}
-            ariaLabel={`Acciones para subtema ${subtema.nombre || ''}`}
-          />
-        )}
-      </td>
+      {/* Columna de acciones: vacía (KebabMenu movido a celda de nombre) */}
+      <td className="col-actions td-actions" />
     </tr>
   )
 }, (prev, next) =>
@@ -529,6 +549,31 @@ const TemaRow = memo(function TemaRow({
               Inactivo · {inactiveDays}d
             </span>
           )}
+          {!isArchived && (() => {
+            const temaKebabItems = [
+              {
+                label: 'Editar nombre',
+                icon: '✎',
+                onClick: () => startEditTema(tema.nombre),
+              },
+              ...(nSubtemas === 0 ? [{
+                label: 'Agregar fecha al tema',
+                icon: '+',
+                onClick: () => onAddPlanificacion(tema.id),
+              }] : []),
+              {
+                label: 'Agregar subtema',
+                icon: '+',
+                onClick: () => onAddSubtema(tema.id),
+              },
+            ]
+            return (
+              <KebabMenu
+                items={temaKebabItems}
+                ariaLabel={`Acciones para tema ${tema.nombre || ''}`}
+              />
+            )
+          })()}
           {!isArchived && (
             <button
               className="btn-add-subtema-inline"
