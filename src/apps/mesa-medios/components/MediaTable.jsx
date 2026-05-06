@@ -561,11 +561,6 @@ const TemaRow = memo(function TemaRow({
                 icon: '+',
                 onClick: () => onAddPlanificacion(tema.id),
               }] : []),
-              {
-                label: 'Agregar subtema',
-                icon: '+',
-                onClick: () => onAddSubtema(tema.id),
-              },
             ]
             return (
               <KebabMenu
