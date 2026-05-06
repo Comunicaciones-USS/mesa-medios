@@ -6277,3 +6277,86 @@ body {
   height: 22px;
   font-size: 14px;
 }
+
+/* === Status Pill Dropdown === */
+
+.status-pill-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px 4px 12px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter 0.15s, border-color 0.15s;
+  line-height: 1.2;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.status-pill-trigger:hover:not(:disabled) {
+  filter: brightness(0.95);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+.status-pill-trigger:focus-visible {
+  outline: 2px solid var(--secondary);
+  outline-offset: 2px;
+}
+
+.status-pill-trigger:disabled {
+  cursor: default;
+}
+
+.status-pill-chevron {
+  font-size: 9px;
+  opacity: 0.7;
+  margin-top: 1px;
+}
+
+.status-pill-yellow { background: var(--yellow-bg); color: var(--yellow-text); }
+.status-pill-green  { background: var(--green-bg);  color: var(--green-text);  }
+.status-pill-blue   { background: #dbeafe; color: #1e40af; }
+.status-pill-gray   { background: #e5e7eb; color: #4b5563; }
+
+.status-pill-dropdown-portal {
+  z-index: 9999;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  padding: 4px;
+  min-width: 140px;
+  animation: status-pill-fade-in 0.12s ease-out;
+}
+
+@keyframes status-pill-fade-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.status-pill-option {
+  display: block;
+  width: 100%;
+  padding: 6px 10px;
+  margin: 2px 0;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: filter 0.1s;
+  line-height: 1.2;
+}
+
+.status-pill-option:hover        { filter: brightness(0.93); }
+.status-pill-option:focus-visible { outline: 2px solid var(--secondary); outline-offset: -2px; }
+
+.status-pill-option-yellow { background: var(--yellow-bg); color: var(--yellow-text); }
+.status-pill-option-green  { background: var(--green-bg);  color: var(--green-text);  }
+.status-pill-option-blue   { background: #dbeafe; color: #1e40af; }
+.status-pill-option-gray   { background: #e5e7eb; color: #4b5563; }
